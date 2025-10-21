@@ -1,0 +1,256 @@
+-- ======================================================
+-- 📦 DATABASE BARBERSHOP SYSTEM
+-- ======================================================
+
+CREATE DATABASE IF NOT EXISTS db_barbershop;
+USE db_barbershop;
+
+-- ======================================================
+-- 🧍‍♂️ USERS
+-- ======================================================
+CREATE TABLE users (
+  id_user INT AUTO_INCREMENT PRIMARY KEY,
+  nama_user VARCHAR(100) NOT NULL,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  role ENUM('admin','kasir','capster') NOT NULL,
+  id_store INT NULL,
+  id_capster INT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ======================================================
+-- 🏬 STORE
+-- ======================================================
+CREATE TABLE store (
+  id_store INT AUTO_INCREMENT PRIMARY KEY,
+  nama_store VARCHAR(100) NOT NULL,
+  alamat_store TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ======================================================
+-- 💈 CAPSTER
+-- ======================================================
+CREATE TABLE capster (
+  id_capster INT AUTO_INCREMENT PRIMARY KEY,
+  nama_capster VARCHAR(100) NOT NULL,
+  id_store INT NOT NULL,
+  status ENUM('aktif','nonaktif') DEFAULT 'aktif',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_capster_store FOREIGN KEY (id_store)
+    REFERENCES store(id_store) ON DELETE CASCADE
+);
+
+-- ======================================================
+-- 💰 KOMISI SETTING
+-- ======================================================
+CREATE TABLE komisi_setting (
+  id_setting INT AUTO_INCREMENT PRIMARY KEY,
+  id_store INT NOT NULL,
+  persentase_capster DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_komisi_store FOREIGN KEY (id_store)
+    REFERENCES store(id_store) ON DELETE CASCADE
+);
+
+-- ======================================================
+-- 🧾 PRICELIST (SERVICES)
+-- ======================================================
+CREATE TABLE pricelist (
+  id_pricelist INT AUTO_INCREMENT PRIMARY KEY,
+  service VARCHAR(100) NOT NULL,
+  keterangan TEXT,
+  harga DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ======================================================
+-- 🧴 PRODUK (MASTER)
+-- ======================================================
+CREATE TABLE produk (
+  id_produk INT AUTO_INCREMENT PRIMARY KEY,
+  nama_produk VARCHAR(100) NOT NULL,
+  harga_awal DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  harga_jual DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ======================================================
+-- 📦 STOK PRODUK PER STORE
+-- ======================================================
+CREATE TABLE stok_produk (
+  id_stok INT AUTO_INCREMENT PRIMARY KEY,
+  id_produk INT NOT NULL,
+  id_store INT NOT NULL,
+  jumlah_stok INT NOT NULL DEFAULT 0,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_stok_produk FOREIGN KEY (id_produk)
+    REFERENCES produk(id_produk) ON DELETE CASCADE,
+  CONSTRAINT fk_stok_store FOREIGN KEY (id_store)
+    REFERENCES store(id_store) ON DELETE CASCADE
+);
+
+-- ======================================================
+-- 💵 TRANSAKSI (HEADER)
+-- ======================================================
+CREATE TABLE transaksi (
+  id_transaksi INT AUTO_INCREMENT PRIMARY KEY,
+  id_store INT NOT NULL,
+  id_user INT NOT NULL,
+  tipe_transaksi ENUM('service','produk','campuran') NOT NULL,
+  subtotal DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  jumlah_bayar DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  kembalian DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_transaksi_store FOREIGN KEY (id_store)
+    REFERENCES store(id_store) ON DELETE CASCADE,
+  CONSTRAINT fk_transaksi_user FOREIGN KEY (id_user)
+    REFERENCES users(id_user) ON DELETE CASCADE
+);
+
+-- ======================================================
+-- ✂️ TRANSAKSI SERVICE DETAIL
+-- ======================================================
+CREATE TABLE transaksi_service_detail (
+  id_detail INT AUTO_INCREMENT PRIMARY KEY,
+  id_transaksi INT NOT NULL,
+  id_pricelist INT NOT NULL,
+  id_capster INT NOT NULL,
+  harga DECIMAL(12,2) NOT NULL,
+  komisi_capster DECIMAL(12,2) NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_service_transaksi FOREIGN KEY (id_transaksi)
+    REFERENCES transaksi(id_transaksi) ON DELETE CASCADE,
+  CONSTRAINT fk_service_pricelist FOREIGN KEY (id_pricelist)
+    REFERENCES pricelist(id_pricelist) ON DELETE CASCADE,
+  CONSTRAINT fk_service_capster FOREIGN KEY (id_capster)
+    REFERENCES capster(id_capster) ON DELETE CASCADE
+);
+
+-- ======================================================
+-- 🧴 TRANSAKSI PRODUK DETAIL
+-- ======================================================
+CREATE TABLE transaksi_produk_detail (
+  id_detail INT AUTO_INCREMENT PRIMARY KEY,
+  id_transaksi INT NOT NULL,
+  id_produk INT NOT NULL,
+  jumlah INT NOT NULL,
+  harga_awal DECIMAL(12,2) DEFAULT 0.00,
+  harga_jual DECIMAL(12,2) DEFAULT 0.00,
+  total_penjualan DECIMAL(12,2) DEFAULT 0.00,
+  total_modal DECIMAL(12,2) DEFAULT 0.00,
+  laba_rugi DECIMAL(12,2) DEFAULT 0.00,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_produk_transaksi FOREIGN KEY (id_transaksi)
+    REFERENCES transaksi(id_transaksi) ON DELETE CASCADE,
+  CONSTRAINT fk_produk_master FOREIGN KEY (id_produk)
+    REFERENCES produk(id_produk) ON DELETE CASCADE
+);
+
+-- ======================================================
+-- 🧾 STRUK (RIWAYAT CETAK)
+-- ======================================================
+CREATE TABLE struk (
+  id_struk INT AUTO_INCREMENT PRIMARY KEY,
+  id_transaksi INT NOT NULL,
+  nomor_struk VARCHAR(30) UNIQUE NOT NULL,
+  file_path VARCHAR(255),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_struk_transaksi FOREIGN KEY (id_transaksi)
+    REFERENCES transaksi(id_transaksi) ON DELETE CASCADE
+);
+
+-- ======================================================
+-- 🔁 RELASI TAMBAHAN UNTUK USERS
+-- ======================================================
+ALTER TABLE users
+  ADD CONSTRAINT fk_user_store FOREIGN KEY (id_store)
+  REFERENCES store(id_store) ON DELETE SET NULL;
+
+ALTER TABLE users
+  ADD CONSTRAINT fk_user_capster FOREIGN KEY (id_capster)
+  REFERENCES capster(id_capster) ON DELETE SET NULL;
+
+-- ======================================================
+-- ⚙️ TRIGGER: Hitung Laba/Rugi Otomatis
+-- ======================================================
+DELIMITER $$
+
+CREATE TRIGGER trg_transaksi_produk_detail_before_insert
+BEFORE INSERT ON transaksi_produk_detail
+FOR EACH ROW
+BEGIN
+    DECLARE v_harga_awal DECIMAL(12,2);
+    DECLARE v_harga_jual DECIMAL(12,2);
+
+    -- Ambil harga modal & harga jual dari produk
+    SELECT harga_awal, harga_jual
+    INTO v_harga_awal, v_harga_jual
+    FROM produk
+    WHERE id_produk = NEW.id_produk;
+
+    -- Hitung otomatis
+    SET NEW.harga_awal = v_harga_awal;
+    SET NEW.harga_jual = v_harga_jual;
+    SET NEW.total_penjualan = NEW.jumlah * v_harga_jual;
+    SET NEW.total_modal = NEW.jumlah * v_harga_awal;
+    SET NEW.laba_rugi = (v_harga_jual - v_harga_awal) * NEW.jumlah;
+END$$
+
+DELIMITER ;
+
+-- ======================================================
+-- ⚙️ TRIGGER: Kurangi Stok Otomatis
+-- ======================================================
+DELIMITER $$
+
+CREATE TRIGGER trg_kurangi_stok_after_insert
+AFTER INSERT ON transaksi_produk_detail
+FOR EACH ROW
+BEGIN
+    DECLARE v_store_id INT;
+
+    -- Ambil id_store dari transaksi terkait
+    SELECT id_store INTO v_store_id
+    FROM transaksi
+    WHERE id_transaksi = NEW.id_transaksi;
+
+    -- Kurangi stok cabang
+    UPDATE stok_produk
+    SET jumlah_stok = jumlah_stok - NEW.jumlah,
+        updated_at = NOW()
+    WHERE id_produk = NEW.id_produk
+      AND id_store = v_store_id;
+END$$
+
+DELIMITER ;
+
+-- ======================================================
+-- ⚙️ TRIGGER: Kembalikan Stok Jika Transaksi Dihapus
+-- ======================================================
+DELIMITER $$
+
+CREATE TRIGGER trg_tambah_stok_after_delete
+AFTER DELETE ON transaksi_produk_detail
+FOR EACH ROW
+BEGIN
+    DECLARE v_store_id INT;
+
+    SELECT id_store INTO v_store_id
+    FROM transaksi
+    WHERE id_transaksi = OLD.id_transaksi;
+
+    UPDATE stok_produk
+    SET jumlah_stok = jumlah_stok + OLD.jumlah,
+        updated_at = NOW()
+    WHERE id_produk = OLD.id_produk
+      AND id_store = v_store_id;
+END$$
+
+DELIMITER ;
+
+-- ======================================================
+-- ✅ SELESAI — DATABASE LENGKAP & OTOMATIS
+-- ======================================================
+
