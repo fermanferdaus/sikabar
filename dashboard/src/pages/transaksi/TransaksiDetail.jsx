@@ -34,7 +34,7 @@ export default function TransaksiDetail() {
         </h1>
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/transaksi/admin')}
           className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-2.5 rounded-lg font-medium transition-all"
         >
           ← Kembali

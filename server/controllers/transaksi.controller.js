@@ -217,158 +217,170 @@ export const createTransaksi = (req, res) => {
 
         // 2️⃣ Simpan ke tabel struk
         const file_path = `/uploads/struk/${nomor_struk}.pdf`;
-        const sqlStruk = `
-          INSERT INTO struk (id_transaksi, nomor_struk, file_path)
-          VALUES (?, ?, ?)
-        `;
-        db.query(sqlStruk, [id_transaksi, nomor_struk, file_path], (err) => {
-          if (err) {
-            console.error("❌ Gagal simpan struk:", err);
-            db.rollback(() =>
-              res.status(500).json({ message: "Gagal simpan data struk" })
-            );
-            return;
-          }
+        db.query(
+          `INSERT INTO struk (id_transaksi, nomor_struk, file_path) VALUES (?, ?, ?)`,
+          [id_transaksi, nomor_struk, file_path],
+          (err) => {
+            if (err) {
+              console.error("❌ Gagal simpan struk:", err);
+              db.rollback(() =>
+                res.status(500).json({ message: "Gagal simpan data struk" })
+              );
+              return;
+            }
 
-          // === Helper commit akhir ===
-          const finish = () => {
-            db.commit((err) => {
-              if (err) {
-                db.rollback(() =>
-                  res.status(500).json({ message: "Gagal commit transaksi" })
-                );
-                return;
-              }
-              res.json({
-                message: "Transaksi berhasil disimpan",
-                id: id_transaksi,
-                nomor_struk,
-                metode_bayar,
-                subtotal,
-                jumlah_bayar,
-                kembalian,
-              });
-            });
-          };
-
-          // === Simpan detail service (komisi otomatis per store) ===
-          const saveService = (cb) => {
-            const serviceItems = items.filter((i) => i.tipe === "service");
-            if (serviceItems.length === 0) return cb();
-
-            // Ambil persentase komisi capster berdasarkan id_store dari tabel komisi_setting
-            db.query(
-              `SELECT persentase_capster 
-     FROM komisi_setting 
-     WHERE id_store = ? 
-     LIMIT 1`,
-              [id_store],
-              (err, rows) => {
+            // === Helper commit akhir ===
+            const finish = () => {
+              db.commit((err) => {
                 if (err) {
-                  console.error("❌ Gagal ambil data komisi_setting:", err);
                   db.rollback(() =>
-                    res
-                      .status(500)
-                      .json({ message: "Gagal ambil data komisi capster" })
+                    res.status(500).json({ message: "Gagal commit transaksi" })
                   );
                   return;
                 }
+                res.json({
+                  message: "Transaksi berhasil disimpan",
+                  id: id_transaksi,
+                  nomor_struk,
+                  metode_bayar,
+                  subtotal,
+                  jumlah_bayar,
+                  kembalian,
+                });
+              });
+            };
 
-                // Ambil nilai persentase (jika tidak ada = 0)
-                const persentase =
-                  rows.length > 0 ? parseFloat(rows[0].persentase_capster) : 0;
+            // === Simpan detail produk (dan update stok akhir) ===
+            const saveProduk = (cb) => {
+              const produkValues = items
+                .filter((i) => i.tipe === "produk")
+                .map((i) => {
+                  const jumlah = Number(i.jumlah) || 0;
+                  const hargaAwal = Number(i.harga_awal) || 0;
+                  const hargaJual = Number(i.harga_jual) || 0;
 
-                // Hitung komisi berdasarkan harga × persentase_store
-                const serviceValues = serviceItems.map((srv) => {
-                  const komisiNominal = (srv.harga * persentase) / 100;
+                  const totalPenjualan = jumlah * hargaJual;
+                  const totalModal = jumlah * hargaAwal;
+                  const labaRugi = totalPenjualan - totalModal;
+
                   return [
                     id_transaksi,
-                    srv.id_pricelist,
-                    srv.id_capster,
-                    srv.harga,
-                    komisiNominal,
+                    i.id_produk,
+                    jumlah,
+                    hargaAwal,
+                    hargaJual,
+                    totalPenjualan,
+                    totalModal,
+                    labaRugi,
                   ];
                 });
 
-                db.query(
-                  `INSERT INTO transaksi_service_detail 
-         (id_transaksi, id_pricelist, id_capster, harga, komisi_capster)
-         VALUES ?`,
-                  [serviceValues],
-                  (err) => {
-                    if (err) {
-                      console.error("❌ Gagal simpan detail layanan:", err);
-                      db.rollback(() =>
-                        res.status(500).json({
-                          message:
-                            "Gagal simpan detail layanan: " + err.message,
-                        })
-                      );
-                      return;
-                    }
-                    cb();
+              if (produkValues.length === 0) return cb();
+
+              db.query(
+                `INSERT INTO transaksi_produk_detail 
+                  (id_transaksi, id_produk, jumlah, harga_awal, harga_jual, total_penjualan, total_modal, laba_rugi)
+                  VALUES ?`,
+                [produkValues],
+                (err) => {
+                  if (err) {
+                    console.error("❌ Gagal simpan detail produk:", err);
+                    db.rollback(() =>
+                      res.status(500).json({
+                        message: "Gagal simpan detail produk: " + err.message,
+                      })
+                    );
+                    return;
                   }
-                );
-              }
-            );
-          };
 
-          // === Simpan detail produk (jika ada) ===
-          const saveProduk = (cb) => {
-            const produkValues = items
-              .filter((i) => i.tipe === "produk")
-              .map((i) => [
-                id_transaksi,
-                i.id_produk,
-                i.jumlah,
-                i.harga_awal,
-                i.harga_jual,
-                i.jumlah * i.harga_jual,
-                i.jumlah * i.harga_awal,
-                i.jumlah * (i.harga_jual - i.harga_awal),
-              ]);
-
-            if (produkValues.length === 0) return cb();
-
-            db.query(
-              `INSERT INTO transaksi_produk_detail 
-               (id_transaksi, id_produk, jumlah, harga_awal, harga_jual, total_penjualan, total_modal, laba_rugi)
-               VALUES ?`,
-              [produkValues],
-              (err) => {
-                if (err) {
-                  console.error("❌ Gagal simpan detail produk:", err);
-                  db.rollback(() =>
-                    res.status(500).json({
-                      message: "Gagal simpan detail produk: " + err.message,
-                    })
-                  );
-                  return;
+                  // ✅ Update stok akhir di tabel stok_produk
+                  let done = 0;
+                  produkValues.forEach((p) => {
+                    const [_, id_produk, jumlah] = p;
+                    db.query(
+                      `
+                      UPDATE stok_produk 
+                      SET stok_akhir = GREATEST(stok_akhir - ?, 0), 
+                          updated_at = NOW()
+                      WHERE id_produk = ? AND id_store = ?
+                      `,
+                      [jumlah, id_produk, id_store],
+                      () => {
+                        done++;
+                        if (done === produkValues.length) cb();
+                      }
+                    );
+                  });
                 }
+              );
+            };
 
-                // Kurangi stok otomatis
-                let done = 0;
-                produkValues.forEach((p) => {
+            // === Simpan detail service (jika ada)
+            const saveService = (cb) => {
+              const serviceItems = items.filter((i) => i.tipe === "service");
+              if (serviceItems.length === 0) return cb();
+
+              db.query(
+                `SELECT persentase_capster FROM komisi_setting WHERE id_store = ? LIMIT 1`,
+                [id_store],
+                (err, rows) => {
+                  if (err) {
+                    console.error("❌ Gagal ambil data komisi:", err);
+                    db.rollback(() =>
+                      res
+                        .status(500)
+                        .json({ message: "Gagal ambil data komisi capster" })
+                    );
+                    return;
+                  }
+
+                  const persentase =
+                    rows.length > 0
+                      ? parseFloat(rows[0].persentase_capster)
+                      : 0;
+
+                  const serviceValues = serviceItems.map((srv) => {
+                    const komisiNominal = (srv.harga * persentase) / 100;
+                    return [
+                      id_transaksi,
+                      srv.id_pricelist,
+                      srv.id_capster,
+                      srv.harga,
+                      komisiNominal,
+                    ];
+                  });
+
                   db.query(
-                    `UPDATE produk SET stok = stok - ? WHERE id_produk = ?`,
-                    [p[2], p[1]],
-                    () => {
-                      done++;
-                      if (done === produkValues.length) cb();
+                    `INSERT INTO transaksi_service_detail 
+                      (id_transaksi, id_pricelist, id_capster, harga, komisi_capster)
+                      VALUES ?`,
+                    [serviceValues],
+                    (err) => {
+                      if (err) {
+                        console.error("❌ Gagal simpan detail layanan:", err);
+                        db.rollback(() =>
+                          res.status(500).json({
+                            message:
+                              "Gagal simpan detail layanan: " + err.message,
+                          })
+                        );
+                        return;
+                      }
+                      cb();
                     }
                   );
-                });
-              }
-            );
-          };
+                }
+              );
+            };
 
-          // Jalankan sequence
-          if (tipe_transaksi === "service") saveService(() => finish());
-          else if (tipe_transaksi === "produk") saveProduk(() => finish());
-          else if (tipe_transaksi === "campuran")
-            saveService(() => saveProduk(() => finish()));
-          else finish();
-        });
+            // Jalankan sequence
+            if (tipe_transaksi === "service") saveService(() => finish());
+            else if (tipe_transaksi === "produk") saveProduk(() => finish());
+            else if (tipe_transaksi === "campuran")
+              saveService(() => saveProduk(() => finish()));
+            else finish();
+          }
+        );
       }
     );
   });

@@ -35,7 +35,7 @@ export default function Login() {
 
       // 🚪 Redirect sesuai role
       if (data.role === "admin") navigate("/dashboard");
-      else if (data.role === "kasir") navigate("/transaksi");
+      else if (data.role === "kasir") navigate("/dashboard");
       else if (data.role === "capster") navigate("/komisi");
       else navigate("/dashboard");
     } catch (err) {

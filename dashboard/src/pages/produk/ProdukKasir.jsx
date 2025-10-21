@@ -1,28 +1,36 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import useProdukAPI from "../../hooks/useProdukAPI";
 import { Pencil, Trash2, X } from "lucide-react";
 
-export default function ProdukStokDetail() {
-  const { id_store } = useParams();
+export default function ProdukKasir() {
   const navigate = useNavigate();
   const { getProdukByStore, deleteStokProduk } = useProdukAPI();
+
+  const id_store = localStorage.getItem("id_store");
+  const nama_user = localStorage.getItem("nama_user");
 
   const [produk, setProduk] = useState([]);
   const [storeName, setStoreName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // 🔹 State notifikasi
   const [notif, setNotif] = useState(null);
-
-  // 🔹 State modal hapus
   const [showModal, setShowModal] = useState(false);
   const [selectedProduk, setSelectedProduk] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // 🔁 Ambil data stok produk
+  // 🔔 Tampilkan notifikasi sukses setelah tambah/edit produk
+  useEffect(() => {
+    const savedMessage = localStorage.getItem("produkMessage");
+    if (savedMessage) {
+      const messageData = JSON.parse(savedMessage);
+      setNotif(messageData);
+      localStorage.removeItem("produkMessage");
+      setTimeout(() => setNotif(null), 4000);
+    }
+  }, []);
+
   const loadProduk = async () => {
     setLoading(true);
     try {
@@ -37,17 +45,24 @@ export default function ProdukStokDetail() {
   };
 
   useEffect(() => {
-    loadProduk();
+    if (!id_store) {
+      alert("Anda tidak memiliki store terdaftar!");
+      navigate("/dashboard");
+    } else {
+      loadProduk();
+    }
   }, [id_store]);
 
   // ➕ Tambah produk baru
   const handleAddProduk = () => {
-    navigate(`/produk/add`, { state: { fromStore: id_store } });
+    navigate(`/produk/addkasir`, { state: { fromStore: id_store } });
   };
 
   // ✏️ Edit produk
   const handleEdit = (id_produk) => {
-    navigate(`/produk/edit/${id_produk}`, { state: { fromStore: id_store } });
+    navigate(`/produk/editkasir/${id_produk}`, {
+      state: { fromStore: id_store },
+    });
   };
 
   // 🗑️ Tampilkan modal konfirmasi hapus
@@ -56,7 +71,7 @@ export default function ProdukStokDetail() {
     setShowModal(true);
   };
 
-  // 🗑️ Konfirmasi hapus
+  // 🗑️ Konfirmasi hapus stok produk
   const confirmDelete = async () => {
     if (!selectedProduk) return;
     setDeleting(true);
@@ -66,14 +81,14 @@ export default function ProdukStokDetail() {
       setSelectedProduk(null);
       setNotif({
         type: "success",
-        text: `Stok produk "${selectedProduk.nama_produk}" berhasil dihapus dari toko ini`,
+        text: `Produk "${selectedProduk.nama_produk}" berhasil dihapus dari toko.`,
       });
       await loadProduk();
       setTimeout(() => setNotif(null), 4000);
     } catch (err) {
       setNotif({
         type: "error",
-        text: "Gagal menghapus stok produk: " + err.message,
+        text: "Gagal menghapus produk: " + err.message,
       });
       setTimeout(() => setNotif(null), 4000);
     } finally {
@@ -93,17 +108,6 @@ export default function ProdukStokDetail() {
     return () => window.removeEventListener("storage", handleReload);
   }, []);
 
-  // 🔔 Cek pesan sukses/gagal dari halaman edit
-  useEffect(() => {
-    const storedMsg = localStorage.getItem("produkMessage");
-    if (storedMsg) {
-      const msg = JSON.parse(storedMsg);
-      setNotif(msg);
-      localStorage.removeItem("produkMessage");
-      setTimeout(() => setNotif(null), 4000);
-    }
-  }, []);
-
   return (
     <MainLayout current="produk">
       {/* 🔹 Header Halaman */}
@@ -111,20 +115,12 @@ export default function ProdukStokDetail() {
         <h1 className="text-2xl font-semibold text-slate-800">
           Stok Produk – {storeName || `Store #${id_store}`}
         </h1>
-
         <div className="flex items-center gap-3">
           <button
             onClick={handleAddProduk}
             className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition"
           >
             + Tambah Produk
-          </button>
-
-          <button
-            onClick={() => navigate(`/produk`)}
-            className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
-          >
-            ← Kembali
           </button>
         </div>
       </div>
@@ -148,7 +144,7 @@ export default function ProdukStokDetail() {
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : produk.length === 0 ? (
-        <p className="text-gray-500">Belum ada data produk untuk store ini.</p>
+        <p className="text-gray-500">Belum ada produk di toko Anda.</p>
       ) : (
         <div className="overflow-x-auto bg-white border rounded-xl shadow-sm">
           <table className="w-full border-collapse text-sm">
@@ -166,7 +162,6 @@ export default function ProdukStokDetail() {
                 <th className="p-3 border text-center">Aksi</th>
               </tr>
             </thead>
-
             <tbody className="text-gray-700">
               {produk.map((p, i) => (
                 <tr key={p.id_produk} className="hover:bg-gray-50 transition">
@@ -204,7 +199,6 @@ export default function ProdukStokDetail() {
                 </tr>
               ))}
             </tbody>
-
             <tfoot className="bg-gray-50 font-semibold text-gray-800">
               <tr>
                 <td colSpan="6" className="p-3 text-right border">
@@ -238,11 +232,11 @@ export default function ProdukStokDetail() {
               Konfirmasi Hapus
             </h2>
             <p className="text-gray-600 mb-6">
-              Apakah Anda yakin ingin menghapus produk{" "}
+              Apakah Anda yakin ingin menghapus{" "}
               <span className="font-semibold text-red-600">
                 "{selectedProduk.nama_produk}"
               </span>{" "}
-              dari store ini?
+              dari toko Anda?
             </p>
 
             <div className="flex justify-end gap-3">

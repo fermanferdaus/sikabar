@@ -21,9 +21,6 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const role = localStorage.getItem("role");
 
-  // =============================
-  // 📂 KELOMPOK MENU BERDASARKAN ROLE
-  // =============================
   const menuGroups = [
     {
       title: "MAIN MENU",
@@ -40,6 +37,13 @@ export default function Sidebar() {
       title: "MASTER DATA",
       items: [
         {
+          path: role === "kasir" ? `/produk/kasir` : "/produk",
+          label: "Produk",
+          icon: ShoppingBag,
+          roles: ["admin", "kasir"],
+        },
+
+        {
           path: "/capster",
           label: "Capster",
           icon: Scissors,
@@ -47,15 +51,10 @@ export default function Sidebar() {
         },
         { path: "/store", label: "Store", icon: Store, roles: ["admin"] },
         { path: "/pricelist", label: "Pricelist", icon: Tag, roles: ["admin"] },
-        {
-          path: "/produk",
-          label: "Produk",
-          icon: ShoppingBag,
-          roles: ["admin"],
-        },
         { path: "/users", label: "Users", icon: Users, roles: ["admin"] },
       ],
     },
+
     {
       title: "TRANSAKSI",
       items: [
@@ -92,9 +91,6 @@ export default function Sidebar() {
     },
   ];
 
-  // =============================
-  // 🔒 Logout Handler
-  // =============================
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = "/login";
@@ -163,12 +159,19 @@ export default function Sidebar() {
                       .map((item) => {
                         const Icon = item.icon;
 
-                        // ✅ Match yang akurat, hindari tumpang tindih /komisi-setting
                         let isActive =
                           location.pathname === item.path ||
                           location.pathname.startsWith(item.path + "/");
 
-                        // ✅ Tambahan khusus Transaksi Admin
+                        if (role === "kasir" && item.label === "Produk") {
+                          if (
+                            location.pathname.startsWith("/produk/addkasir") ||
+                            location.pathname.startsWith("/produk/editkasir")
+                          ) {
+                            isActive = true;
+                          }
+                        }
+
                         if (
                           role === "admin" &&
                           item.label === "Transaksi" &&
@@ -200,7 +203,7 @@ export default function Sidebar() {
         </nav>
 
         {/* === FOOTER === */}
-        <div className="p-4 border-t border-gray-700">
+        <div className="p-1 border-t border-gray-700">
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 px-4 py-2.5 w-full rounded-lg text-left text-gray-300 hover:bg-gray-700 hover:text-white transition-all duration-200"

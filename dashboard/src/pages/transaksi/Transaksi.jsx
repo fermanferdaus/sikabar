@@ -45,7 +45,7 @@ export default function TransaksiAdd() {
   const id_user = localStorage.getItem("id_user");
 
   const { services } = useFetchService();
-  const { produk } = useFetchProduk();
+  const { produk } = useFetchProduk(id_store);
   const { capsters } = useFetchCapsterByStore(id_store);
 
   // 🔄 Hitung subtotal otomatis
@@ -332,6 +332,8 @@ function ProdukGrid({ produk, onAdd }) {
                 tipe: "produk",
                 id_produk: p.id_produk,
                 nama: p.nama_produk,
+                harga_awal: Number(p.harga_awal), // ✅ kirim harga modal
+                harga_jual: Number(p.harga_jual), // ✅ kirim harga jual
                 harga: Number(p.harga_jual),
                 jumlah: 1,
                 total: Number(p.harga_jual),

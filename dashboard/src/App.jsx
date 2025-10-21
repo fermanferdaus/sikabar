@@ -19,6 +19,11 @@ import TransaksiAdmin from "./pages/transaksi/TransaksiAdmin";
 import TransaksiDetail from "./pages/transaksi/TransaksiDetail";
 import RiwayatTransaksiKasir from "./pages/transaksi/RiwayatTransaksiKasir";
 import ProdukStokDetail from "./pages/produk/ProdukStokDetail";
+import ProdukAdd from "./pages/produk/ProdukAdd";
+import ProdukEdit from "./pages/produk/ProdukEdit";
+import ProdukKasir from "./pages/produk/ProdukKasir";
+import ProdukAddKasir from "./pages/produk/ProdukAddKasir";
+import ProdukEditKasir from "./pages/produk/ProdukEditKasir";
 
 export default function App() {
   return (
@@ -58,10 +63,54 @@ export default function App() {
         />
 
         <Route
+          path="/produk/add"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ProdukAdd />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/produk/stok/:id_store"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <ProdukStokDetail />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/produk/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ProdukEdit />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/produk/kasir"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <ProdukKasir />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/produk/addkasir"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <ProdukAddKasir  />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/produk/editkasir/:id_produk"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <ProdukEditKasir  />
             </ProtectedRoute>
           }
         />
