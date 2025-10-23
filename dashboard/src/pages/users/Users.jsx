@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import MainLayout from "../../layouts/MainLayout";
-import { Pencil, Trash2, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import MainLayout from "../../layouts/MainLayout";
+import TableData from "../../components/TableData";
 import ConfirmModal from "../../components/ConfirmModal";
+import { Pencil, Trash2, Plus } from "lucide-react";
 import useFetchUsers from "../../hooks/useFetchUsers";
 
 export default function Users() {
@@ -13,9 +14,8 @@ export default function Users() {
   const [showModal, setShowModal] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedName, setSelectedName] = useState(null);
-  const [search, setSearch] = useState("");
-  const [filteredData, setFilteredData] = useState([]);
 
+  // 🔔 Ambil pesan dari localStorage
   useEffect(() => {
     const savedMsg = localStorage.getItem("userMessage");
     if (savedMsg) {
@@ -26,18 +26,7 @@ export default function Users() {
     }
   }, []);
 
-  useEffect(() => {
-    setFilteredData(
-      data.filter(
-        (u) =>
-          u.nama_user.toLowerCase().includes(search.toLowerCase()) ||
-          u.username.toLowerCase().includes(search.toLowerCase()) ||
-          (u.nama_store &&
-            u.nama_store.toLowerCase().includes(search.toLowerCase()))
-      )
-    );
-  }, [search, data]);
-
+  // 🗑️ Hapus user
   const handleDelete = (id, name) => {
     setSelectedId(id);
     setSelectedName(name);
@@ -61,109 +50,110 @@ export default function Users() {
 
   return (
     <MainLayout current="users">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
-        <h1 className="text-2xl font-semibold text-slate-800">Data Pengguna</h1>
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <div className="relative w-full sm:w-64">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Cari nama, username, atau store..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+      {(searchTerm) => {
+        const filteredData = data.filter(
+          (u) =>
+            u.nama_user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (u.nama_store &&
+              u.nama_store.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+
+        const columns = [
+          { key: "no", label: "#" },
+          { key: "nama_user", label: "Nama" },
+          { key: "username", label: "Username" },
+          { key: "nama_store", label: "Cabang" },
+          { key: "role", label: "Role" },
+          { key: "aksi", label: "Aksi" },
+        ];
+
+        const tableData = filteredData.map((u, i) => ({
+          no: i + 1,
+          nama_user: u.nama_user,
+          username: u.username,
+          nama_store: u.nama_store || <i className="text-gray-400">-</i>,
+          role: (
+            <span className="capitalize px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
+              {u.role}
+            </span>
+          ),
+          aksi: (
+            <div className="flex items-left justify-left gap-2">
+              <button
+                onClick={() => navigate(`/users/edit/${u.id_user}`)}
+                className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
+                title="Edit"
+              >
+                <Pencil size={16} />
+              </button>
+              <button
+                onClick={() => handleDelete(u.id_user, u.nama_user)}
+                className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
+                title="Hapus"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ),
+        }));
+
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
+            {/* === Header Card === */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
+              <div>
+                <h1 className="text-xl font-semibold text-slate-800">
+                  Data Pengguna
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Kelola akun pengguna dan akses sistem barbershop.
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate("/users/add")}
+                className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
+              >
+                <Plus size={16} />
+                Tambah User
+              </button>
+            </div>
+
+            {/* === Notifikasi === */}
+            {notif && (
+              <div
+                className={`px-4 py-3 rounded-lg text-sm font-medium border ${
+                  notif.type === "success"
+                    ? "bg-green-50 border-green-200 text-green-700"
+                    : "bg-red-50 border-red-200 text-red-700"
+                }`}
+              >
+                {notif.text}
+              </div>
+            )}
+
+            {/* === Tabel Data === */}
+            {loading ? (
+              <p className="text-gray-500 italic">Memuat data pengguna...</p>
+            ) : error ? (
+              <p className="text-red-500">{error}</p>
+            ) : filteredData.length === 0 ? (
+              <p className="text-gray-500 italic">Pengguna tidak ditemukan.</p>
+            ) : (
+              <TableData columns={columns} data={tableData} />
+            )}
+
+            {/* === Modal Hapus === */}
+            <ConfirmModal
+              open={showModal}
+              onClose={() => setShowModal(false)}
+              onConfirm={confirmDelete}
+              message={`Apakah Anda yakin ingin menghapus user "${selectedName}"?`}
             />
           </div>
-          <button
-            onClick={() => navigate("/users/add")}
-            className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium transition"
-          >
-            + Tambah User
-          </button>
-        </div>
-      </div>
-
-      {notif && (
-        <div
-          className={`mb-5 px-4 py-3 rounded-lg text-sm font-medium ${
-            notif.type === "success"
-              ? "bg-green-100 text-green-800 border border-green-300"
-              : "bg-red-100 text-red-800 border border-red-300"
-          }`}
-        >
-          {notif.text}
-        </div>
-      )}
-
-      {loading ? (
-        <p className="text-gray-500">Memuat data pengguna...</p>
-      ) : error ? (
-        <p className="text-red-500">{error}</p>
-      ) : filteredData.length === 0 ? (
-        <p className="text-gray-500 italic">Pengguna tidak ditemukan.</p>
-      ) : (
-        <div className="bg-white border rounded-xl shadow-sm overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-gray-100 text-gray-700">
-              <tr>
-                <th className="p-3 border text-center w-[5%]">No</th>
-                <th className="p-3 border text-left">Nama</th>
-                <th className="p-3 border text-left">Username</th>
-                <th className="p-3 border text-left">Store</th>
-                <th className="p-3 border text-center w-[10%]">Role</th>
-                <th className="p-3 border text-center w-[20%]">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-700">
-              {filteredData.map((u, i) => (
-                <tr key={u.id_user} className="hover:bg-gray-50 transition">
-                  <td className="p-3 border text-center">{i + 1}</td>
-                  <td className="p-3 border">{u.nama_user}</td>
-                  <td className="p-3 border">{u.username}</td>
-                  <td className="p-3 border">
-                    {u.nama_store ? (
-                      u.nama_store
-                    ) : (
-                      <i className="text-gray-400">-</i>
-                    )}
-                  </td>
-                  <td className="p-3 border text-center capitalize">
-                    {u.role}
-                  </td>
-                  <td className="p-3 border text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => navigate(`/users/edit/${u.id_user}`)}
-                        className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
-                        title="Edit"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(u.id_user, u.nama_user)}
-                        className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
-                        title="Hapus"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <ConfirmModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        onConfirm={confirmDelete}
-        message={`Apakah Anda yakin ingin menghapus user "${selectedName}"?`}
-      />
+        );
+      }}
     </MainLayout>
   );
 }

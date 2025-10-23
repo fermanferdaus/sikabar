@@ -12,7 +12,7 @@ export default function CapsterAddKasir() {
   const [nama, setNama] = useState("");
   const [error, setError] = useState(null);
 
-  // === Handle Submit ===
+  // 🧩 Handle Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -25,7 +25,7 @@ export default function CapsterAddKasir() {
       setError(null);
       await addCapster(nama);
 
-      // ✅ Simpan pesan ke localStorage untuk alert di halaman daftar
+      // ✅ Simpan pesan untuk alert di halaman daftar
       localStorage.setItem(
         "capsterMessageKasir",
         JSON.stringify({
@@ -43,20 +43,26 @@ export default function CapsterAddKasir() {
 
   return (
     <MainLayout current="capster">
-      <div className="max-w-xl mx-auto bg-white border rounded-xl shadow-md p-6">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6">
-          ➕ Tambah Capster
-        </h1>
+      <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 transition-all duration-300">
+        {/* === Header === */}
+        <div className="border-b border-gray-100 pb-5 mb-6">
+          <h1 className="text-2xl font-semibold text-slate-800">
+            Tambah Capster
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Capster baru akan otomatis ditambahkan ke store Anda.
+          </p>
+        </div>
 
-        {/* 🔔 Alert Error */}
+        {/* === Alert Error === */}
         {error && (
-          <div className="mb-4 px-4 py-3 rounded-lg bg-red-100 text-red-700 border border-red-300 text-sm font-medium">
+          <div className="mb-6 px-4 py-3 rounded-lg bg-red-50 text-red-700 border border-red-200 text-sm font-medium">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Nama Capster */}
+        {/* === Form === */}
+        <form onSubmit={handleSubmit} className="space-y-8">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nama Capster
@@ -67,16 +73,17 @@ export default function CapsterAddKasir() {
               onChange={(e) => setNama(e.target.value)}
               placeholder="Masukkan nama capster"
               required
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
             />
           </div>
 
-          {/* Tombol Aksi */}
-          <div className="flex justify-end gap-3 pt-3">
+          {/* === Tombol Aksi === */}
+          <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
               onClick={() => navigate("/capster/kasir")}
-              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
+              disabled={loading}
             >
               Batal
             </button>
@@ -84,14 +91,13 @@ export default function CapsterAddKasir() {
             <button
               type="submit"
               disabled={loading}
-              className={`flex items-center gap-2 ${
+              className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-medium text-white transition ${
                 loading
-                  ? "bg-amber-400 cursor-wait"
-                  : "bg-amber-600 hover:bg-amber-700"
-              } text-white px-4 py-2 rounded-lg transition`}
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
-              <Save size={18} />
-              {loading ? "Menyimpan..." : "Simpan"}
+              {loading ? "Menyimpan..." : "Simpan Capster"}
             </button>
           </div>
         </form>

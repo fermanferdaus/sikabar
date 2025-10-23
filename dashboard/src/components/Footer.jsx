@@ -1,10 +1,15 @@
 export default function Footer() {
   const year = new Date().getFullYear();
+
   return (
-    <footer className="text-center text-sm text-gray-500 py-4 border-t bg-white">
-      © {year}{" "}
-      <span className="font-semibold text-barber-gold">BarberSystem</span>. All
-      rights reserved.
+    <footer className="flex items-center justify-center py-6 bg-[#f8fafc] text-gray-500">
+      <p className="text-sm">
+        © {year}{" "}
+        <span className="font-semibold text-[#0e57b5]">
+          Le Muani Barbershop
+        </span>{" "}
+        — All rights reserved.
+      </p>
     </footer>
   );
 }

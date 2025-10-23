@@ -15,6 +15,19 @@ export default function ProdukEditKasir() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // 💰 Format helper
+  const formatRupiah = (angka) =>
+    "Rp " + Number(angka || 0).toLocaleString("id-ID");
+
+  const handleInputRupiah = (e, field) => {
+    const clean = e.target.value.replace(/\D/g, "");
+    setProduk((prev) => ({
+      ...prev,
+      [field]: clean ? Number(clean) : 0,
+    }));
+  };
+
+  // 🔹 Ambil data produk
   useEffect(() => {
     const loadProduk = async () => {
       try {
@@ -42,6 +55,7 @@ export default function ProdukEditKasir() {
     setProduk({ ...produk, [name]: value });
   };
 
+  // 🔹 Submit Update
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -73,8 +87,8 @@ export default function ProdukEditKasir() {
           text: "Produk berhasil diperbarui",
         })
       );
-
       localStorage.setItem("reloadProduk", "true");
+
       navigate(`/produk/kasir`);
     } catch (err) {
       setError(err.message);
@@ -83,78 +97,121 @@ export default function ProdukEditKasir() {
     }
   };
 
-  if (loading) return <p className="text-gray-500 p-6">Memuat data...</p>;
-  if (error) return <p className="text-red-500 p-6">{error}</p>;
+  if (loading)
+    return (
+      <MainLayout current="produk">
+        <p className="text-gray-500 p-6">Memuat data...</p>
+      </MainLayout>
+    );
+
+  if (error)
+    return (
+      <MainLayout current="produk">
+        <p className="text-red-500 p-6">{error}</p>
+      </MainLayout>
+    );
 
   return (
     <MainLayout current="produk">
-      <div className="max-w-xl mx-auto bg-white border rounded-xl shadow-md p-6">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6">
-          ✏️ Edit Produk (Kasir)
-        </h1>
+      <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 transition-all duration-300">
+        {/* === Header === */}
+        <div className="border-b border-gray-100 pb-5 mb-6">
+          <h1 className="text-2xl font-semibold text-slate-800">
+            Edit Produk
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Ubah detail produk dan stok untuk toko Anda.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nama Produk
-            </label>
-            <input
-              type="text"
-              name="nama_produk"
-              value={produk.nama_produk}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              required
-            />
+        {/* === Form === */}
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Grid 1 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {/* Nama Produk */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nama Produk
+              </label>
+              <input
+                type="text"
+                name="nama_produk"
+                value={produk.nama_produk}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                placeholder="Masukkan nama produk"
+                required
+              />
+            </div>
+
+            {/* Stok */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Stok Sekarang
+              </label>
+              <input
+                type="number"
+                name="stok_sekarang"
+                min="0"
+                value={produk.stok_sekarang}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                placeholder="Masukkan stok"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Harga Awal
-            </label>
-            <input
-              type="number"
-              name="harga_awal"
-              value={produk.harga_awal}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              required
-            />
+          {/* Grid 2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {/* Harga Awal */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Harga Awal
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                name="harga_awal"
+                value={produk.harga_awal ? formatRupiah(produk.harga_awal) : ""}
+                onChange={(e) => handleInputRupiah(e, "harga_awal")}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-right font-medium tracking-wide"
+                placeholder="Masukkan harga awal"
+                required
+              />
+            </div>
+
+            {/* Harga Jual */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Harga Jual
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                name="harga_jual"
+                value={produk.harga_jual ? formatRupiah(produk.harga_jual) : ""}
+                onChange={(e) => handleInputRupiah(e, "harga_jual")}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-right font-medium tracking-wide"
+                placeholder="Masukkan harga jual"
+                required
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Harga Jual
-            </label>
-            <input
-              type="number"
-              name="harga_jual"
-              value={produk.harga_jual}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              required
-            />
-          </div>
+          {/* Error */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Stok Sekarang
-            </label>
-            <input
-              type="number"
-              name="stok_sekarang"
-              value={produk.stok_sekarang}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              min="0"
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-3">
+          {/* Tombol */}
+          <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
               onClick={() => navigate(`/produk/kasir`)}
-              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
+              disabled={saving}
             >
               Batal
             </button>
@@ -162,11 +219,11 @@ export default function ProdukEditKasir() {
             <button
               type="submit"
               disabled={saving}
-              className={`${
+              className={`px-6 py-2.5 rounded-lg font-medium text-white transition ${
                 saving
-                  ? "bg-amber-400 cursor-wait"
-                  : "bg-amber-600 hover:bg-amber-700"
-              } text-white px-4 py-2 rounded-lg transition`}
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
               {saving ? "Menyimpan..." : "Simpan Perubahan"}
             </button>

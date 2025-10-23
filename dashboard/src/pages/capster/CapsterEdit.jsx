@@ -19,29 +19,34 @@ export default function CapsterEdit() {
   const role = localStorage.getItem("role");
   const navigate = useNavigate();
 
+  // 🧭 Ambil data capster dan daftar store
   useEffect(() => {
     if (role !== "admin") navigate("/capster");
 
     const fetchData = async () => {
       try {
-        const res1 = await fetch(`${API_URL}/capster/${id}`, {
+        const resCapster = await fetch(`${API_URL}/capster/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = await res1.json();
-        setFormData(data);
+        const capsterData = await resCapster.json();
+        if (!resCapster.ok) throw new Error(capsterData.message);
 
-        const res2 = await fetch(`${API_URL}/store`, {
+        const resStore = await fetch(`${API_URL}/store`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const storesData = await res2.json();
-        setStores(storesData);
+        const storeData = await resStore.json();
+        if (!resStore.ok) throw new Error(storeData.message);
+
+        setFormData(capsterData);
+        setStores(storeData);
       } catch (err) {
-        setError("Gagal memuat data capster");
+        setError("Gagal memuat data capster. " + err.message);
       }
     };
     fetchData();
   }, [id]);
 
+  // 🧩 Handle Submit
   const handleSubmit = (e) => {
     e.preventDefault();
     updateCapster(id, formData);
@@ -50,35 +55,75 @@ export default function CapsterEdit() {
   if (error)
     return (
       <MainLayout current="capster">
-        <p className="text-red-600">{error}</p>
+        <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10">
+          <p className="text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm font-medium">
+            {error}
+          </p>
+          <div className="text-right mt-4">
+            <button
+              onClick={() => navigate("/capster")}
+              className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
+            >
+              Kembali
+            </button>
+          </div>
+        </div>
       </MainLayout>
     );
 
   return (
     <MainLayout current="capster">
-      <div className="max-w-xl mx-auto bg-white border rounded-xl shadow-md p-6">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6">
-          ✏️ Edit Capster
-        </h1>
+      <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 transition-all duration-300">
+        {/* === Header === */}
+        <div className="border-b border-gray-100 pb-5 mb-6">
+          <h1 className="text-2xl font-semibold text-slate-800">
+            Edit Capster
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Ubah informasi capster yang terdaftar di sistem.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Nama */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nama Capster
-            </label>
-            <input
-              type="text"
-              value={formData.nama_capster}
-              onChange={(e) =>
-                setFormData({ ...formData, nama_capster: e.target.value })
-              }
-              required
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-            />
+        {/* === Form === */}
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Baris 1 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {/* Nama Capster */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nama Capster
+              </label>
+              <input
+                type="text"
+                value={formData.nama_capster}
+                onChange={(e) =>
+                  setFormData({ ...formData, nama_capster: e.target.value })
+                }
+                required
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                placeholder="Masukkan nama capster"
+              />
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) =>
+                  setFormData({ ...formData, status: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+              >
+                <option value="aktif">Aktif</option>
+                <option value="nonaktif">Nonaktif</option>
+              </select>
+            </div>
           </div>
 
-          {/* Store */}
+          {/* Baris 2 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Store
@@ -89,7 +134,7 @@ export default function CapsterEdit() {
                 setFormData({ ...formData, id_store: e.target.value })
               }
               required
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
             >
               <option value="">-- Pilih Store --</option>
               {stores.map((s) => (
@@ -100,29 +145,12 @@ export default function CapsterEdit() {
             </select>
           </div>
 
-          {/* Status */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) =>
-                setFormData({ ...formData, status: e.target.value })
-              }
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-            >
-              <option value="aktif">Aktif</option>
-              <option value="nonaktif">Nonaktif</option>
-            </select>
-          </div>
-
           {/* Tombol Aksi */}
-          <div className="flex justify-end gap-3 pt-3">
+          <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
               onClick={() => navigate("/capster")}
-              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
             >
               Batal
             </button>
@@ -130,11 +158,11 @@ export default function CapsterEdit() {
             <button
               type="submit"
               disabled={loading}
-              className={`${
+              className={`px-6 py-2.5 rounded-lg font-medium text-white transition ${
                 loading
-                  ? "bg-amber-400 cursor-wait"
-                  : "bg-amber-600 hover:bg-amber-700"
-              } text-white px-4 py-2 rounded-lg transition`}
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
               {loading ? "Menyimpan..." : "Simpan Perubahan"}
             </button>

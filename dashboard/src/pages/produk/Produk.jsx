@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react"; // 🔍 Tambahkan ikon Search
 import MainLayout from "../../layouts/MainLayout";
+import TableData from "../../components/TableData";
 
 export default function Produk() {
   const [stores, setStores] = useState([]);
-  const [filteredStores, setFilteredStores] = useState([]);
-  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem("token");
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchStores = async () => {
@@ -23,7 +20,6 @@ export default function Produk() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Gagal memuat data");
         setStores(data);
-        setFilteredStores(data);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -33,77 +29,67 @@ export default function Produk() {
     fetchStores();
   }, []);
 
-  // 🔍 Filter otomatis setiap kali isi search berubah
-  useEffect(() => {
-    const lower = search.toLowerCase();
-    const filtered = stores.filter((s) =>
-      s.nama_store.toLowerCase().includes(lower)
-    );
-    setFilteredStores(filtered);
-  }, [search, stores]);
+  const columns = [
+    { key: "no", label: "#" },
+    { key: "nama_store", label: "Nama Store" },
+    { key: "total_produk", label: "Total Produk" },
+    { key: "total_stok", label: "Total Stok" },
+    { key: "aksi", label: "Aksi" },
+  ];
+
+  const data = stores.map((s, i) => ({
+    no: i + 1,
+    nama_store: s.nama_store,
+    total_produk: s.total_produk,
+    total_stok: s.total_stok,
+    aksi: (
+      <button
+        onClick={() => navigate(`/produk/stok/${s.id_store}`)}
+        className="text-[#0e57b5] hover:underline font-medium"
+      >
+        Lihat Stok
+      </button>
+    ),
+  }));
 
   return (
     <MainLayout current="produk">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
-        <h1 className="text-2xl font-semibold text-slate-800">
-          Data Stok Per Store
-        </h1>
+      {(searchTerm) => {
+        const filtered = stores.filter((s) =>
+          s.nama_store.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
-        {/* 🔍 Search Bar dengan ikon */}
-        <div className="relative w-full sm:w-64">
-          <Search
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-          <input
-            type="text"
-            placeholder="Cari nama store..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          />
-        </div>
-      </div>
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
+            {/* Header Card */}
+            <div className="border-b border-gray-100 pb-4">
+              <h1 className="text-xl font-semibold text-slate-800">
+                Data Stok Produk
+              </h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Daftar stok produk di setiap cabang.
+              </p>
+            </div>
 
-      {loading ? (
-        <p className="text-gray-500">Memuat data...</p>
-      ) : error ? (
-        <p className="text-red-500">{error}</p>
-      ) : filteredStores.length === 0 ? (
-        <p className="text-gray-500">Data tidak ditemukan.</p>
-      ) : (
-        <div className="overflow-x-auto bg-white border rounded-xl shadow-sm">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-gray-100 text-gray-700">
-              <tr>
-                <th className="p-3 border">#</th>
-                <th className="p-3 border text-left">Nama Store</th>
-                <th className="p-3 border text-center">Total Produk</th>
-                <th className="p-3 border text-center">Total Stok</th>
-                <th className="p-3 border text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-700">
-              {filteredStores.map((s, i) => (
-                <tr key={s.id_store} className="hover:bg-gray-50">
-                  <td className="p-3 border text-center">{i + 1}</td>
-                  <td className="p-3 border">{s.nama_store}</td>
-                  <td className="p-3 border text-center">{s.total_produk}</td>
-                  <td className="p-3 border text-center">{s.total_stok}</td>
-                  <td className="p-3 border text-center">
-                    <button
-                      onClick={() => navigate(`/produk/stok/${s.id_store}`)}
-                      className="text-blue-600 hover:underline font-medium"
-                    >
-                      Lihat Stok
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            {/* Konten */}
+            {loading ? (
+              <p className="text-gray-500">Memuat data...</p>
+            ) : error ? (
+              <p className="text-red-500">{error}</p>
+            ) : filtered.length === 0 ? (
+              <p className="text-gray-500">Data tidak ditemukan.</p>
+            ) : (
+              <TableData
+                columns={columns}
+                data={data.filter((s) =>
+                  s.nama_store.toLowerCase().includes(searchTerm.toLowerCase())
+                )}
+                searchTerm={searchTerm}
+              />
+            )}
+          </div>
+        );
+      }}
     </MainLayout>
   );
 }

@@ -18,15 +18,27 @@ export default function ProdukEdit() {
 
   const [produk, setProduk] = useState({
     nama_produk: "",
-    harga_awal: "",
-    harga_jual: "",
-    stok_awal: "",
+    harga_awal: 0,
+    harga_jual: 0,
+    stok_awal: 0,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // 🔁 Ambil data produk + stok per store
+  // 💰 Format Rupiah helper
+  const formatRupiah = (angka) =>
+    "Rp " + Number(angka || 0).toLocaleString("id-ID");
+
+  const handleInputRupiah = (e, field) => {
+    const clean = e.target.value.replace(/\D/g, "");
+    setProduk((prev) => ({
+      ...prev,
+      [field]: clean ? Number(clean) : 0,
+    }));
+  };
+
+  // 🔁 Ambil data produk + stok
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -40,8 +52,8 @@ export default function ProdukEdit() {
 
         setProduk({
           nama_produk: data.nama_produk || "",
-          harga_awal: data.harga_awal || "",
-          harga_jual: data.harga_jual || "",
+          harga_awal: data.harga_awal || 0,
+          harga_jual: data.harga_jual || 0,
           stok_awal: stok,
         });
       } catch (err) {
@@ -53,7 +65,7 @@ export default function ProdukEdit() {
     fetchData();
   }, [id, fromStore]);
 
-  // ✏️ Handle input perubahan
+  // ✏️ Handle input teks biasa
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProduk({ ...produk, [name]: value });
@@ -71,7 +83,6 @@ export default function ProdukEdit() {
       const token = localStorage.getItem("token");
 
       if (role === "admin") {
-        // 🟩 Admin tetap pakai route lama
         await updateProduk(id, {
           nama_produk: produk.nama_produk,
           harga_awal: Number(produk.harga_awal),
@@ -86,7 +97,6 @@ export default function ProdukEdit() {
           });
         }
       } else if (role === "kasir") {
-        // 🟨 Kasir pakai endpoint kasir khusus
         await fetch(`${API_URL}/produk/kasir/update`, {
           method: "PUT",
           headers: {
@@ -109,26 +119,16 @@ export default function ProdukEdit() {
         "produkMessage",
         JSON.stringify({
           type: "success",
-          text: "Produk dan stok berhasil diperbarui",
+          text: "Produk berhasil diperbarui",
         })
       );
-
       localStorage.setItem("reloadProduk", "true");
 
       if (fromStore) navigate(`/produk/stok/${fromStore}`);
       else if (role === "kasir") navigate(`/produk/kasir`);
       else navigate(-1);
     } catch (err) {
-      localStorage.setItem(
-        "produkMessage",
-        JSON.stringify({
-          type: "error",
-          text: "Gagal memperbarui produk: " + err.message,
-        })
-      );
-
-      if (fromStore) navigate(`/produk/stok/${fromStore}`);
-      else navigate(-1);
+      setError("Gagal memperbarui produk: " + err.message);
     } finally {
       setSaving(false);
     }
@@ -137,91 +137,112 @@ export default function ProdukEdit() {
   if (loading)
     return (
       <MainLayout>
-        <p className="text-gray-500">Memuat data produk...</p>
+        <p className="text-gray-500 p-6">Memuat data produk...</p>
       </MainLayout>
     );
 
   return (
     <MainLayout current="produk">
-      <div className="max-w-xl mx-auto bg-white border rounded-xl shadow-md p-6">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-6">
-          ✏️ Edit Produk
-        </h1>
+      <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 transition-all duration-300">
+        {/* === Header === */}
+        <div className="border-b border-gray-100 pb-5 mb-6">
+          <h1 className="text-2xl font-semibold text-slate-800">Edit Produk</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Ubah detail dan harga produk sesuai kebutuhan Anda.
+          </p>
+        </div>
 
-        {error && <p className="text-red-600 mb-4">{error}</p>}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Nama Produk */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nama Produk
-            </label>
-            <input
-              type="text"
-              name="nama_produk"
-              value={produk.nama_produk}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              required
-            />
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-4">
+            {error}
           </div>
+        )}
 
-          {/* Harga Awal */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Harga Awal
-            </label>
-            <input
-              type="number"
-              name="harga_awal"
-              value={produk.harga_awal}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              required
-            />
-          </div>
-
-          {/* Harga Jual */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Harga Jual
-            </label>
-            <input
-              type="number"
-              name="harga_jual"
-              value={produk.harga_jual}
-              onChange={handleChange}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              required
-            />
-          </div>
-
-          {/* Stok Awal */}
-          {fromStore && (
+        {/* === Form === */}
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Grid 1 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {/* Nama Produk */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Stok Produk di Store Ini
+                Nama Produk
               </label>
               <input
-                type="number"
-                name="stok_awal"
-                value={produk.stok_awal}
+                type="text"
+                name="nama_produk"
+                value={produk.nama_produk}
                 onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                min="0"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                placeholder="Masukkan nama produk"
                 required
               />
             </div>
-          )}
+
+            {/* Stok */}
+            {fromStore && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Stok Produk di Store Ini
+                </label>
+                <input
+                  type="number"
+                  name="stok_awal"
+                  min="0"
+                  value={produk.stok_awal}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  placeholder="Masukkan stok"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Grid 2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {/* Harga Awal */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Harga Awal
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                name="harga_awal"
+                value={produk.harga_awal ? formatRupiah(produk.harga_awal) : ""}
+                onChange={(e) => handleInputRupiah(e, "harga_awal")}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-right font-medium tracking-wide"
+                placeholder="Masukkan harga awal"
+                required
+              />
+            </div>
+
+            {/* Harga Jual */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Harga Jual
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                name="harga_jual"
+                value={produk.harga_jual ? formatRupiah(produk.harga_jual) : ""}
+                onChange={(e) => handleInputRupiah(e, "harga_jual")}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition text-right font-medium tracking-wide"
+                placeholder="Masukkan harga jual"
+                required
+              />
+            </div>
+          </div>
 
           {/* Tombol Aksi */}
-          <div className="flex justify-end gap-3 pt-3">
+          <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
               onClick={() =>
                 fromStore ? navigate(`/produk/stok/${fromStore}`) : navigate(-1)
               }
-              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
+              disabled={saving}
             >
               Batal
             </button>
@@ -229,11 +250,11 @@ export default function ProdukEdit() {
             <button
               type="submit"
               disabled={saving}
-              className={`${
+              className={`px-6 py-2.5 rounded-lg font-medium text-white transition ${
                 saving
-                  ? "bg-amber-400 cursor-wait"
-                  : "bg-amber-600 hover:bg-amber-700"
-              } text-white px-4 py-2 rounded-lg transition`}
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
               {saving ? "Menyimpan..." : "Simpan Perubahan"}
             </button>

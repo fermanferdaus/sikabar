@@ -1,6 +1,6 @@
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -18,7 +18,7 @@ export default function ChartKeuangan({ data }) {
       </div>
     );
 
-  // 🔹 Samakan format tanggal (seperti admin)
+  // 🔹 Format tanggal singkat
   const formattedData = data.map((item) => {
     let rawDate = item.tanggal || item.bulan || "";
     let tanggalLabel = rawDate;
@@ -41,23 +41,38 @@ export default function ChartKeuangan({ data }) {
   });
 
   return (
-    <div className="bg-white border rounded-xl shadow-sm p-6">
+    <div>
       <h2 className="text-lg font-semibold text-slate-700 mb-4">
         Grafik Pendapatan Bulanan
       </h2>
 
-      <ResponsiveContainer width="100%" height={320}>
-        <LineChart data={formattedData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-          <XAxis dataKey="tanggal" tick={{ fontSize: 12 }} />
-          <YAxis tickFormatter={formatRupiah} width={100} />
+      <ResponsiveContainer width="100%" height={350}>
+        <BarChart
+          data={formattedData}
+          margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
+          barGap={8}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis
+            dataKey="tanggal"
+            tick={{ fontSize: 12 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            tickFormatter={formatRupiah}
+            width={90}
+            axisLine={false}
+            tickLine={false}
+          />
           <Tooltip
             formatter={(v) => formatRupiah(v)}
             labelFormatter={(label) => `Periode: ${label}`}
             contentStyle={{
-              borderRadius: "8px",
+              borderRadius: "10px",
               borderColor: "#e2e8f0",
               backgroundColor: "#fff",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
             }}
           />
           <Legend
@@ -67,26 +82,34 @@ export default function ChartKeuangan({ data }) {
             }}
           />
 
-          {/* 💙 Garis Pendapatan Kotor */}
-          <Line
-            type="monotone"
+          {/* 🟦 Pendapatan Kotor */}
+          <Bar
             dataKey="pendapatan_kotor"
             name="Pendapatan Kotor"
-            stroke="#38bdf8"
-            strokeWidth={2}
-            dot={false}
+            fill="url(#gradientKotor)"
+            radius={[6, 6, 0, 0]}
           />
 
-          {/* 💚 Garis Pendapatan Bersih */}
-          <Line
-            type="monotone"
+          {/* 🟩 Pendapatan Bersih */}
+          <Bar
             dataKey="pendapatan_bersih"
             name="Pendapatan Bersih"
-            stroke="#10b981"
-            strokeWidth={2}
-            dot={false}
+            fill="url(#gradientBersih)"
+            radius={[6, 6, 0, 0]}
           />
-        </LineChart>
+
+          {/* Gradien Warna */}
+          <defs>
+            <linearGradient id="gradientKotor" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.95} />
+              <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.8} />
+            </linearGradient>
+            <linearGradient id="gradientBersih" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#22c55e" stopOpacity={0.95} />
+              <stop offset="100%" stopColor="#4ade80" stopOpacity={0.8} />
+            </linearGradient>
+          </defs>
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );

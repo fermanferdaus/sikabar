@@ -46,3 +46,18 @@ aside::-webkit-scrollbar-thumb:hover {
   scrollbar-width: thin;
   scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
 }
+
+/* spin.css */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-slow {
+  animation: spin-slow 1s linear infinite;
+  transform-origin: center;
+}

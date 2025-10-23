@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import useProdukAPI from "../../hooks/useProdukAPI";
-import { Pencil, Trash2, Search } from "lucide-react"; // 🔍 Tambahkan ikon Search
+import TableData from "../../components/TableData";
+import { Pencil, Trash2, Plus } from "lucide-react";
 import ConfirmModal from "../../components/ConfirmModal";
 
 export default function ProdukKasir() {
@@ -13,8 +14,6 @@ export default function ProdukKasir() {
   const nama_user = localStorage.getItem("nama_user");
 
   const [produk, setProduk] = useState([]);
-  const [filteredProduk, setFilteredProduk] = useState([]);
-  const [search, setSearch] = useState("");
   const [storeName, setStoreName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,7 +38,6 @@ export default function ProdukKasir() {
     try {
       const data = await getProdukByStore(id_store);
       setProduk(data);
-      setFilteredProduk(data);
       if (data.length > 0) setStoreName(data[0].nama_store || "");
     } catch (err) {
       setError(err.message);
@@ -57,15 +55,6 @@ export default function ProdukKasir() {
     }
   }, [id_store]);
 
-  // 🔍 Filter produk otomatis setiap kali search berubah
-  useEffect(() => {
-    const lower = search.toLowerCase();
-    const filtered = produk.filter((p) =>
-      p.nama_produk.toLowerCase().includes(lower)
-    );
-    setFilteredProduk(filtered);
-  }, [search, produk]);
-
   // ➕ Tambah produk baru
   const handleAddProduk = () => {
     navigate(`/produk/addkasir`, { state: { fromStore: id_store } });
@@ -78,13 +67,12 @@ export default function ProdukKasir() {
     });
   };
 
-  // 🗑️ Tampilkan modal konfirmasi hapus
+  // 🗑️ Hapus produk
   const openDeleteModal = (produk) => {
     setSelectedProduk(produk);
     setShowModal(true);
   };
 
-  // 🗑️ Konfirmasi hapus stok produk
   const confirmDelete = async () => {
     if (!selectedProduk) return;
     setDeleting(true);
@@ -109,7 +97,7 @@ export default function ProdukKasir() {
     }
   };
 
-  // 🔁 Reload otomatis setelah tambah/edit produk
+  // 🔁 Reload otomatis setelah tambah/edit
   useEffect(() => {
     const handleReload = (event) => {
       if (event.key === "reloadProduk" && event.newValue === "true") {
@@ -123,141 +111,136 @@ export default function ProdukKasir() {
 
   return (
     <MainLayout current="produk">
-      {/* 🔹 Header Halaman */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
-        <h1 className="text-2xl font-semibold text-slate-800">
-          Stok Produk – {storeName || `Store #${id_store}`}
-        </h1>
+      {(searchTerm) => {
+        const filteredProduk = produk.filter((p) =>
+          p.nama_produk.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          {/* 🔍 Search Bar */}
-          <div className="relative w-full sm:w-64">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Cari nama produk..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        const totalLaba = filteredProduk.reduce(
+          (sum, p) => sum + (Number(p.total_laba) || 0),
+          0
+        );
+
+        const columns = [
+          { key: "no", label: "#" },
+          { key: "nama_produk", label: "Nama Produk" },
+          { key: "harga_awal", label: "Harga Awal" },
+          { key: "harga_jual", label: "Harga Jual" },
+          { key: "stok_awal", label: "Stok Awal" },
+          { key: "stok_sekarang", label: "Stok Sekarang" },
+          { key: "total_laba", label: "Laba Total" },
+          { key: "aksi", label: "Aksi" },
+        ];
+
+        const data = filteredProduk.map((p, i) => ({
+          no: i + 1,
+          nama_produk: p.nama_produk,
+          harga_awal: `Rp ${p.harga_awal.toLocaleString("id-ID")}`,
+          harga_jual: `Rp ${p.harga_jual.toLocaleString("id-ID")}`,
+          stok_awal: p.stok_awal,
+          stok_sekarang: p.stok_sekarang,
+          total_laba: (
+            <span className="text-green-600 font-semibold">
+              Rp {Number(p.total_laba || 0).toLocaleString("id-ID")}
+            </span>
+          ),
+          aksi: (
+            <div className="flex items-center justify-left gap-2">
+              <button
+                onClick={() => handleEdit(p.id_produk)}
+                className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
+                title="Edit"
+              >
+                <Pencil size={16} />
+              </button>
+              <button
+                onClick={() => openDeleteModal(p)}
+                className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
+                title="Hapus"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ),
+        }));
+
+        return (
+          <div className="bg-white shadow-md rounded-2xl border border-gray-100 p-8 space-y-6">
+            {/* === Header === */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
+              <div>
+                <h1 className="text-xl font-semibold text-slate-800">
+                  Produk Kasir – {storeName || `Store #${id_store}`}
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Kelola produk dan stok untuk toko Anda.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAddProduk}
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
+                >
+                  <Plus size={16} />
+                  Tambah Produk
+                </button>
+              </div>
+            </div>
+
+            {/* 🔔 Notifikasi */}
+            {notif && (
+              <div
+                className={`px-4 py-3 rounded-lg text-sm font-medium border ${
+                  notif.type === "success"
+                    ? "bg-green-50 border-green-200 text-green-700"
+                    : "bg-red-50 border-red-200 text-red-700"
+                }`}
+              >
+                {notif.text}
+              </div>
+            )}
+
+            {/* === Tabel Produk === */}
+            {loading ? (
+              <p className="text-gray-500">Memuat data...</p>
+            ) : error ? (
+              <p className="text-red-500">{error}</p>
+            ) : filteredProduk.length === 0 ? (
+              <p className="text-gray-500">Produk tidak ditemukan.</p>
+            ) : (
+              <>
+                <TableData
+                  columns={columns}
+                  data={data}
+                  searchTerm={searchTerm}
+                />
+                <div className="flex justify-end mt-4 text-sm font-semibold text-gray-700 border-t border-gray-200 pt-3">
+                  <span>
+                    Total Laba:&nbsp;
+                    <span className="text-green-600">
+                      Rp {totalLaba.toLocaleString("id-ID")}
+                    </span>
+                  </span>
+                </div>
+              </>
+            )}
+
+            {/* 🗑️ Modal Hapus */}
+            <ConfirmModal
+              open={showModal}
+              onClose={() => setShowModal(false)}
+              onConfirm={confirmDelete}
+              loading={deleting}
+              message={
+                selectedProduk
+                  ? `Apakah Anda yakin ingin menghapus produk "${selectedProduk.nama_produk}" dari toko Anda?`
+                  : "Apakah Anda yakin ingin menghapus data ini?"
+              }
             />
           </div>
-
-          <button
-            onClick={handleAddProduk}
-            className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition"
-          >
-            + Tambah Produk
-          </button>
-        </div>
-      </div>
-
-      {/* 🔔 Notifikasi */}
-      {notif && (
-        <div
-          className={`mb-5 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-300 ${
-            notif.type === "success"
-              ? "bg-green-100 text-green-800 border border-green-300"
-              : "bg-red-100 text-red-800 border border-red-300"
-          }`}
-        >
-          {notif.text}
-        </div>
-      )}
-
-      {/* 🔹 Tabel Produk */}
-      {loading ? (
-        <p className="text-gray-500">Memuat data...</p>
-      ) : error ? (
-        <p className="text-red-500">{error}</p>
-      ) : filteredProduk.length === 0 ? (
-        <p className="text-gray-500">Produk tidak ditemukan.</p>
-      ) : (
-        <div className="overflow-x-auto bg-white border rounded-xl shadow-sm">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-gray-100 text-gray-700">
-              <tr>
-                <th className="p-3 border">#</th>
-                <th className="p-3 border text-left">Nama Produk</th>
-                <th className="p-3 border text-center">Harga Awal</th>
-                <th className="p-3 border text-center">Harga Jual</th>
-                <th className="p-3 border text-center">Stok Awal</th>
-                <th className="p-3 border text-center">Stok Sekarang</th>
-                <th className="p-3 border text-center text-green-700">
-                  Laba Total
-                </th>
-                <th className="p-3 border text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-700">
-              {filteredProduk.map((p, i) => (
-                <tr key={p.id_produk} className="hover:bg-gray-50 transition">
-                  <td className="p-3 border text-center">{i + 1}</td>
-                  <td className="p-3 border">{p.nama_produk}</td>
-                  <td className="p-3 border text-center">
-                    Rp {p.harga_awal.toLocaleString("id-ID")}
-                  </td>
-                  <td className="p-3 border text-center">
-                    Rp {p.harga_jual.toLocaleString("id-ID")}
-                  </td>
-                  <td className="p-3 border text-center">{p.stok_awal}</td>
-                  <td className="p-3 border text-center">{p.stok_sekarang}</td>
-                  <td className="p-3 border text-center font-semibold text-green-600">
-                    Rp {Number(p.total_laba || 0).toLocaleString("id-ID")}
-                  </td>
-                  <td className="p-3 border text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => handleEdit(p.id_produk)}
-                        className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
-                        title="Edit"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        onClick={() => openDeleteModal(p)}
-                        className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
-                        title="Hapus"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot className="bg-gray-50 font-semibold text-gray-800">
-              <tr>
-                <td colSpan="6" className="p-3 text-right border">
-                  Total Laba:
-                </td>
-                <td className="p-3 border text-center text-green-700">
-                  Rp{" "}
-                  {filteredProduk
-                    .reduce((sum, p) => sum + (Number(p.total_laba) || 0), 0)
-                    .toLocaleString("id-ID")}
-                </td>
-                <td className="border"></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
-
-      {/* 🗑️ Modal Konfirmasi Hapus */}
-      <ConfirmModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        onConfirm={confirmDelete}
-        loading={deleting}
-        message={
-          selectedProduk
-            ? `Apakah Anda yakin ingin menghapus produk "${selectedProduk.nama_produk}" dari toko Anda?`
-            : "Apakah Anda yakin ingin menghapus data ini?"
-        }
-      />
+        );
+      }}
     </MainLayout>
   );
 }

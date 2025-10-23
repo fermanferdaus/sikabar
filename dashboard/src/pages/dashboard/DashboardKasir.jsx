@@ -1,7 +1,6 @@
 import MainLayout from "../../layouts/MainLayout";
-import CardStat from "../../components/CardStat";
 import ChartKeuangan from "../../components/ChartKeuangan";
-import { Scissors, Package, DollarSign, ArrowRight } from "lucide-react";
+import { Scissors, Package, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import useFetchCapster from "../../hooks/useFetchCapster";
@@ -17,7 +16,6 @@ export default function DashboardKasir() {
     if (storeId) setIdStore(storeId);
   }, []);
 
-  // 🔹 Ambil data berdasarkan store kasir
   const { capsters } = useFetchCapster(idStore);
   const { produk } = useFetchProduk(idStore);
   const { data: transaksiData, loading } = useFetchTransaksiStore(
@@ -25,7 +23,6 @@ export default function DashboardKasir() {
     "Bulanan"
   );
 
-  // 💰 Hitung total transaksi & pendapatan
   const totalTransaksi = transaksiData.reduce(
     (sum, d) => sum + Number(d.total_transaksi || 0),
     0
@@ -43,99 +40,125 @@ export default function DashboardKasir() {
 
   return (
     <MainLayout current="dashboard">
-      <h1 className="text-2xl font-semibold text-slate-800 mb-6">
-        Dashboard Kasir
-      </h1>
+      {(searchTerm) => {
+        const filterMatch = (text) =>
+          text?.toString().toLowerCase().includes(searchTerm.toLowerCase());
 
-      {/* === BARIS 1: Statistik Umum === */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
-        {/* ✂️ Total Capster */}
-        <div className="bg-white border rounded-xl shadow-sm hover:shadow-md transition p-5 flex flex-col">
-          <CardStat
-            title="Total Capster"
-            value={capsters?.length || 0}
-            icon={<Scissors size={24} />}
-            color="bg-amber-500"
-          />
-          <hr className="my-3 border-gray-200" />
-          <button
-            onClick={() => goTo("/capster/kasir")}
-            className="text-amber-600 hover:text-amber-800 flex items-center gap-1 text-sm font-medium self-end"
-          >
-            Lihat Selengkapnya <ArrowRight size={15} />
-          </button>
-        </div>
+        const filteredCapster = capsters?.filter((c) =>
+          filterMatch(c.nama_capster)
+        );
+        const filteredProduk = produk?.filter((p) =>
+          filterMatch(p.nama_produk)
+        );
 
-        {/* 📦 Total Produk */}
-        <div className="bg-white border rounded-xl shadow-sm hover:shadow-md transition p-5 flex flex-col">
-          <CardStat
-            title="Total Produk"
-            value={produk?.length || 0}
-            icon={<Package size={24} />}
-            color="bg-blue-500"
-          />
-          <hr className="my-3 border-gray-200" />
-          <button
-            onClick={() => goTo("/produk/kasir")}
-            className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm font-medium self-end"
-          >
-            Lihat Selengkapnya <ArrowRight size={15} />
-          </button>
-        </div>
+        return (
+          <div className="bg-white shadow-md rounded-2xl border border-gray-100 p-7 space-y-8 transition-all duration-300">
+            {/* === BARIS 1: Statistik Umum === */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* ✂️ Total Capster */}
+              <div
+                onClick={() => goTo("/capster/kasir")}
+                className="cursor-pointer bg-[#1d4ed8] text-white rounded-xl p-6 shadow hover:shadow-lg hover:-translate-y-1 transition-all"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-sm opacity-90">Total Capster</p>
+                  <Scissors size={28} />
+                </div>
+                <h2 className="text-3xl font-semibold">
+                  {filteredCapster?.length || 0}
+                </h2>
+                <p className="text-xs opacity-80 mt-1">Karyawan terdaftar</p>
+              </div>
 
-        {/* 💰 Total Transaksi */}
-        <div className="bg-white border rounded-xl shadow-sm hover:shadow-md transition p-5 flex flex-col">
-          <CardStat
-            title="Total Transaksi"
-            value={totalTransaksi.toLocaleString("id-ID")}
-            icon={<DollarSign size={24} />}
-            color="bg-green-500"
-          />
-          <hr className="my-3 border-gray-200" />
-          <button
-            onClick={() => goTo("/riwayat")}
-            className="text-green-600 hover:text-green-800 flex items-center gap-1 text-sm font-medium self-end"
-          >
-            Lihat Selengkapnya <ArrowRight size={15} />
-          </button>
-        </div>
-      </div>
+              {/* 📦 Total Produk */}
+              <div
+                onClick={() => goTo("/produk/kasir")}
+                className="cursor-pointer bg-[#2563eb] text-white rounded-xl p-6 shadow hover:shadow-lg hover:-translate-y-1 transition-all"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-sm opacity-90">Total Produk</p>
+                  <Package size={28} />
+                </div>
+                <h2 className="text-3xl font-semibold">
+                  {filteredProduk?.length || 0}
+                </h2>
+                <p className="text-xs opacity-80 mt-1">Produk tersedia</p>
+              </div>
 
-      {/* === BARIS 2: Pendapatan Bulanan === */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-5 mb-6">
-        {/* 💵 Pendapatan Kotor Bulan Ini */}
-        <div className="bg-white border rounded-xl shadow-sm hover:shadow-md transition p-5 flex flex-col">
-          <CardStat
-            title="Pendapatan Kotor Bulan Ini"
-            value={`Rp ${totalKotor.toLocaleString("id-ID")}`}
-            icon={<DollarSign size={24} />}
-            color="bg-sky-500"
-          />
-        </div>
+              {/* 💰 Total Transaksi */}
+              <div
+                onClick={() => goTo("/riwayat")}
+                className="cursor-pointer bg-[#38bdf8] text-white rounded-xl p-6 shadow hover:shadow-lg hover:-translate-y-1 transition-all"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-sm opacity-90">Total Transaksi</p>
+                  <DollarSign size={28} />
+                </div>
+                <h2 className="text-3xl font-semibold">
+                  {totalTransaksi.toLocaleString("id-ID")}
+                </h2>
+                <p className="text-xs opacity-80 mt-1">Transaksi bulan ini</p>
+              </div>
+            </div>
 
-        {/* 💸 Pendapatan Bersih Bulan Ini */}
-        <div className="bg-white border rounded-xl shadow-sm hover:shadow-md transition p-5 flex flex-col">
-          <CardStat
-            title="Pendapatan Bersih Bulan Ini"
-            value={`Rp ${totalBersih.toLocaleString("id-ID")}`}
-            icon={<DollarSign size={24} />}
-            color="bg-emerald-600"
-          />
-        </div>
-      </div>
+            {/* === BARIS 2: Pendapatan === */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* 💵 Pendapatan Kotor Bulan Ini */}
+              <div
+                onClick={() => goTo("/riwayat")}
+                className="cursor-pointer bg-[#22d3ee] text-white rounded-xl p-6 shadow hover:shadow-lg hover:-translate-y-1 transition-all"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-sm opacity-90">
+                    Pendapatan Kotor Bulan Ini
+                  </p>
+                  <DollarSign size={28} />
+                </div>
+                <h2 className="text-3xl font-semibold">
+                  Rp {totalKotor.toLocaleString("id-ID")}
+                </h2>
+                <p className="text-xs opacity-80 mt-1">
+                  Sebelum pemotongan komisi
+                </p>
+              </div>
 
-      {/* === GRAFIK KEUANGAN === */}
-      {loading ? (
-        <div className="bg-white border rounded-xl shadow-sm p-6 text-center text-gray-500">
-          Memuat grafik pendapatan toko...
-        </div>
-      ) : transaksiData.length === 0 ? (
-        <div className="bg-white border rounded-xl shadow-sm p-6 text-center text-gray-400 italic">
-          Belum ada data pendapatan untuk toko ini.
-        </div>
-      ) : (
-        <ChartKeuangan data={transaksiData} />
-      )}
+              {/* 💸 Pendapatan Bersih Bulan Ini */}
+              <div
+                onClick={() => goTo("/riwayat")}
+                className="cursor-pointer bg-[#34d399] text-white rounded-xl p-6 shadow hover:shadow-lg hover:-translate-y-1 transition-all"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-sm opacity-90">
+                    Pendapatan Bersih Bulan Ini
+                  </p>
+                  <DollarSign size={28} />
+                </div>
+                <h2 className="text-3xl font-semibold">
+                  Rp {totalBersih.toLocaleString("id-ID")}
+                </h2>
+                <p className="text-xs opacity-80 mt-1">
+                  Setelah pembagian komisi
+                </p>
+              </div>
+            </div>
+
+            {/* === GRAFIK KEUANGAN === */}
+            {loading ? (
+              <div className="bg-[#f9fafb] rounded-2xl border border-gray-100 p-6 text-center text-gray-500">
+                Memuat grafik pendapatan toko...
+              </div>
+            ) : transaksiData.length === 0 ? (
+              <div className="bg-[#f9fafb] rounded-2xl border border-gray-100 p-6 text-center text-gray-400 italic">
+                Belum ada data pendapatan untuk toko ini.
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <ChartKeuangan data={transaksiData} />
+              </div>
+            )}
+          </div>
+        );
+      }}
     </MainLayout>
   );
 }

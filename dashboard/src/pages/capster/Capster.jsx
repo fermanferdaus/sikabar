@@ -1,8 +1,9 @@
 import MainLayout from "../../layouts/MainLayout";
 import useFetchCapster from "../../hooks/useFetchCapster";
 import useCapsterActions from "../../hooks/useCapsterActions";
+import TableData from "../../components/TableData";
 import { Link } from "react-router-dom";
-import { Pencil, Trash2, Search } from "lucide-react";
+import { Pencil, Trash2, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import ConfirmModal from "../../components/ConfirmModal";
 
@@ -10,9 +11,6 @@ export default function Capster() {
   const { capsters, loading, error } = useFetchCapster();
   const { deleteCapster } = useCapsterActions();
   const role = localStorage.getItem("role");
-
-  const [filteredCapster, setFilteredCapster] = useState([]);
-  const [search, setSearch] = useState("");
 
   const [alert, setAlert] = useState(null);
   const [showModal, setShowModal] = useState(false);
@@ -30,24 +28,12 @@ export default function Capster() {
     }
   }, []);
 
-  // 🔍 Filter otomatis saat search berubah
-  useEffect(() => {
-    const lower = search.toLowerCase();
-    const filtered = capsters.filter(
-      (c) =>
-        c.nama_capster.toLowerCase().includes(lower) ||
-        c.nama_store.toLowerCase().includes(lower)
-    );
-    setFilteredCapster(filtered);
-  }, [search, capsters]);
-
-  // 🗑️ Buka modal hapus
+  // 🗑️ Modal hapus
   const openDeleteModal = (capster) => {
     setSelectedCapster(capster);
     setShowModal(true);
   };
 
-  // 🗑️ Konfirmasi hapus
   const confirmDelete = async () => {
     if (!selectedCapster) return;
     setDeleting(true);
@@ -57,7 +43,7 @@ export default function Capster() {
       setSelectedCapster(null);
       setAlert({
         type: "success",
-        text: `Capster "${selectedCapster.nama_capster}" berhasil dihapus`,
+        text: `Capster "${selectedCapster.nama_capster}" berhasil dihapus.`,
       });
       setTimeout(() => setAlert(null), 4000);
     } catch (err) {
@@ -73,116 +59,129 @@ export default function Capster() {
 
   return (
     <MainLayout current="capster">
-      {/* 🔹 Header */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
-        <h1 className="text-2xl font-semibold text-slate-800">Data Capster</h1>
+      {(searchTerm) => {
+        const filtered = capsters.filter(
+          (c) =>
+            c.nama_capster.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.nama_store.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          {/* 🔍 Search Bar */}
-          <div className="relative w-full sm:w-64">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Cari nama capster / store..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        // 🔹 Kolom tabel
+        const columns = [
+          { key: "no", label: "#" },
+          { key: "nama_capster", label: "Nama Capster" },
+          { key: "nama_store", label: "Cabang" },
+          { key: "status", label: "Status" },
+        ];
+
+        if (role === "admin") columns.push({ key: "aksi", label: "Aksi" });
+
+        // 🔹 Data tabel
+        const data = filtered.map((c, i) => ({
+          no: i + 1,
+          nama_capster: c.nama_capster,
+          nama_store: c.nama_store,
+          status: (
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                c.status === "aktif"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-600"
+              }`}
+            >
+              {c.status}
+            </span>
+          ),
+          ...(role === "admin" && {
+            aksi: (
+              <div className="flex items-center justify-left gap-2">
+                <Link
+                  to={`/capster/edit/${c.id_capster}`}
+                  className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
+                  title="Edit"
+                >
+                  <Pencil size={16} />
+                </Link>
+                <button
+                  onClick={() => openDeleteModal(c)}
+                  className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
+                  title="Hapus"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ),
+          }),
+        }));
+
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
+              <div>
+                <h1 className="text-xl font-semibold text-slate-800">
+                  Data Capster
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Kelola daftar capster dan status aktif/nonaktif di setiap
+                  cabang.
+                </p>
+              </div>
+
+              {role === "admin" && (
+                <Link
+                  to="/capster/add"
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
+                >
+                  <Plus size={16} />
+                  Tambah Capster
+                </Link>
+              )}
+            </div>
+
+            {/* Alert */}
+            {alert && (
+              <div
+                className={`px-4 py-3 rounded-lg text-sm font-medium border ${
+                  alert.type === "success"
+                    ? "bg-green-50 border-green-200 text-green-700"
+                    : "bg-red-50 border-red-200 text-red-700"
+                }`}
+              >
+                {alert.text}
+              </div>
+            )}
+
+            {/* Table */}
+            {loading ? (
+              <p className="text-gray-500">Memuat data...</p>
+            ) : error ? (
+              <p className="text-red-500">{error}</p>
+            ) : filtered.length === 0 ? (
+              <p className="text-gray-500">Capster tidak ditemukan.</p>
+            ) : (
+              <TableData
+                columns={columns}
+                data={data}
+                searchTerm={searchTerm}
+              />
+            )}
+
+            {/* Modal Konfirmasi Hapus */}
+            <ConfirmModal
+              open={showModal}
+              onClose={() => setShowModal(false)}
+              onConfirm={confirmDelete}
+              loading={deleting}
+              message={
+                selectedCapster
+                  ? `Apakah Anda yakin ingin menghapus capster "${selectedCapster.nama_capster}"?`
+                  : "Apakah Anda yakin ingin menghapus data ini?"
+              }
             />
           </div>
-
-          {role === "admin" && (
-            <Link
-              to="/capster/add"
-              className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition"
-            >
-              + Tambah Capster
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* 🔔 Alert Notification */}
-      {alert && (
-        <div
-          className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-300 ${
-            alert.type === "success"
-              ? "bg-green-100 text-green-800 border border-green-300"
-              : "bg-red-100 text-red-800 border border-red-300"
-          }`}
-        >
-          {alert.text}
-        </div>
-      )}
-
-      {/* 🔹 Tabel */}
-      {loading ? (
-        <p className="text-gray-500">Memuat data...</p>
-      ) : error ? (
-        <p className="text-red-500">{error}</p>
-      ) : filteredCapster.length === 0 ? (
-        <p className="text-gray-500">Capster tidak ditemukan.</p>
-      ) : (
-        <div className="overflow-x-auto bg-white border rounded-xl shadow-sm">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-gray-100 text-gray-700">
-              <tr>
-                <th className="p-3 border">#</th>
-                <th className="p-3 border text-left">Nama Capster</th>
-                <th className="p-3 border text-left">Store</th>
-                {role === "admin" && (
-                  <th className="p-3 border text-center">Aksi</th>
-                )}
-              </tr>
-            </thead>
-
-            <tbody className="text-gray-700">
-              {filteredCapster.map((c, i) => (
-                <tr key={c.id_capster} className="hover:bg-gray-50 transition">
-                  <td className="p-3 border text-center">{i + 1}</td>
-                  <td className="p-3 border">{c.nama_capster}</td>
-                  <td className="p-3 border">{c.nama_store}</td>
-                  {role === "admin" && (
-                    <td className="p-3 border text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Link
-                          to={`/capster/edit/${c.id_capster}`}
-                          className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
-                          title="Edit"
-                        >
-                          <Pencil size={16} />
-                        </Link>
-                        <button
-                          onClick={() => openDeleteModal(c)}
-                          className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
-                          title="Hapus"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* 🗑️ Modal Konfirmasi Hapus */}
-      <ConfirmModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        onConfirm={confirmDelete}
-        loading={deleting}
-        message={
-          selectedCapster
-            ? `Apakah Anda yakin ingin menghapus capster "${selectedCapster.nama_capster}"?`
-            : "Apakah Anda yakin ingin menghapus data ini?"
-        }
-      />
+        );
+      }}
     </MainLayout>
   );
 }

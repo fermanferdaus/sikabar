@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import useFetchKomisiSetting from "../../hooks/useFetchKomisiSetting";
 import { formatTanggalJam } from "../../utils/dateFormatter";
+import { Pencil, Trash2 } from "lucide-react";
 import ConfirmModal from "../../components/ConfirmModal";
-import { Pencil, Trash2, Search } from "lucide-react";
+import TableData from "../../components/TableData";
 
 export default function KomisiSetting() {
   const { data, loading, error, deleteKomisi } = useFetchKomisiSetting();
@@ -14,7 +15,6 @@ export default function KomisiSetting() {
   const [showModal, setShowModal] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [selectedStore, setSelectedStore] = useState(null);
-  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const savedMessage = localStorage.getItem("komisiMessage");
@@ -52,130 +52,106 @@ export default function KomisiSetting() {
     }
   };
 
-  const filteredData = data.filter((item) =>
-    item.nama_store.toLowerCase().includes(search.toLowerCase())
-  );
-
   return (
     <MainLayout current="komisi setting">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-3">
-        <h1 className="text-2xl font-semibold text-slate-800">
-          Pengaturan Komisi Capster
-        </h1>
+      {(searchTerm) => {
+        const filtered = data.filter((item) =>
+          item.nama_store.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
-        <div className="flex flex-col sm:flex-row gap-3 items-center">
-          <div className="relative w-full sm:w-64">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Cari nama store..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        const columns = [
+          { key: "no", label: "#" },
+          { key: "nama_store", label: "Nama Store" },
+          { key: "persentase_capster", label: "Persentase Capster (%)" },
+          { key: "updated_at", label: "Update Terakhir" },
+          { key: "aksi", label: "Aksi" },
+        ];
+
+        const tableData = filtered.map((item, i) => ({
+          no: i + 1,
+          nama_store: item.nama_store,
+          persentase_capster: (
+            <div className="text-left text-blue-700 font-medium">
+              {Math.floor(item.persentase_capster)}%
+            </div>
+          ),
+          updated_at: (
+            <div className="text-left">{formatTanggalJam(item.updated_at)}</div>
+          ),
+          aksi: (
+            <div className="flex items-center justify-left gap-2">
+              <button
+                onClick={() => navigate(`/komisi-setting/edit/${item.id_setting}`)}
+                className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
+                title="Edit"
+              >
+                <Pencil size={16} />
+              </button>
+              <button
+                onClick={() => handleDelete(item.id_setting, item.nama_store)}
+                className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
+                title="Hapus"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ),
+        }));
+
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
+            {/* === Header === */}
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-gray-100 pb-4 gap-3">
+              <div>
+                <h1 className="text-xl font-semibold text-slate-800">
+                  Pengaturan Komisi Capster
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Atur persentase komisi untuk setiap cabang/barbershop.
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate("/komisi-setting/add")}
+                className="bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2 rounded-lg font-medium transition"
+              >
+                + Tambah Komisi
+              </button>
+            </div>
+
+            {/* === Notifikasi === */}
+            {notif && (
+              <div
+                className={`px-4 py-3 rounded-lg text-sm font-medium border ${
+                  notif.type === "success"
+                    ? "bg-green-50 text-green-700 border-green-200"
+                    : "bg-red-50 text-red-700 border-red-200"
+                }`}
+              >
+                {notif.text}
+              </div>
+            )}
+
+            {/* === Konten === */}
+            {loading ? (
+              <p className="text-gray-500">Memuat data komisi...</p>
+            ) : error ? (
+              <p className="text-red-500">{error}</p>
+            ) : filtered.length === 0 ? (
+              <p className="text-gray-500">Data tidak ditemukan.</p>
+            ) : (
+              <TableData columns={columns} data={tableData} />
+            )}
+
+            <ConfirmModal
+              open={showModal}
+              onClose={() => setShowModal(false)}
+              onConfirm={confirmDelete}
+              message={`Apakah Anda yakin ingin menghapus pengaturan komisi untuk store "${selectedStore}"?`}
             />
           </div>
-          <button
-            onClick={() => navigate("/komisi-setting/add")}
-            className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium transition"
-          >
-            + Tambah Komisi
-          </button>
-        </div>
-      </div>
-
-      {notif && (
-        <div
-          className={`mb-5 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-300 ${
-            notif.type === "success"
-              ? "bg-green-100 text-green-800 border border-green-300"
-              : "bg-red-100 text-red-800 border border-red-300"
-          }`}
-        >
-          {notif.text}
-        </div>
-      )}
-
-      {loading ? (
-        <p className="text-gray-500">Memuat data komisi...</p>
-      ) : error ? (
-        <p className="text-red-500">{error}</p>
-      ) : (
-        <div className="bg-white border rounded-xl p-6 shadow-sm overflow-x-auto">
-          <table className="min-w-full border-collapse text-sm">
-            <thead className="bg-gray-100 text-gray-700">
-              <tr>
-                <th className="p-3 border text-left">ID Setting</th>
-                <th className="p-3 border text-left">Store</th>
-                <th className="p-3 border text-center">
-                  Persentase Capster (%)
-                </th>
-                <th className="p-3 border text-center">Update Terakhir</th>
-                <th className="p-3 border text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="text-center text-gray-500 py-6 border italic"
-                  >
-                    Tidak ada data yang cocok.
-                  </td>
-                </tr>
-              ) : (
-                filteredData.map((item) => (
-                  <tr
-                    key={item.id_setting}
-                    className="hover:bg-gray-50 transition"
-                  >
-                    <td className="p-3 border">{item.id_setting}</td>
-                    <td className="p-3 border">{item.nama_store}</td>
-                    <td className="p-3 border text-center text-blue-700 font-medium">
-                      {Math.floor(item.persentase_capster)}%
-                    </td>
-                    <td className="p-3 border text-center">
-                      {formatTanggalJam(item.updated_at)}
-                    </td>
-                    <td className="p-3 border text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() =>
-                            navigate(`/komisi-setting/edit/${item.id_setting}`)
-                          }
-                          className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
-                          title="Edit"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleDelete(item.id_setting, item.nama_store)
-                          }
-                          className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
-                          title="Hapus"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <ConfirmModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        onConfirm={confirmDelete}
-        message={`Apakah Anda yakin ingin menghapus pengaturan komisi untuk store "${selectedStore}"?`}
-      />
+        );
+      }}
     </MainLayout>
   );
 }
