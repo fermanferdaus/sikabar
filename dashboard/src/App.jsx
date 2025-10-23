@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/dashboard/Dashboard";
+import DashboardKasir from "./pages/dashboard/DashboardKasir";
 import Produk from "./pages/produk/Produk";
 import Capster from "./pages/capster/Capster";
 import Transaksi from "./pages/transaksi/Transaksi";
@@ -24,6 +25,15 @@ import ProdukEdit from "./pages/produk/ProdukEdit";
 import ProdukKasir from "./pages/produk/ProdukKasir";
 import ProdukAddKasir from "./pages/produk/ProdukAddKasir";
 import ProdukEditKasir from "./pages/produk/ProdukEditKasir";
+import CapsterAdd from "./pages/capster/CapsterAdd";
+import CapsterEdit from "./pages/capster/CapsterEdit";
+import PricelistAdd from "./pages/pricelist/PricelistAdd";
+import PricelistEdit from "./pages/pricelist/PricelistEdit";
+import UsersAdd from "./pages/users/UsersAdd";
+import UsersEdit from "./pages/users/UsersEdit";
+import CapsterKasir from "./pages/capster/CapsterKasir";
+import CapsterAddKasir from "./pages/capster/CapsterAddKasir";
+import CapsterEditKasir from "./pages/capster/CapsterEditKasir";
 
 export default function App() {
   return (
@@ -41,6 +51,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/dashboard/kasir"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <DashboardKasir />
+            </ProtectedRoute>
+          }
+        />
 
         {/* CAPSTER - Admin */}
         <Route
@@ -48,6 +66,46 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <Capster />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/capster/add"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CapsterAdd />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/capster/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CapsterEdit />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/capster/kasir"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <CapsterKasir />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/capster/addkasir"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <CapsterAddKasir />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/capster/editkasir/:id"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <CapsterEditKasir />
             </ProtectedRoute>
           }
         />
@@ -102,7 +160,7 @@ export default function App() {
           path="/produk/addkasir"
           element={
             <ProtectedRoute allowedRoles={["kasir"]}>
-              <ProdukAddKasir  />
+              <ProdukAddKasir />
             </ProtectedRoute>
           }
         />
@@ -110,7 +168,7 @@ export default function App() {
           path="/produk/editkasir/:id_produk"
           element={
             <ProtectedRoute allowedRoles={["kasir"]}>
-              <ProdukEditKasir  />
+              <ProdukEditKasir />
             </ProtectedRoute>
           }
         />
@@ -185,6 +243,23 @@ export default function App() {
         />
 
         <Route
+          path="/users/add"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UsersAdd />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UsersEdit />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/store"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
@@ -214,6 +289,22 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <Pricelist />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pricelist/add"
+          element={
+            <ProtectedRoute>
+              <PricelistAdd />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pricelist/edit/:id"
+          element={
+            <ProtectedRoute>
+              <PricelistEdit />
             </ProtectedRoute>
           }
         />

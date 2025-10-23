@@ -11,12 +11,43 @@ export default function StoreAdd() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.nama_store || !form.alamat)
-      return alert("Semua kolom wajib diisi!");
+
+    // Validasi input
+    if (!form.nama_store || !form.alamat) {
+      setTimeout(() => alert("Semua kolom wajib diisi!"), 0);
+      return;
+    }
+
     setLoading(true);
-    await addStore(form);
-    setLoading(false);
-    navigate("/store");
+    try {
+      await addStore({
+        nama_store: form.nama_store,
+        alamat_store: form.alamat, // kirim key yang sesuai
+      });
+
+      // ✅ Simpan pesan sukses ke localStorage agar bisa ditampilkan di halaman Store
+      localStorage.setItem(
+        "storeMessage",
+        JSON.stringify({
+          type: "success",
+          text: `Store "${form.nama_store}" berhasil ditambahkan.`,
+        })
+      );
+
+      navigate("/store");
+    } catch (err) {
+      // Jika gagal, kirim pesan error
+      localStorage.setItem(
+        "storeMessage",
+        JSON.stringify({
+          type: "error",
+          text: `Gagal menambahkan store: ${err.message}`,
+        })
+      );
+      navigate("/store");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

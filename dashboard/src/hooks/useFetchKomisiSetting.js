@@ -8,7 +8,7 @@ export default function useFetchKomisiSetting() {
   const API_URL = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem("token");
 
-  // Ambil semua komisi setting
+  // === Ambil semua data komisi setting ===
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -25,7 +25,7 @@ export default function useFetchKomisiSetting() {
     }
   };
 
-  // Tambah komisi setting
+  // === Tambah komisi setting ===
   const addKomisi = async (newData) => {
     try {
       const res = await fetch(`${API_URL}/komisi-setting`, {
@@ -39,11 +39,12 @@ export default function useFetchKomisiSetting() {
       if (!res.ok) throw new Error("Gagal menambahkan data komisi");
       await fetchData();
     } catch (err) {
-      alert(err.message);
+      console.error("❌ Error addKomisi:", err);
+      throw err;
     }
   };
 
-  // Update komisi setting
+  // === Update komisi setting ===
   const updateKomisi = async (id_setting, updatedData) => {
     try {
       const res = await fetch(`${API_URL}/komisi-setting/${id_setting}`, {
@@ -57,13 +58,13 @@ export default function useFetchKomisiSetting() {
       if (!res.ok) throw new Error("Gagal memperbarui data komisi");
       await fetchData();
     } catch (err) {
-      alert(err.message);
+      console.error("❌ Error updateKomisi:", err);
+      throw err;
     }
   };
 
-  // Hapus komisi setting
+  // === Hapus komisi setting (tanpa window.confirm) ===
   const deleteKomisi = async (id_setting) => {
-    if (!confirm("Yakin ingin menghapus data ini?")) return;
     try {
       const res = await fetch(`${API_URL}/komisi-setting/${id_setting}`, {
         method: "DELETE",
@@ -72,7 +73,8 @@ export default function useFetchKomisiSetting() {
       if (!res.ok) throw new Error("Gagal menghapus data komisi");
       await fetchData();
     } catch (err) {
-      alert(err.message);
+      console.error("❌ Error deleteKomisi:", err);
+      throw err;
     }
   };
 
@@ -80,5 +82,12 @@ export default function useFetchKomisiSetting() {
     fetchData();
   }, []);
 
-  return { data, loading, error, addKomisi, updateKomisi, deleteKomisi };
+  return {
+    data,
+    loading,
+    error,
+    addKomisi,
+    updateKomisi,
+    deleteKomisi,
+  };
 }

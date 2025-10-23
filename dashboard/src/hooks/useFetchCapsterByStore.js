@@ -17,8 +17,8 @@ export default function useFetchCapsterByStore(id_store) {
 
     const fetchCapsters = async () => {
       try {
-        console.log("📡 Fetching:", `${API_URL}/capster/store/${id_store}`);
-        const res = await fetch(`${API_URL}/capster/store/${id_store}`, {
+        console.log("📡 Fetching:", `${API_URL}/capster/kasir/store/${id_store}`);
+        const res = await fetch(`${API_URL}/capster/kasir/store/${id_store}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 

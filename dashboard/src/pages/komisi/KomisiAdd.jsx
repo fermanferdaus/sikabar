@@ -11,24 +11,43 @@ export default function KomisiAdd() {
     loading: loadingStores,
     error: errorStores,
   } = useFetchStore();
+
   const [form, setForm] = useState({ id_store: "", persentase_capster: "" });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.id_store || !form.persentase_capster)
-      return alert("Semua kolom wajib diisi!");
+    if (!form.id_store || !form.persentase_capster) {
+      alert("Semua kolom wajib diisi!");
+      return;
+    }
 
     setLoading(true);
-    await addKomisi(form);
-    setLoading(false);
-    navigate("/komisi-setting");
+    try {
+      await addKomisi(form);
+
+      // 💬 Simpan notifikasi untuk halaman KomisiSetting
+      localStorage.setItem(
+        "komisiMessage",
+        JSON.stringify({
+          type: "success",
+          text: "Pengaturan komisi berhasil ditambahkan.",
+        })
+      );
+
+      // ⏩ Langsung redirect
+      navigate("/komisi-setting");
+    } catch (err) {
+      alert("Gagal menambah pengaturan komisi: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // 🔹 Hanya izinkan angka bulat
+  // 🔢 Hanya izinkan angka bulat
   const handlePercentageChange = (e) => {
-    const value = e.target.value.replace(/\D/g, ""); // hapus non-digit
+    const value = e.target.value.replace(/\D/g, "");
     setForm({ ...form, persentase_capster: value });
   };
 

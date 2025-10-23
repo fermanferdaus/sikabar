@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import useProdukAPI from "../../hooks/useProdukAPI";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Pencil, Trash2, Search } from "lucide-react"; // 🔍 Tambahkan ikon Search
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function ProdukKasir() {
   const navigate = useNavigate();
@@ -12,6 +13,8 @@ export default function ProdukKasir() {
   const nama_user = localStorage.getItem("nama_user");
 
   const [produk, setProduk] = useState([]);
+  const [filteredProduk, setFilteredProduk] = useState([]);
+  const [search, setSearch] = useState("");
   const [storeName, setStoreName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,6 +39,7 @@ export default function ProdukKasir() {
     try {
       const data = await getProdukByStore(id_store);
       setProduk(data);
+      setFilteredProduk(data);
       if (data.length > 0) setStoreName(data[0].nama_store || "");
     } catch (err) {
       setError(err.message);
@@ -52,6 +56,15 @@ export default function ProdukKasir() {
       loadProduk();
     }
   }, [id_store]);
+
+  // 🔍 Filter produk otomatis setiap kali search berubah
+  useEffect(() => {
+    const lower = search.toLowerCase();
+    const filtered = produk.filter((p) =>
+      p.nama_produk.toLowerCase().includes(lower)
+    );
+    setFilteredProduk(filtered);
+  }, [search, produk]);
 
   // ➕ Tambah produk baru
   const handleAddProduk = () => {
@@ -111,11 +124,27 @@ export default function ProdukKasir() {
   return (
     <MainLayout current="produk">
       {/* 🔹 Header Halaman */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
         <h1 className="text-2xl font-semibold text-slate-800">
           Stok Produk – {storeName || `Store #${id_store}`}
         </h1>
-        <div className="flex items-center gap-3">
+
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          {/* 🔍 Search Bar */}
+          <div className="relative w-full sm:w-64">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Cari nama produk..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+
           <button
             onClick={handleAddProduk}
             className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition"
@@ -143,8 +172,8 @@ export default function ProdukKasir() {
         <p className="text-gray-500">Memuat data...</p>
       ) : error ? (
         <p className="text-red-500">{error}</p>
-      ) : produk.length === 0 ? (
-        <p className="text-gray-500">Belum ada produk di toko Anda.</p>
+      ) : filteredProduk.length === 0 ? (
+        <p className="text-gray-500">Produk tidak ditemukan.</p>
       ) : (
         <div className="overflow-x-auto bg-white border rounded-xl shadow-sm">
           <table className="w-full border-collapse text-sm">
@@ -163,7 +192,7 @@ export default function ProdukKasir() {
               </tr>
             </thead>
             <tbody className="text-gray-700">
-              {produk.map((p, i) => (
+              {filteredProduk.map((p, i) => (
                 <tr key={p.id_produk} className="hover:bg-gray-50 transition">
                   <td className="p-3 border text-center">{i + 1}</td>
                   <td className="p-3 border">{p.nama_produk}</td>
@@ -206,7 +235,7 @@ export default function ProdukKasir() {
                 </td>
                 <td className="p-3 border text-center text-green-700">
                   Rp{" "}
-                  {produk
+                  {filteredProduk
                     .reduce((sum, p) => sum + (Number(p.total_laba) || 0), 0)
                     .toLocaleString("id-ID")}
                 </td>
@@ -217,51 +246,18 @@ export default function ProdukKasir() {
         </div>
       )}
 
-      {/* 🔸 Modal Konfirmasi Hapus */}
-      {showModal && selectedProduk && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-[90%] sm:w-[400px] relative">
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
-            >
-              <X size={20} />
-            </button>
-
-            <h2 className="text-lg font-semibold text-gray-800 mb-3">
-              Konfirmasi Hapus
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Apakah Anda yakin ingin menghapus{" "}
-              <span className="font-semibold text-red-600">
-                "{selectedProduk.nama_produk}"
-              </span>{" "}
-              dari toko Anda?
-            </p>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-                disabled={deleting}
-              >
-                Batal
-              </button>
-              <button
-                onClick={confirmDelete}
-                disabled={deleting}
-                className={`px-4 py-2 rounded-lg text-white transition ${
-                  deleting
-                    ? "bg-red-400 cursor-wait"
-                    : "bg-red-600 hover:bg-red-700"
-                }`}
-              >
-                {deleting ? "Menghapus..." : "Hapus"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 🗑️ Modal Konfirmasi Hapus */}
+      <ConfirmModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={confirmDelete}
+        loading={deleting}
+        message={
+          selectedProduk
+            ? `Apakah Anda yakin ingin menghapus produk "${selectedProduk.nama_produk}" dari toko Anda?`
+            : "Apakah Anda yakin ingin menghapus data ini?"
+        }
+      />
     </MainLayout>
   );
 }

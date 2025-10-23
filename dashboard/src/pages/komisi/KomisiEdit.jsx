@@ -20,7 +20,7 @@ export default function KomisiEdit() {
   });
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Ambil data komisi berdasarkan ID
+  // 🔹 Ambil data komisi sesuai ID
   useEffect(() => {
     const komisi = data.find((item) => String(item.id_setting) === String(id));
     if (komisi) {
@@ -31,21 +31,38 @@ export default function KomisiEdit() {
     }
   }, [id, data]);
 
-  // 🔹 Submit perubahan
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.id_store || !form.persentase_capster)
-      return alert("Semua kolom wajib diisi!");
+    if (!form.id_store || !form.persentase_capster) {
+      alert("Semua kolom wajib diisi!");
+      return;
+    }
 
     setLoading(true);
-    await updateKomisi(id, form);
-    setLoading(false);
-    navigate("/komisi-setting");
+    try {
+      await updateKomisi(id, form);
+
+      // 💬 Simpan notifikasi untuk halaman KomisiSetting
+      localStorage.setItem(
+        "komisiMessage",
+        JSON.stringify({
+          type: "success",
+          text: "Perubahan pengaturan komisi berhasil disimpan.",
+        })
+      );
+
+      // ⏩ Langsung redirect
+      navigate("/komisi-setting");
+    } catch (err) {
+      alert("Gagal menyimpan perubahan: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // 🔹 Hanya angka bulat
+  // 🔢 Hanya angka bulat
   const handlePercentageChange = (e) => {
-    const value = e.target.value.replace(/\D/g, ""); // hapus semua non-digit
+    const value = e.target.value.replace(/\D/g, "");
     setForm({ ...form, persentase_capster: value });
   };
 
@@ -62,7 +79,7 @@ export default function KomisiEdit() {
       ) : (
         <div className="bg-white border rounded-xl p-8 shadow-sm max-w-lg">
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* === Pilih Store (tidak bisa diubah) === */}
+            {/* === Pilih Store (tidak dapat diubah) === */}
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">
                 Toko
@@ -90,7 +107,6 @@ export default function KomisiEdit() {
               <input
                 type="text"
                 inputMode="numeric"
-                pattern="[0-9]*"
                 value={form.persentase_capster}
                 onChange={handlePercentageChange}
                 placeholder="Masukkan angka bulat (misal: 35)"

@@ -21,12 +21,15 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const role = localStorage.getItem("role");
 
+  // ==============================
+  // 📂 MENU BERDASARKAN ROLE
+  // ==============================
   const menuGroups = [
     {
       title: "MAIN MENU",
       items: [
         {
-          path: "/dashboard",
+          path: role === "kasir" ? "/dashboard/kasir" : "/dashboard",
           label: "Dashboard",
           icon: LayoutDashboard,
           roles: ["admin", "kasir"],
@@ -42,19 +45,17 @@ export default function Sidebar() {
           icon: ShoppingBag,
           roles: ["admin", "kasir"],
         },
-
         {
-          path: "/capster",
+          path: role === "kasir" ? "/capster/kasir" : "/capster",
           label: "Capster",
           icon: Scissors,
-          roles: ["admin"],
+          roles: ["admin", "kasir"],
         },
         { path: "/store", label: "Store", icon: Store, roles: ["admin"] },
         { path: "/pricelist", label: "Pricelist", icon: Tag, roles: ["admin"] },
         { path: "/users", label: "Users", icon: Users, roles: ["admin"] },
       ],
     },
-
     {
       title: "TRANSAKSI",
       items: [
@@ -79,7 +80,7 @@ export default function Sidebar() {
           path: "/komisi",
           label: "Komisi",
           icon: Coins,
-          roles: ["capster", "admin"],
+          roles: ["admin", "capster"],
         },
         {
           path: "/komisi-setting",
@@ -91,14 +92,20 @@ export default function Sidebar() {
     },
   ];
 
+  // ==============================
+  // 🚪 LOGOUT
+  // ==============================
   const handleLogout = () => {
     localStorage.clear();
     window.location.href = "/login";
   };
 
+  // ==============================
+  // 🎨 RENDER
+  // ==============================
   return (
     <>
-      {/* Tombol Hamburger (Mobile) */}
+      {/* Tombol hamburger (mobile) */}
       <button
         className="lg:hidden fixed top-4 left-4 z-50 bg-amber-600 text-white p-2 rounded-lg shadow-md hover:bg-amber-700 transition"
         onClick={() => setIsOpen(true)}
@@ -106,17 +113,17 @@ export default function Sidebar() {
         <Menu size={22} />
       </button>
 
-      {/* Overlay (Mobile) */}
+      {/* Overlay (mobile) */}
       {isOpen && (
         <div
           onClick={() => setIsOpen(false)}
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
-        ></div>
+        />
       )}
 
       {/* === SIDEBAR === */}
       <aside
-        className={`fixed top-0 left-0 h-screen w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-gray-100 flex flex-col shadow-xl transition-transform duration-300 z-50 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 h-screen w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-gray-100 flex flex-col shadow-xl transition-transform duration-300 z-50 ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -158,27 +165,18 @@ export default function Sidebar() {
                       .filter((i) => i.roles.includes(role))
                       .map((item) => {
                         const Icon = item.icon;
-
-                        let isActive =
+                        const isActive =
                           location.pathname === item.path ||
                           location.pathname.startsWith(item.path + "/");
 
-                        if (role === "kasir" && item.label === "Produk") {
-                          if (
-                            location.pathname.startsWith("/produk/addkasir") ||
-                            location.pathname.startsWith("/produk/editkasir")
-                          ) {
-                            isActive = true;
-                          }
-                        }
+                        // Kasir - aktifkan sub path seperti /capster/addkasir dan /capster/editkasir
+                        const kasirExtraActive =
+                          role === "kasir" &&
+                          item.label === "Capster" &&
+                          (location.pathname.startsWith("/capster/addkasir") ||
+                            location.pathname.startsWith("/capster/editkasir"));
 
-                        if (
-                          role === "admin" &&
-                          item.label === "Transaksi" &&
-                          location.pathname.startsWith("/transaksi/store")
-                        ) {
-                          isActive = true;
-                        }
+                        const finalActive = isActive || kasirExtraActive;
 
                         return (
                           <Link
@@ -186,7 +184,7 @@ export default function Sidebar() {
                             to={item.path}
                             onClick={() => setIsOpen(false)}
                             className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 ${
-                              isActive
+                              finalActive
                                 ? "bg-amber-600 text-white shadow-inner"
                                 : "text-gray-300 hover:bg-gray-700 hover:text-white"
                             }`}

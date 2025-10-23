@@ -10,8 +10,8 @@ export default function useFetchStore() {
 
   // 🔹 Ambil semua data store
   const fetchStore = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const res = await fetch(`${API_URL}/store`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -34,13 +34,21 @@ export default function useFetchStore() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(store),
+        body: JSON.stringify({
+          nama_store: store.nama_store,
+          alamat_store: store.alamat_store, // ✅ gunakan key yang dikirim dari StoreAdd.jsx
+        }),
       });
-      if (!res.ok) throw new Error("Gagal menambahkan store");
+
+      if (!res.ok) {
+        const errMsg = await res.text();
+        throw new Error(`Gagal menambahkan store: ${errMsg}`);
+      }
+
       await fetchStore();
-      alert("Store berhasil ditambahkan!");
     } catch (err) {
-      alert(err.message);
+      console.error("❌ Error addStore:", err);
+      throw err;
     }
   };
 
@@ -57,16 +65,14 @@ export default function useFetchStore() {
       });
       if (!res.ok) throw new Error("Gagal memperbarui store");
       await fetchStore();
-      alert("Store berhasil diperbarui!");
     } catch (err) {
-      alert(err.message);
+      console.error("❌ Error updateStore:", err);
+      throw err;
     }
   };
 
-  // 🔹 Hapus store
+  // 🔹 Hapus store (tanpa confirm bawaan browser)
   const deleteStore = async (id_store) => {
-    const confirmDelete = window.confirm("Yakin ingin menghapus store ini?");
-    if (!confirmDelete) return;
     try {
       const res = await fetch(`${API_URL}/store/${id_store}`, {
         method: "DELETE",
@@ -74,9 +80,9 @@ export default function useFetchStore() {
       });
       if (!res.ok) throw new Error("Gagal menghapus store");
       await fetchStore();
-      alert("Store berhasil dihapus!");
     } catch (err) {
-      alert(err.message);
+      console.error("❌ Error deleteStore:", err);
+      throw err;
     }
   };
 

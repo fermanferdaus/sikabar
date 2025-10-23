@@ -1,15 +1,14 @@
-import MainLayout from "../../layouts/MainLayout";
-import useFetchCapster from "../../hooks/useFetchCapster";
-import useCapsterActions from "../../hooks/useCapsterActions";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Pencil, Trash2, Search } from "lucide-react";
-import { useState, useEffect } from "react";
+import MainLayout from "../../layouts/MainLayout";
+import { Pencil, Trash2, PlusCircle, Search } from "lucide-react"; // 🔍 Tambahkan ikon Search
+import useCapsterKasir from "../../hooks/useCapsterKasir";
 import ConfirmModal from "../../components/ConfirmModal";
 
-export default function Capster() {
-  const { capsters, loading, error } = useFetchCapster();
-  const { deleteCapster } = useCapsterActions();
-  const role = localStorage.getItem("role");
+export default function CapsterKasir() {
+  const id_store = localStorage.getItem("id_store");
+  const { capsters, loading, error, fetchCapsters, deleteCapster } =
+    useCapsterKasir(id_store);
 
   const [filteredCapster, setFilteredCapster] = useState([]);
   const [search, setSearch] = useState("");
@@ -19,24 +18,26 @@ export default function Capster() {
   const [selectedCapster, setSelectedCapster] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // 🚨 Ambil pesan dari localStorage
+  // 🚨 Ambil pesan dari localStorage (dikirim dari Add/Edit)
   useEffect(() => {
-    const message = localStorage.getItem("capsterMessage");
+    const message = localStorage.getItem("capsterMessageKasir");
     if (message) {
       setAlert(JSON.parse(message));
-      localStorage.removeItem("capsterMessage");
+      localStorage.removeItem("capsterMessageKasir");
       const timer = setTimeout(() => setAlert(null), 4000);
       return () => clearTimeout(timer);
     }
   }, []);
 
-  // 🔍 Filter otomatis saat search berubah
+  useEffect(() => {
+    fetchCapsters();
+  }, []);
+
+  // 🔍 Filter otomatis saat mengetik di search bar
   useEffect(() => {
     const lower = search.toLowerCase();
-    const filtered = capsters.filter(
-      (c) =>
-        c.nama_capster.toLowerCase().includes(lower) ||
-        c.nama_store.toLowerCase().includes(lower)
+    const filtered = capsters.filter((c) =>
+      c.nama_capster.toLowerCase().includes(lower)
     );
     setFilteredCapster(filtered);
   }, [search, capsters]);
@@ -60,6 +61,7 @@ export default function Capster() {
         text: `Capster "${selectedCapster.nama_capster}" berhasil dihapus`,
       });
       setTimeout(() => setAlert(null), 4000);
+      fetchCapsters();
     } catch (err) {
       setAlert({
         type: "error",
@@ -75,7 +77,9 @@ export default function Capster() {
     <MainLayout current="capster">
       {/* 🔹 Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-3">
-        <h1 className="text-2xl font-semibold text-slate-800">Data Capster</h1>
+        <h1 className="text-2xl font-semibold text-slate-800">
+          Data Capster Toko
+        </h1>
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
           {/* 🔍 Search Bar */}
@@ -86,21 +90,19 @@ export default function Capster() {
             />
             <input
               type="text"
-              placeholder="Cari nama capster / store..."
+              placeholder="Cari nama capster..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           </div>
 
-          {role === "admin" && (
-            <Link
-              to="/capster/add"
-              className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition"
-            >
-              + Tambah Capster
-            </Link>
-          )}
+          <Link
+            to="/capster/addkasir"
+            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition"
+          >
+            <PlusCircle size={18} /> Tambah Capster
+          </Link>
         </div>
       </div>
 
@@ -117,13 +119,13 @@ export default function Capster() {
         </div>
       )}
 
-      {/* 🔹 Tabel */}
+      {/* 🔹 Tabel Capster */}
       {loading ? (
-        <p className="text-gray-500">Memuat data...</p>
+        <p className="text-gray-500 italic">Memuat data capster...</p>
       ) : error ? (
-        <p className="text-red-500">{error}</p>
+        <p className="text-red-600">{error}</p>
       ) : filteredCapster.length === 0 ? (
-        <p className="text-gray-500">Capster tidak ditemukan.</p>
+        <p className="text-gray-500 italic">Capster tidak ditemukan.</p>
       ) : (
         <div className="overflow-x-auto bg-white border rounded-xl shadow-sm">
           <table className="w-full border-collapse text-sm">
@@ -131,39 +133,44 @@ export default function Capster() {
               <tr>
                 <th className="p-3 border">#</th>
                 <th className="p-3 border text-left">Nama Capster</th>
-                <th className="p-3 border text-left">Store</th>
-                {role === "admin" && (
-                  <th className="p-3 border text-center">Aksi</th>
-                )}
+                <th className="p-3 border text-center">Status</th>
+                <th className="p-3 border text-center">Aksi</th>
               </tr>
             </thead>
-
             <tbody className="text-gray-700">
               {filteredCapster.map((c, i) => (
                 <tr key={c.id_capster} className="hover:bg-gray-50 transition">
                   <td className="p-3 border text-center">{i + 1}</td>
                   <td className="p-3 border">{c.nama_capster}</td>
-                  <td className="p-3 border">{c.nama_store}</td>
-                  {role === "admin" && (
-                    <td className="p-3 border text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Link
-                          to={`/capster/edit/${c.id_capster}`}
-                          className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
-                          title="Edit"
-                        >
-                          <Pencil size={16} />
-                        </Link>
-                        <button
-                          onClick={() => openDeleteModal(c)}
-                          className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
-                          title="Hapus"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  )}
+                  <td className="p-3 border text-center">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        c.status === "aktif"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-600"
+                      }`}
+                    >
+                      {c.status}
+                    </span>
+                  </td>
+                  <td className="p-3 border text-center">
+                    <div className="flex justify-center gap-2">
+                      <Link
+                        to={`/capster/editkasir/${c.id_capster}`}
+                        className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md"
+                        title="Edit"
+                      >
+                        <Pencil size={16} />
+                      </Link>
+                      <button
+                        onClick={() => openDeleteModal(c)}
+                        className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
+                        title="Hapus"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

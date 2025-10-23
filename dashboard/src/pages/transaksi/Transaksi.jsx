@@ -9,14 +9,13 @@ import {
   Layers,
   CreditCard,
   Trash,
-  XCircle,
+  Search,
 } from "lucide-react";
+import ConfirmModal from "../../components/ConfirmModal";
 
-// 🔢 Helper: format Rupiah
 const formatRupiah = (angka) =>
   "Rp" + Number(angka || 0).toLocaleString("id-ID");
 
-// 🔢 Nomor struk unik
 const generateNomorStruk = () => {
   const now = new Date();
   const tanggal = now
@@ -48,7 +47,6 @@ export default function TransaksiAdd() {
   const { produk } = useFetchProduk(id_store);
   const { capsters } = useFetchCapsterByStore(id_store);
 
-  // 🔄 Hitung subtotal otomatis
   useEffect(() => {
     const total = items.reduce(
       (sum, i) => sum + Number(i.harga || 0) * Number(i.jumlah || 1),
@@ -57,7 +55,6 @@ export default function TransaksiAdd() {
     setSubtotal(total);
   }, [items]);
 
-  // 🧠 Tambah item
   const addItem = (item) => {
     setItems((prev) => {
       const existingIndex = prev.findIndex((i) => {
@@ -90,7 +87,6 @@ export default function TransaksiAdd() {
     });
   };
 
-  // 🟢 Simpan transaksi
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!tipeTransaksi) return alert("Pilih tipe transaksi terlebih dahulu!");
@@ -116,7 +112,6 @@ export default function TransaksiAdd() {
     });
 
     const result = await res.json();
-
     if (res.ok) {
       alert(`✅ Transaksi berhasil!\nNomor Struk: ${noStruk}`);
       window.open(`${API_URL}/struk/print/${result.id}`, "_blank");
@@ -136,7 +131,7 @@ export default function TransaksiAdd() {
         Tambah Transaksi
       </h1>
 
-      {/* === PILIH TIPE TRANSAKSI === */}
+      {/* === PILIH JENIS TRANSAKSI === */}
       <div>
         <h2 className="font-semibold mb-3 text-gray-700">Pilih Jenis</h2>
         <div className="grid grid-cols-3 gap-4">
@@ -171,7 +166,7 @@ export default function TransaksiAdd() {
 
       {/* === PILIH ITEM === */}
       {tipeTransaksi && (
-        <div className="bg-white p-5 border rounded-xl shadow-sm mt-5">
+        <div className="bg-white p-5 border rounded-xl shadow-sm mt-5 space-y-8">
           {tipeTransaksi !== "produk" && (
             <ServiceGrid
               capsters={capsters}
@@ -223,29 +218,53 @@ export default function TransaksiAdd() {
             ))}
           </div>
 
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="Masukkan jumlah bayar"
-            value={
-              jumlahBayar
-                ? "Rp" +
-                  jumlahBayar.toLocaleString("id-ID", {
-                    minimumFractionDigits: 0,
-                  })
-                : ""
-            }
-            onChange={(e) => {
-              const numericValue = e.target.value.replace(/\D/g, "");
-              const cleanValue = numericValue.replace(/^0+/, "");
-              setJumlahBayar(Number(cleanValue || 0));
-            }}
-            className="border rounded-lg px-4 py-2 w-full text-right font-medium tracking-wide"
-          />
+          <div>
+            <label className="block text-gray-700 font-medium mb-1">
+              Jumlah Bayar
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="Masukkan jumlah bayar"
+              value={
+                jumlahBayar
+                  ? "Rp" +
+                    jumlahBayar.toLocaleString("id-ID", {
+                      minimumFractionDigits: 0,
+                    })
+                  : ""
+              }
+              onChange={(e) => {
+                const numericValue = e.target.value.replace(/\D/g, "");
+                const cleanValue = numericValue.replace(/^0+/, "");
+                setJumlahBayar(Number(cleanValue || 0));
+              }}
+              className="border rounded-lg px-4 py-2 w-full text-right font-medium tracking-wide"
+            />
+          </div>
+
+          {jumlahBayar > 0 && (
+            <div className="text-right mt-2">
+              {jumlahBayar >= subtotal ? (
+                <p className="text-green-600 font-semibold">
+                  Kembalian: {formatRupiah(jumlahBayar - subtotal)}
+                </p>
+              ) : (
+                <p className="text-red-600 font-semibold">
+                  Kurang: {formatRupiah(subtotal - jumlahBayar)}
+                </p>
+              )}
+            </div>
+          )}
 
           <button
             onClick={handleSubmit}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition-all"
+            disabled={jumlahBayar < subtotal}
+            className={`w-full font-medium py-3 rounded-lg transition-all ${
+              jumlahBayar < subtotal
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700 text-white"
+            }`}
           >
             Simpan & Cetak Struk
           </button>
@@ -259,27 +278,54 @@ export default function TransaksiAdd() {
 function ServiceGrid({ services, capsters, onAdd }) {
   const [selectedCapster, setCapster] = useState(null);
   const [showWarning, setShowWarning] = useState(false);
+  const [searchCapster, setSearchCapster] = useState("");
+  const [searchService, setSearchService] = useState("");
+
+  const filteredCapster = capsters.filter((c) =>
+    c.nama_capster.toLowerCase().includes(searchCapster.toLowerCase())
+  );
+  const filteredService = services.filter((s) =>
+    s.service.toLowerCase().includes(searchService.toLowerCase())
+  );
 
   return (
-    <div className="relative">
-      <h4 className="font-medium text-gray-700 mb-2">Pilih Capster</h4>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {capsters.map((c) => (
-          <button
-            key={c.id_capster}
-            onClick={() => {
-              setCapster(c.id_capster);
-              setShowWarning(false);
-            }}
-            className={`px-3 py-2 rounded-lg border text-sm transition-all ${
-              selectedCapster === c.id_capster
-                ? "bg-blue-600 text-white border-blue-700"
-                : "bg-gray-100 hover:bg-blue-50"
-            }`}
-          >
-            {c.nama_capster}
-          </button>
-        ))}
+    <div className="relative space-y-6">
+      {/* CAPSTER */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <h4 className="font-medium text-gray-700">Pilih Capster</h4>
+          <div className="relative">
+            <Search
+              size={16}
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Cari capster..."
+              value={searchCapster}
+              onChange={(e) => setSearchCapster(e.target.value)}
+              className="border pl-8 pr-2 py-1 rounded-lg text-sm w-48 focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {filteredCapster.map((c) => (
+            <button
+              key={c.id_capster}
+              onClick={() => {
+                setCapster(c.id_capster);
+                setShowWarning(false);
+              }}
+              className={`px-3 py-2 rounded-lg border text-sm transition-all ${
+                selectedCapster === c.id_capster
+                  ? "bg-blue-600 text-white border-blue-700"
+                  : "bg-gray-100 hover:bg-blue-50"
+              }`}
+            >
+              {c.nama_capster}
+            </button>
+          ))}
+        </div>
       </div>
 
       {showWarning && (
@@ -288,31 +334,49 @@ function ServiceGrid({ services, capsters, onAdd }) {
         </div>
       )}
 
-      <h3 className="font-medium text-gray-700 mb-3">Pilih Layanan</h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {services.map((s) => (
-          <button
-            key={s.id_pricelist}
-            onClick={() => {
-              if (!selectedCapster) return setShowWarning(true);
-              onAdd({
-                tipe: "service",
-                id_pricelist: s.id_pricelist,
-                id_capster: selectedCapster,
-                nama: s.service,
-                harga: Number(s.harga),
-                total: Number(s.harga),
-              });
-            }}
-            className="border rounded-lg p-3 hover:bg-blue-50 transition-all flex flex-col items-center"
-          >
-            <Scissors className="text-blue-600" />
-            <p className="font-semibold text-center">{s.service}</p>
-            <span className="text-gray-600 text-sm">
-              {formatRupiah(s.harga)}
-            </span>
-          </button>
-        ))}
+      {/* LAYANAN */}
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-medium text-gray-700">Pilih Layanan</h3>
+          <div className="relative">
+            <Search
+              size={16}
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Cari layanan..."
+              value={searchService}
+              onChange={(e) => setSearchService(e.target.value)}
+              className="border pl-8 pr-2 py-1 rounded-lg text-sm w-48 focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {filteredService.map((s) => (
+            <button
+              key={s.id_pricelist}
+              onClick={() => {
+                if (!selectedCapster) return setShowWarning(true);
+                onAdd({
+                  tipe: "service",
+                  id_pricelist: s.id_pricelist,
+                  id_capster: selectedCapster,
+                  nama: s.service,
+                  harga: Number(s.harga),
+                  total: Number(s.harga),
+                });
+              }}
+              className="border rounded-lg p-3 hover:bg-blue-50 transition-all flex flex-col items-center"
+            >
+              <Scissors className="text-blue-600" />
+              <p className="font-semibold text-center">{s.service}</p>
+              <span className="text-gray-600 text-sm">
+                {formatRupiah(s.harga)}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -320,11 +384,31 @@ function ServiceGrid({ services, capsters, onAdd }) {
 
 /* === GRID PRODUK === */
 function ProdukGrid({ produk, onAdd }) {
+  const [searchProduk, setSearchProduk] = useState("");
+  const filteredProduk = produk.filter((p) =>
+    p.nama_produk.toLowerCase().includes(searchProduk.toLowerCase())
+  );
+
   return (
     <div>
-      <h3 className="font-medium text-gray-700 mb-3">Pilih Produk</h3>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="font-medium text-gray-700">Pilih Produk</h3>
+        <div className="relative">
+          <Search
+            size={16}
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+          <input
+            type="text"
+            placeholder="Cari produk..."
+            value={searchProduk}
+            onChange={(e) => setSearchProduk(e.target.value)}
+            className="border pl-8 pr-2 py-1 rounded-lg text-sm w-48 focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {produk.map((p) => (
+        {filteredProduk.map((p) => (
           <button
             key={p.id_produk}
             onClick={() =>
@@ -332,8 +416,8 @@ function ProdukGrid({ produk, onAdd }) {
                 tipe: "produk",
                 id_produk: p.id_produk,
                 nama: p.nama_produk,
-                harga_awal: Number(p.harga_awal), // ✅ kirim harga modal
-                harga_jual: Number(p.harga_jual), // ✅ kirim harga jual
+                harga_awal: Number(p.harga_awal),
+                harga_jual: Number(p.harga_jual),
                 harga: Number(p.harga_jual),
                 jumlah: 1,
                 total: Number(p.harga_jual),
@@ -355,9 +439,35 @@ function ProdukGrid({ produk, onAdd }) {
 
 /* === TABEL ITEM === */
 function ItemTable({ items, setItems, showConfirm, setShowConfirm }) {
+  const [searchItem, setSearchItem] = useState("");
+  const filteredItems = items.filter((i) =>
+    i.nama.toLowerCase().includes(searchItem.toLowerCase())
+  );
+
+  const confirmDelete = () => {
+    setItems((prev) => prev.filter((_, i) => i !== showConfirm.index));
+    setShowConfirm({ visible: false, index: null });
+  };
+
   return (
     <div className="bg-white p-5 border rounded-xl shadow-sm mt-5">
-      <h2 className="font-semibold mb-2 text-gray-700">Daftar Item</h2>
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="font-semibold text-gray-700">Daftar Item</h2>
+        <div className="relative">
+          <Search
+            size={16}
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+          <input
+            type="text"
+            placeholder="Cari item..."
+            value={searchItem}
+            onChange={(e) => setSearchItem(e.target.value)}
+            className="border pl-8 pr-2 py-1 rounded-lg text-sm w-56 focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
       <table className="min-w-full text-sm border">
         <thead className="bg-gray-100">
           <tr>
@@ -369,74 +479,52 @@ function ItemTable({ items, setItems, showConfirm, setShowConfirm }) {
           </tr>
         </thead>
         <tbody>
-          {items.map((i, idx) => (
-            <tr key={idx}>
-              <td className="p-2 border">{i.nama}</td>
-              <td className="p-2 border text-right">{formatRupiah(i.harga)}</td>
-              <td className="p-2 border text-center">{i.jumlah || 1}</td>
-              <td className="p-2 border text-right font-medium">
-                {formatRupiah(i.total)}
-              </td>
-              <td className="p-2 border text-center">
-                <button
-                  onClick={() => setShowConfirm({ visible: true, index: idx })}
-                  className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 transition"
-                  title="Hapus item"
-                >
-                  <Trash size={16} />
-                </button>
+          {filteredItems.length === 0 ? (
+            <tr>
+              <td colSpan="5" className="p-4 text-center text-gray-500 italic">
+                Tidak ada item yang cocok.
               </td>
             </tr>
-          ))}
+          ) : (
+            filteredItems.map((i, idx) => (
+              <tr key={idx}>
+                <td className="p-2 border">{i.nama}</td>
+                <td className="p-2 border text-right">
+                  {formatRupiah(i.harga)}
+                </td>
+                <td className="p-2 border text-center">{i.jumlah || 1}</td>
+                <td className="p-2 border text-right font-medium">
+                  {formatRupiah(i.total)}
+                </td>
+                <td className="p-2 border text-center">
+                  <button
+                    onClick={() =>
+                      setShowConfirm({ visible: true, index: idx })
+                    }
+                    className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 transition"
+                    title="Hapus item"
+                  >
+                    <Trash size={16} />
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
 
-      {/* 🔺 Modal Konfirmasi */}
-      {showConfirm.visible && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-gray-800">
-                Konfirmasi Hapus
-              </h3>
-              <button
-                onClick={() => setShowConfirm({ visible: false, index: null })}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <XCircle size={20} />
-              </button>
-            </div>
-
-            <p className="text-gray-600 text-sm">
-              Yakin ingin menghapus{" "}
-              <span className="font-semibold text-red-600">
-                {items[showConfirm.index]?.nama}
-              </span>{" "}
-              dari daftar transaksi?
-            </p>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                onClick={() => setShowConfirm({ visible: false, index: null })}
-                className="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-100 transition"
-              >
-                Batal
-              </button>
-              <button
-                onClick={() => {
-                  setItems((prev) =>
-                    prev.filter((_, i) => i !== showConfirm.index)
-                  );
-                  setShowConfirm({ visible: false, index: null });
-                }}
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition"
-              >
-                Ya, Hapus
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        open={showConfirm.visible}
+        onClose={() => setShowConfirm({ visible: false, index: null })}
+        onConfirm={confirmDelete}
+        message={
+          showConfirm.visible
+            ? `Apakah Anda yakin ingin menghapus item "${
+                items[showConfirm.index]?.nama
+              }" dari daftar transaksi?`
+            : "Apakah Anda yakin ingin menghapus item ini?"
+        }
+      />
     </div>
   );
 }

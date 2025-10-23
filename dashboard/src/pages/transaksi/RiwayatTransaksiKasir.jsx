@@ -3,33 +3,53 @@ import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import { useFetchRiwayatKasir } from "../../hooks/useFetchRiwayatKasir";
 import { formatTanggalJam } from "../../utils/dateFormatter";
+import { Search } from "lucide-react";
 
 export default function RiwayatTransaksiKasir() {
   const navigate = useNavigate();
-
   const [filterType, setFilterType] = useState("Bulanan");
   const [filterTipeTransaksi, setFilterTipeTransaksi] = useState("Semua");
   const [tanggal, setTanggal] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [search, setSearch] = useState("");
 
   const { data, loading, error } = useFetchRiwayatKasir(filterType, tanggal);
 
-  // 🔍 Filter tambahan
-  const filteredData =
-    filterTipeTransaksi === "Semua"
-      ? data
-      : data.filter((d) => d.tipe_transaksi === filterTipeTransaksi);
+  const filteredData = data
+    .filter((d) =>
+      filterTipeTransaksi === "Semua"
+        ? true
+        : d.tipe_transaksi === filterTipeTransaksi
+    )
+    .filter(
+      (d) =>
+        d.metode_bayar?.toLowerCase().includes(search.toLowerCase()) ||
+        d.produk?.toLowerCase().includes(search.toLowerCase()) ||
+        d.layanan?.toLowerCase().includes(search.toLowerCase())
+    );
 
   return (
     <MainLayout current="riwayat transaksi">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-3">
         <h1 className="text-2xl font-semibold text-slate-800">
           Riwayat Transaksi Saya
         </h1>
+        <div className="relative w-full sm:w-64">
+          <Search
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+          <input
+            type="text"
+            placeholder="Cari produk, layanan, atau metode bayar..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+        </div>
       </div>
 
-      {/* === Filter Bar === */}
       <div className="flex flex-wrap gap-4 items-center bg-white p-4 border rounded-xl shadow-sm">
         <div className="flex items-center gap-2">
           <label className="text-gray-600 font-medium">Tipe:</label>
@@ -68,7 +88,6 @@ export default function RiwayatTransaksiKasir() {
         </div>
       </div>
 
-      {/* === Konten === */}
       {loading ? (
         <p className="text-gray-500 mt-4">Memuat data...</p>
       ) : error ? (
@@ -80,7 +99,6 @@ export default function RiwayatTransaksiKasir() {
   );
 }
 
-/* === Komponen tabel transaksi === */
 function RiwayatTable({ filteredData }) {
   return (
     <div className="mt-6">
@@ -97,7 +115,7 @@ function RiwayatTable({ filteredData }) {
         <tbody>
           {filteredData.length === 0 ? (
             <tr>
-              <td colSpan="5" className="text-center p-3 text-gray-500">
+              <td colSpan="5" className="text-center p-3 text-gray-500 italic">
                 Tidak ada transaksi
               </td>
             </tr>
@@ -108,7 +126,6 @@ function RiwayatTable({ filteredData }) {
                   {formatTanggalJam(d.created_at)}
                 </td>
                 <td className="p-3 border capitalize">{d.tipe_transaksi}</td>
-
                 <td className="p-3 border text-sm text-gray-700">
                   {d.tipe_transaksi === "campuran" && (
                     <>
@@ -123,7 +140,6 @@ function RiwayatTable({ filteredData }) {
                     <span>{d.produk || "-"}</span>
                   )}
                 </td>
-
                 <td className="p-3 border text-right text-slate-700">
                   Rp {Number(d.subtotal).toLocaleString("id-ID")}
                 </td>

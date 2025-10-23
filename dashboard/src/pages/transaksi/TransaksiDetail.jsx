@@ -3,16 +3,17 @@ import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import { useFetchTransaksiStore } from "../../hooks/useFetchTransaksi";
 import { formatTanggalJam } from "../../utils/dateFormatter";
+import { Search } from "lucide-react";
 
 export default function TransaksiDetail() {
   const { id_store } = useParams();
   const navigate = useNavigate();
-
   const [filterType, setFilterType] = useState("Bulanan");
   const [filterTipeTransaksi, setFilterTipeTransaksi] = useState("Semua");
   const [tanggal, setTanggal] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [search, setSearch] = useState("");
 
   const { data, loading, error } = useFetchTransaksiStore(
     id_store,
@@ -20,28 +21,50 @@ export default function TransaksiDetail() {
     tanggal
   );
 
-  const filteredData =
-    filterTipeTransaksi === "Semua"
-      ? data
-      : data.filter((d) => d.tipe_transaksi === filterTipeTransaksi);
+  const filteredData = data
+    .filter((d) =>
+      filterTipeTransaksi === "Semua"
+        ? true
+        : d.tipe_transaksi === filterTipeTransaksi
+    )
+    .filter(
+      (d) =>
+        d.kasir?.toLowerCase().includes(search.toLowerCase()) ||
+        d.metode_bayar?.toLowerCase().includes(search.toLowerCase()) ||
+        d.produk?.toLowerCase().includes(search.toLowerCase()) ||
+        d.layanan?.toLowerCase().includes(search.toLowerCase())
+    );
 
   return (
     <MainLayout current="transaksi">
-      {/* === Header === */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-3">
         <h1 className="text-2xl font-semibold text-slate-800">
           Detail Transaksi Toko
         </h1>
-        <button
-          type="button"
-          onClick={() => navigate('/transaksi/admin')}
-          className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-2.5 rounded-lg font-medium transition-all"
-        >
-          ← Kembali
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 items-center">
+          <div className="relative w-full sm:w-64">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Cari kasir, produk, atau metode bayar..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/transaksi/admin")}
+            className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-2.5 rounded-lg font-medium transition-all"
+          >
+            ← Kembali
+          </button>
+        </div>
       </div>
 
-      {/* === Filter Bar === */}
       <div className="flex flex-wrap gap-4 items-center bg-white p-4 border rounded-xl shadow-sm">
         <div className="flex items-center gap-2">
           <label className="text-gray-600 font-medium">Tipe:</label>
@@ -54,7 +77,6 @@ export default function TransaksiDetail() {
             <option value="Bulanan">Bulanan</option>
           </select>
         </div>
-
         <div className="flex items-center gap-2">
           <label className="text-gray-600 font-medium">Tanggal:</label>
           <input
@@ -64,7 +86,6 @@ export default function TransaksiDetail() {
             className="border rounded-md px-2 py-1 text-sm"
           />
         </div>
-
         <div className="flex items-center gap-2">
           <label className="text-gray-600 font-medium">Tipe Transaksi:</label>
           <select
@@ -80,7 +101,6 @@ export default function TransaksiDetail() {
         </div>
       </div>
 
-      {/* === Konten === */}
       {loading ? (
         <p className="text-gray-500 mt-4">Memuat data...</p>
       ) : error ? (
@@ -92,7 +112,6 @@ export default function TransaksiDetail() {
   );
 }
 
-/* === Komponen tabel transaksi === */
 function RiwayatTable({ filteredData }) {
   return (
     <div className="mt-6">

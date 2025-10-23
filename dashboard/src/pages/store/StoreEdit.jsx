@@ -8,27 +8,50 @@ export default function StoreEdit() {
   const { data, updateStore } = useFetchStore();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ nama_store: "", alamat: "" });
+  const [form, setForm] = useState({ nama_store: "", alamat_store: "" });
   const [loading, setLoading] = useState(false);
 
+  // 🔹 Ambil data store berdasarkan ID dan tampilkan di form
   useEffect(() => {
     const store = data.find((s) => String(s.id_store) === String(id));
     if (store) {
       setForm({
         nama_store: store.nama_store,
-        alamat: store.alamat,
+        alamat_store: store.alamat_store, // ✅ gunakan field yang sesuai DB
       });
     }
   }, [id, data]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.nama_store || !form.alamat)
+    if (!form.nama_store || !form.alamat_store)
       return alert("Semua kolom wajib diisi!");
     setLoading(true);
-    await updateStore(id, form);
-    setLoading(false);
-    navigate("/store");
+    try {
+      await updateStore(id, form);
+
+      // ✅ Simpan pesan sukses agar muncul di halaman store
+      localStorage.setItem(
+        "storeMessage",
+        JSON.stringify({
+          type: "success",
+          text: `Data store "${form.nama_store}" berhasil diperbarui.`,
+        })
+      );
+
+      navigate("/store");
+    } catch (err) {
+      localStorage.setItem(
+        "storeMessage",
+        JSON.stringify({
+          type: "error",
+          text: `Gagal memperbarui store: ${err.message}`,
+        })
+      );
+      navigate("/store");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -61,8 +84,10 @@ export default function StoreEdit() {
             </label>
             <input
               type="text"
-              value={form.alamat}
-              onChange={(e) => setForm({ ...form, alamat: e.target.value })}
+              value={form.alamat_store}
+              onChange={(e) =>
+                setForm({ ...form, alamat_store: e.target.value })
+              }
               placeholder="Masukkan alamat store"
               className="w-full border rounded-lg px-4 py-2 text-gray-800 focus:ring-2 focus:ring-amber-500"
               required

@@ -74,7 +74,7 @@ export const getAllTransaksi = (req, res) => {
   );
 };
 
-// 🟢 Laporan transaksi per toko (admin)
+// 🟢 Laporan transaksi per toko (admin) - lengkap dengan laba & komisi
 export const getLaporanTransaksi = (req, res) => {
   const { type = "Bulanan", tanggal } = req.query;
   const date = tanggal ? dayjs(tanggal) : dayjs();
@@ -92,10 +92,31 @@ export const getLaporanTransaksi = (req, res) => {
     SELECT 
       s.id_store,
       s.nama_store,
-      COUNT(t.id_transaksi) AS total_transaksi,
-      COALESCE(SUM(t.subtotal), 0) AS pendapatan_kotor
+      COUNT(DISTINCT t.id_transaksi) AS total_transaksi,
+
+      -- 💰 Pendapatan Kotor
+      COALESCE(SUM(t.subtotal), 0) AS pendapatan_kotor,
+
+      -- 📦 Laba Produk
+      COALESCE(SUM(tp.laba_rugi), 0) AS laba_produk,
+
+      -- ✂️ Pendapatan Service
+      COALESCE(SUM(tsd.harga), 0) AS pendapatan_service,
+
+      -- 👨‍🔧 Total Komisi Capster
+      COALESCE(SUM(tsd.komisi_capster), 0) AS total_komisi_capster,
+
+      -- 💸 Pendapatan Bersih
+      (
+        COALESCE(SUM(tp.laba_rugi), 0) +
+        (COALESCE(SUM(tsd.harga), 0) - COALESCE(SUM(tsd.komisi_capster), 0))
+      ) AS pendapatan_bersih
+
     FROM store s
     LEFT JOIN transaksi t ON s.id_store = t.id_store ${dateCondition}
+    LEFT JOIN transaksi_produk_detail tp ON t.id_transaksi = tp.id_transaksi
+    LEFT JOIN transaksi_service_detail tsd ON t.id_transaksi = tsd.id_transaksi
+
     GROUP BY s.id_store, s.nama_store
     ORDER BY pendapatan_kotor DESC
   `;
@@ -133,14 +154,20 @@ export const getTransaksiByStoreAdmin = (req, res) => {
       t.created_at,
       u.nama_user AS kasir,
       s.nama_store,
+
+      -- tambahkan capster
+      COALESCE(GROUP_CONCAT(DISTINCT c.nama_capster SEPARATOR ', '), '-') AS capster,
+
       -- ambil daftar layanan & produk
       COALESCE(GROUP_CONCAT(DISTINCT pr.service SEPARATOR ', '), '-') AS layanan,
       COALESCE(GROUP_CONCAT(DISTINCT p.nama_produk SEPARATOR ', '), '-') AS produk
+
     FROM transaksi t
     JOIN users u ON t.id_user = u.id_user
     JOIN store s ON t.id_store = s.id_store
     LEFT JOIN transaksi_service_detail tsd ON t.id_transaksi = tsd.id_transaksi
     LEFT JOIN pricelist pr ON tsd.id_pricelist = pr.id_pricelist
+    LEFT JOIN capster c ON tsd.id_capster = c.id_capster   -- 🟢 tambahkan ini
     LEFT JOIN transaksi_produk_detail tpd ON t.id_transaksi = tpd.id_transaksi
     LEFT JOIN produk p ON tpd.id_produk = p.id_produk
     WHERE t.id_store = ? ${dateCondition}
@@ -397,4 +424,83 @@ export const deleteTransaksi = (req, res) => {
       res.json({ message: "Transaksi berhasil dihapus" });
     }
   );
+};
+
+export const getKeuanganChart = (req, res) => {
+  const sql = `
+    SELECT 
+      DATE(t.created_at) AS tanggal,
+      SUM(t.subtotal) AS pendapatan_kotor,
+      SUM(
+        (SELECT COALESCE(SUM(laba_rugi), 0) FROM transaksi_produk_detail d WHERE d.id_transaksi = t.id_transaksi)
+      ) +
+      SUM(
+        (SELECT COALESCE(SUM(tsd.harga - tsd.komisi_capster), 0) FROM transaksi_service_detail tsd WHERE tsd.id_transaksi = t.id_transaksi)
+      ) AS pendapatan_bersih
+    FROM transaksi t
+    GROUP BY DATE(t.created_at)
+    ORDER BY DATE(t.created_at)
+  `;
+
+  db.query(sql, (err, result) => {
+    if (err)
+      return res.status(500).json({ message: "Gagal ambil data keuangan" });
+    res.json(result);
+  });
+};
+
+// 🟢 Get Keuangan (Pendapatan) per Store untuk Dashboard Kasir
+export const getKeuanganByStore = (req, res) => {
+  const { id_store } = req.params;
+  const { type = "Bulanan", tanggal } = req.query;
+  const date = tanggal ? dayjs(tanggal) : dayjs();
+
+  // 🔹 Buat filter waktu (harian/bulanan)
+  let dateCondition = "";
+  if (type === "Harian") {
+    dateCondition = `AND DATE(t.created_at) = '${date.format("YYYY-MM-DD")}'`;
+  } else if (type === "Bulanan") {
+    const start = date.startOf("month").format("YYYY-MM-DD");
+    const end = date.endOf("month").format("YYYY-MM-DD");
+    dateCondition = `AND DATE(t.created_at) BETWEEN '${start}' AND '${end}'`;
+  }
+
+  const sql = `
+    SELECT 
+      DATE(t.created_at) AS tanggal,
+      COUNT(DISTINCT t.id_transaksi) AS total_transaksi,
+
+      -- 💰 Pendapatan Kotor
+      COALESCE(SUM(t.subtotal), 0) AS pendapatan_kotor,
+
+      -- 💵 Pendapatan Bersih (produk + service - komisi)
+      (
+        COALESCE(SUM(
+          (SELECT COALESCE(SUM(tp.laba_rugi), 0)
+           FROM transaksi_produk_detail tp
+           WHERE tp.id_transaksi = t.id_transaksi)
+        ), 0)
+        +
+        COALESCE(SUM(
+          (SELECT COALESCE(SUM(tsd.harga - tsd.komisi_capster), 0)
+           FROM transaksi_service_detail tsd
+           WHERE tsd.id_transaksi = t.id_transaksi)
+        ), 0)
+      ) AS pendapatan_bersih
+
+    FROM transaksi t
+    WHERE t.id_store = ? ${dateCondition}
+    GROUP BY DATE(t.created_at)
+    ORDER BY DATE(t.created_at)
+  `;
+
+  db.query(sql, [id_store], (err, result) => {
+    if (err) {
+      console.error("❌ DB Error getKeuanganByStore:", err);
+      return res
+        .status(500)
+        .json({ message: "Gagal mengambil data keuangan store" });
+    }
+    res.json(result);
+  });
 };

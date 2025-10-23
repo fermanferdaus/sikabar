@@ -2,49 +2,78 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import useFetchKomisi from "../../hooks/useFetchKomisi";
+import { Search } from "lucide-react";
 
 export default function Komisi() {
   const [filterType, setFilterType] = useState("Bulanan");
   const [tanggal, setTanggal] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [search, setSearch] = useState("");
+
   const { komisi, komisiDetail, loading, error } = useFetchKomisi(
     null,
     filterType,
     tanggal
   );
+
   const navigate = useNavigate();
   const role = localStorage.getItem("role");
 
   const data = role === "capster" ? komisiDetail : komisi;
+  const filteredData =
+    role === "capster"
+      ? data
+      : data.filter(
+          (k) =>
+            k.nama_capster.toLowerCase().includes(search.toLowerCase()) ||
+            k.nama_store.toLowerCase().includes(search.toLowerCase())
+        );
 
   return (
     <MainLayout current="komisi">
-      <h1 className="text-2xl font-semibold text-slate-800 mb-6">
-        {role === "capster" ? "Komisi Saya" : "Komisi Capster"}
-      </h1>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-3">
+        <h1 className="text-2xl font-semibold text-slate-800">
+          {role === "capster" ? "Komisi Saya" : "Komisi Capster"}
+        </h1>
 
-      {/* === Filter hanya muncul jika capster === */}
+        {role !== "capster" && (
+          <div className="relative w-full sm:w-64">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Cari capster atau store..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+        )}
+      </div>
+
       {role === "capster" && (
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div>
-            <label className="text-sm text-gray-600 mr-2">Tipe:</label>
+        <div className="flex flex-wrap gap-4 mb-6 bg-white p-4 border rounded-xl shadow-sm">
+          <div className="flex items-center gap-2">
+            <label className="text-gray-600 font-medium">Tipe:</label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="border rounded-lg p-2"
+              className="border rounded-lg p-2 text-sm"
             >
               <option value="Harian">Harian</option>
               <option value="Bulanan">Bulanan</option>
             </select>
           </div>
-          <div>
-            <label className="text-sm text-gray-600 mr-2">Tanggal:</label>
+          <div className="flex items-center gap-2">
+            <label className="text-gray-600 font-medium">Tanggal:</label>
             <input
               type="date"
               value={tanggal}
               onChange={(e) => setTanggal(e.target.value)}
-              className="border rounded-lg p-2"
+              className="border rounded-lg p-2 text-sm"
             />
           </div>
         </div>
@@ -55,7 +84,6 @@ export default function Komisi() {
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : role === "capster" && data ? (
-        // ===================== CAPSTER VIEW =====================
         <div className="bg-white border rounded-xl p-5 shadow-sm space-y-6">
           <div className="grid sm:grid-cols-2 gap-4 text-center">
             <div className="p-4 border rounded-lg">
@@ -114,9 +142,8 @@ export default function Komisi() {
           </table>
         </div>
       ) : (
-        // ===================== ADMIN VIEW =====================
         <div className="bg-white border rounded-xl p-5 shadow-sm">
-          {data.length === 0 ? (
+          {filteredData.length === 0 ? (
             <p className="text-gray-500">Belum ada data capster.</p>
           ) : (
             <table className="min-w-full border-collapse border bg-white rounded-lg shadow-sm">
@@ -129,7 +156,7 @@ export default function Komisi() {
                 </tr>
               </thead>
               <tbody>
-                {data.map((k, i) => (
+                {filteredData.map((k, i) => (
                   <tr key={i} className="hover:bg-gray-50 transition">
                     <td className="p-3 border">{k.nama_capster}</td>
                     <td className="p-3 border">{k.nama_store}</td>
@@ -139,7 +166,7 @@ export default function Komisi() {
                     <td className="p-3 border text-center">
                       <button
                         onClick={() => navigate(`/komisi/${k.id_capster}`)}
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 hover:underline font-medium"
                       >
                         Lihat Detail
                       </button>

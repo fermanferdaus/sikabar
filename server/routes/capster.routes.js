@@ -1,4 +1,6 @@
 import express from "express";
+import { verifyToken } from "../middlewares/auth.middleware.js";
+import { isAdmin, isKasir } from "../middlewares/role.middleware.js";
 import {
   getCapsters,
   getCapsterById,
@@ -7,27 +9,39 @@ import {
   updateCapster,
   deleteCapster,
 } from "../controllers/capster.controller.js";
-import { verifyToken } from "../middlewares/auth.middleware.js";
-import { isAdmin } from "../middlewares/role.middleware.js";
 
 const router = express.Router();
 
-// 🟢 Semua capster (admin)
-router.get("/", verifyToken, getCapsters);
-
-// 🔵 Capster per store (kasir)
-router.get("/store/:id_store", verifyToken, getCapsterByStore);
-
-// 🔵 Capster by ID
-router.get("/:id", verifyToken, getCapsterById);
-
-// 🟡 Tambah capster (admin)
+/* ===========================================================
+   🧩 ADMIN ROUTES
+   -----------------------------------------------------------
+   - Dapat mengelola semua capster dari seluruh store
+   - Akses penuh: get, post, put, delete
+=========================================================== */
+router.get("/", verifyToken, isAdmin, getCapsters);
+router.get("/:id", verifyToken, isAdmin, getCapsterById);
 router.post("/", verifyToken, isAdmin, createCapster);
-
-// 🟠 Update capster (admin)
 router.put("/:id", verifyToken, isAdmin, updateCapster);
-
-// 🔴 Hapus capster (admin)
 router.delete("/:id", verifyToken, isAdmin, deleteCapster);
+
+/* ===========================================================
+   🧩 KASIR ROUTES
+   -----------------------------------------------------------
+   - Hanya bisa melihat & kelola capster yang ada di tokonya
+   - Endpoint kasir tidak boleh bentrok dengan milik admin
+=========================================================== */
+
+// 🔹 Ambil semua capster milik store kasir
+router.get("/kasir/store/:id_store", verifyToken, isKasir, getCapsterByStore);
+
+// 🔹 Tambah capster di store kasir
+router.post("/kasir", verifyToken, isKasir, createCapster);
+
+// 🔹 Update capster di store kasir
+router.put("/kasir/:id", verifyToken, isKasir, updateCapster);
+router.get("/kasir/:id", verifyToken, isKasir, getCapsterById);
+
+// 🔹 Hapus capster di store kasir
+router.delete("/kasir/:id", verifyToken, isKasir, deleteCapster);
 
 export default router;

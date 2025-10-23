@@ -29,14 +29,16 @@ export default function Login() {
       // 🧩 Simpan juga data user penting (agar transaksi & capster tahu store-nya)
       if (data.user) {
         localStorage.setItem("id_user", data.user.id_user);
-        localStorage.setItem("id_store", data.user.id_store);
+        localStorage.setItem("id_store", data.user.id_store || "");
         localStorage.setItem("nama_user", data.user.nama_user || "");
       }
 
       // 🚪 Redirect sesuai role
       if (data.role === "admin") navigate("/dashboard");
-      else if (data.role === "kasir") navigate("/dashboard");
-      else if (data.role === "capster") navigate("/komisi");
+      else if (data.role === "kasir") {
+        navigate("/dashboard/kasir");
+        window.location.reload();
+      } else if (data.role === "capster") navigate("/komisi");
       else navigate("/dashboard");
     } catch (err) {
       console.error("Login error:", err);

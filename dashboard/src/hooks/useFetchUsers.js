@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export default function useFetchPricelist() {
+export default function useFetchUsers() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -8,13 +8,14 @@ export default function useFetchPricelist() {
   const API_URL = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem("token");
 
-  const fetchData = async () => {
+  // 🔹 Ambil semua user
+  const fetchUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/pricelist`, {
+      const res = await fetch(`${API_URL}/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Gagal mengambil data pricelist");
+      if (!res.ok) throw new Error("Gagal memuat data pengguna");
       const result = await res.json();
       setData(result);
     } catch (err) {
@@ -24,8 +25,9 @@ export default function useFetchPricelist() {
     }
   };
 
-  const addPricelist = async (body) => {
-    const res = await fetch(`${API_URL}/pricelist`, {
+  // 🔹 Tambah user
+  const addUser = async (body) => {
+    const res = await fetch(`${API_URL}/users`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -33,12 +35,13 @@ export default function useFetchPricelist() {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error("Gagal menambahkan layanan");
-    await fetchData();
+    if (!res.ok) throw new Error("Gagal menambahkan pengguna");
+    await fetchUsers();
   };
 
-  const updatePricelist = async (id, body) => {
-    const res = await fetch(`${API_URL}/pricelist/${id}`, {
+  // 🔹 Update user
+  const updateUser = async (id, body) => {
+    const res = await fetch(`${API_URL}/users/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -46,29 +49,23 @@ export default function useFetchPricelist() {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error("Gagal memperbarui layanan");
-    await fetchData();
+    if (!res.ok) throw new Error("Gagal memperbarui pengguna");
+    await fetchUsers();
   };
 
-  const deletePricelist = async (id) => {
-    const res = await fetch(`${API_URL}/pricelist/${id}`, {
+  // 🔹 Hapus user
+  const deleteUser = async (id) => {
+    const res = await fetch(`${API_URL}/users/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error("Gagal menghapus layanan");
-    await fetchData();
+    if (!res.ok) throw new Error("Gagal menghapus pengguna");
+    await fetchUsers();
   };
 
   useEffect(() => {
-    fetchData();
+    fetchUsers();
   }, []);
 
-  return {
-    data,
-    loading,
-    error,
-    addPricelist,
-    updatePricelist,
-    deletePricelist,
-  };
+  return { data, loading, error, addUser, updateUser, deleteUser };
 }

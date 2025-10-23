@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import MainLayout from "../../layouts/MainLayout";
 import useFetchKomisi from "../../hooks/useFetchKomisi";
 import { formatTanggalJam } from "../../utils/dateFormatter";
+import { Search } from "lucide-react";
 
 export default function KomisiDetail() {
   const { id } = useParams();
@@ -12,6 +13,7 @@ export default function KomisiDetail() {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [search, setSearch] = useState("");
 
   const { komisi, loading, error } = useFetchKomisi(
     id,
@@ -22,16 +24,18 @@ export default function KomisiDetail() {
   const filteredRiwayat = useMemo(() => {
     if (!komisi?.riwayat) return [];
     const date = new Date(selectedDate);
-    return komisi.riwayat.filter((item) => {
-      const itemDate = new Date(item.tanggal);
-      return filterType === "Harian"
-        ? itemDate.getDate() === date.getDate() &&
-            itemDate.getMonth() === date.getMonth() &&
-            itemDate.getFullYear() === date.getFullYear()
-        : itemDate.getMonth() === date.getMonth() &&
-            itemDate.getFullYear() === date.getFullYear();
-    });
-  }, [komisi, selectedDate, filterType]);
+    return komisi.riwayat
+      .filter((item) => {
+        const itemDate = new Date(item.tanggal);
+        return filterType === "Harian"
+          ? itemDate.getDate() === date.getDate() &&
+              itemDate.getMonth() === date.getMonth() &&
+              itemDate.getFullYear() === date.getFullYear()
+          : itemDate.getMonth() === date.getMonth() &&
+              itemDate.getFullYear() === date.getFullYear();
+      })
+      .filter((r) => r.service?.toLowerCase().includes(search.toLowerCase()));
+  }, [komisi, selectedDate, filterType, search]);
 
   const totalKotor = filteredRiwayat.reduce(
     (sum, r) => sum + (r.harga ?? 0),
@@ -44,17 +48,32 @@ export default function KomisiDetail() {
 
   return (
     <MainLayout current="komisi">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-3">
         <h1 className="text-2xl font-semibold text-slate-800">
           Komisi {komisi?.nama_capster || ""}
         </h1>
-        <button
-          type="button"
-          onClick={() => navigate("/komisi")}
-          className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-2.5 rounded-lg font-medium transition-all"
-        >
-          ← Kembali
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 items-center">
+          <div className="relative w-full sm:w-64">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Cari service..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/komisi")}
+            className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-2.5 rounded-lg font-medium transition-all"
+          >
+            ← Kembali
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -81,7 +100,6 @@ export default function KomisiDetail() {
   );
 }
 
-/* === Komponen kecil reuse === */
 function FilterBar({
   filterType,
   setFilterType,
@@ -148,13 +166,13 @@ function RiwayatTable({ riwayat }) {
         <tbody>
           {riwayat.length === 0 ? (
             <tr>
-              <td colSpan={4} className="text-center text-gray-500 p-4">
+              <td colSpan={4} className="text-center text-gray-500 p-4 italic">
                 Tidak ada data untuk periode ini.
               </td>
             </tr>
           ) : (
             riwayat.map((r, i) => (
-              <tr key={i} className="hover:bg-gray-50">
+              <tr key={i} className="hover:bg-gray-50 transition">
                 <td className="p-3 border text-sm text-gray-700">
                   {formatTanggalJam(r.tanggal)}
                 </td>
