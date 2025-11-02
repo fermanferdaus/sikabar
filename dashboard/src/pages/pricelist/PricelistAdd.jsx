@@ -34,6 +34,7 @@ export default function PricelistAdd() {
   // 🔹 Submit form
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!form.service || !form.harga) {
       setError("Nama layanan dan harga wajib diisi!");
       return;
@@ -43,12 +44,35 @@ export default function PricelistAdd() {
     setError(null);
 
     try {
-      await addPricelist({
-        service: form.service,
-        keterangan: form.keterangan,
-        harga: Number(form.harga),
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/pricelist`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          service: form.service,
+          keterangan: form.keterangan,
+          harga: Number(form.harga),
+        }),
       });
 
+      const data = await res.json();
+
+      if (!res.ok) {
+        // 🔴 Tangani duplikat layanan
+        if (
+          data.message &&
+          data.message.includes("Nama layanan sudah terdaftar")
+        ) {
+          setError("Nama layanan sudah terdaftar!");
+          return;
+        }
+
+        throw new Error(data.message || "Gagal menambahkan layanan");
+      }
+
+      // ✅ Jika berhasil
       localStorage.setItem(
         "pricelistMessage",
         JSON.stringify({
@@ -56,18 +80,11 @@ export default function PricelistAdd() {
           text: `Layanan "${form.service}" berhasil ditambahkan.`,
         })
       );
+
       navigate("/pricelist");
     } catch (err) {
       console.error("❌ Gagal menambahkan layanan:", err);
-      setError("Gagal menambahkan layanan: " + err.message);
-
-      localStorage.setItem(
-        "pricelistMessage",
-        JSON.stringify({
-          type: "error",
-          text: `Gagal menambahkan layanan: ${err.message}`,
-        })
-      );
+      setError(err.message);
     } finally {
       setLoading(false);
     }

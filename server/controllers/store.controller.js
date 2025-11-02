@@ -22,12 +22,31 @@ export const getStoreById = (req, res) => {
 
 export const createStore = (req, res) => {
   const { nama_store, alamat_store } = req.body;
+
+  // 🔍 Cek apakah nama store sudah ada
   db.query(
-    "INSERT INTO store (nama_store, alamat_store) VALUES (?,?)",
-    [nama_store, alamat_store],
+    "SELECT * FROM store WHERE nama_store = ?",
+    [nama_store],
     (err, result) => {
-      if (err) return res.status(500).json({ message: "Gagal menambah store" });
-      res.json({ message: "Store ditambahkan", id: result.insertId });
+      if (err)
+        return res.status(500).json({ message: "Gagal memeriksa store" });
+
+      if (result.length > 0) {
+        // 🚫 Store sudah ada
+        return res.status(400).json({ message: "Nama store sudah terdaftar!" });
+      }
+
+      // ✅ Kalau belum ada → lanjut insert
+      db.query(
+        "INSERT INTO store (nama_store, alamat_store) VALUES (?, ?)",
+        [nama_store, alamat_store],
+        (err, result) => {
+          if (err)
+            return res.status(500).json({ message: "Gagal menambah store" });
+
+          res.json({ message: "Store ditambahkan", id: result.insertId });
+        }
+      );
     }
   );
 };

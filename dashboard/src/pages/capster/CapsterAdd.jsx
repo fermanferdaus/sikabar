@@ -6,6 +6,7 @@ import useCapsterActions from "../../hooks/useCapsterActions";
 export default function CapsterAdd() {
   const { addCapster, loading } = useCapsterActions();
   const [stores, setStores] = useState([]);
+  const [errorMsg, setErrorMsg] = useState(""); // ⬅️ tambahkan state untuk pesan error
   const [formData, setFormData] = useState({
     nama_capster: "",
     id_store: "",
@@ -36,15 +37,47 @@ export default function CapsterAdd() {
     fetchStores();
   }, []);
 
+  // 🔹 Submit Form
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await addCapster(formData);
+    setErrorMsg(""); // reset pesan error
+
+    try {
+      const res = await fetch(`${API_URL}/capster`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        // 🔴 tampilkan pesan error backend
+        setErrorMsg(data.message || "Gagal menambahkan capster");
+        return;
+      }
+
+      // ✅ sukses
+      localStorage.setItem(
+        "userMessage",
+        JSON.stringify({
+          type: "success",
+          text: `Capster "${formData.nama_capster}" berhasil ditambahkan.`,
+        })
+      );
+      navigate("/capster");
+    } catch (error) {
+      console.error("❌ Error submit:", error);
+      setErrorMsg("Terjadi kesalahan koneksi ke server");
+    }
   };
 
   return (
     <MainLayout current="capster">
       <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 transition-all duration-300">
-        {/* === Header === */}
+        {/* Header */}
         <div className="border-b border-gray-100 pb-5 mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">
             Tambah Capster
@@ -54,9 +87,15 @@ export default function CapsterAdd() {
           </p>
         </div>
 
-        {/* === Form === */}
+        {/* 🔴 Alert Error */}
+        {errorMsg && (
+          <div className="mb-6 px-4 py-3 rounded-lg bg-red-50 text-red-700 border border-red-200 text-sm font-medium">
+            {errorMsg}
+          </div>
+        )}
+
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Grid Baris 1 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             {/* Nama Capster */}
             <div>
@@ -115,7 +154,7 @@ export default function CapsterAdd() {
             </select>
           </div>
 
-          {/* === Tombol Aksi === */}
+          {/* Tombol Aksi */}
           <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"

@@ -36,16 +36,45 @@ export const getPricelistById = (req, res) => {
 // 🟡 Create
 export const createPricelist = (req, res) => {
   const { service, keterangan, harga } = req.body;
+
+  if (!service || !harga) {
+    return res
+      .status(400)
+      .json({ message: "Nama layanan dan harga wajib diisi" });
+  }
+
+  // 🔍 Cek apakah nama service sudah ada
   db.query(
-    "INSERT INTO pricelist (service, keterangan, harga) VALUES (?,?,?)",
-    [service, keterangan, harga],
+    "SELECT * FROM pricelist WHERE service = ?",
+    [service],
     (err, result) => {
-      if (err)
-        return res.status(500).json({ message: "Gagal menambah service" });
-      res.json({
-        message: "Service berhasil ditambahkan",
-        id: result.insertId,
-      });
+      if (err) {
+        console.error("DB Error:", err);
+        return res.status(500).json({ message: "Gagal memeriksa data" });
+      }
+
+      if (result.length > 0) {
+        // 🚫 Jika nama service sudah ada
+        return res
+          .status(400)
+          .json({ message: "Nama layanan sudah terdaftar!" });
+      }
+
+      // ✅ Jika belum ada, lanjut insert
+      db.query(
+        "INSERT INTO pricelist (service, keterangan, harga) VALUES (?,?,?)",
+        [service, keterangan, harga],
+        (err, result) => {
+          if (err) {
+            console.error("Insert Error:", err);
+            return res.status(500).json({ message: "Gagal menambah service" });
+          }
+          res.json({
+            message: "Service berhasil ditambahkan",
+            id: result.insertId,
+          });
+        }
+      );
     }
   );
 };

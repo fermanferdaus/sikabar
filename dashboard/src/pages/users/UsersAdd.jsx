@@ -36,7 +36,28 @@ export default function UsersAdd() {
     setError(null);
 
     try {
-      await addUser(form);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // 🔴 Tangani error username duplikat
+        if (data.message && data.message.includes("Username sudah digunakan")) {
+          setError("Username sudah digunakan!");
+          return;
+        }
+
+        throw new Error(data.message || "Gagal menambahkan user");
+      }
+
+      // ✅ Jika berhasil
       localStorage.setItem(
         "userMessage",
         JSON.stringify({
@@ -46,8 +67,7 @@ export default function UsersAdd() {
       );
       navigate("/users");
     } catch (err) {
-      console.error("❌ Gagal menambahkan user:", err);
-      setError("Gagal menambahkan user: " + err.message);
+      setError(err.message);
     } finally {
       setLoading(false);
     }

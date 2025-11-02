@@ -23,10 +23,31 @@ export default function StoreAdd() {
     setError(null);
 
     try {
-      await addStore({
-        nama_store: form.nama_store,
-        alamat_store: form.alamat, // sesuai field backend
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/store`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          nama_store: form.nama_store,
+          alamat_store: form.alamat,
+        }),
       });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // 🔴 Jika backend mengirim pesan duplikat
+        if (
+          data.message &&
+          data.message.includes("Nama store sudah terdaftar")
+        ) {
+          setError("Nama store sudah terdaftar!");
+          return;
+        }
+        throw new Error(data.message || "Gagal menambah store");
+      }
 
       // ✅ Simpan pesan sukses ke localStorage
       localStorage.setItem(
@@ -40,16 +61,7 @@ export default function StoreAdd() {
       navigate("/store");
     } catch (err) {
       console.error("❌ Gagal menambah store:", err);
-      setError("Gagal menambahkan store: " + err.message);
-
-      // Simpan juga ke localStorage untuk alert di halaman utama
-      localStorage.setItem(
-        "storeMessage",
-        JSON.stringify({
-          type: "error",
-          text: `Gagal menambahkan store: ${err.message}`,
-        })
-      );
+      setError(err.message);
     } finally {
       setLoading(false);
     }

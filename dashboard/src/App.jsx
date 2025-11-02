@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
+import Login from "./pages/login/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
 import DashboardKasir from "./pages/dashboard/DashboardKasir";
 import Produk from "./pages/produk/Produk";
@@ -34,6 +34,23 @@ import UsersEdit from "./pages/users/UsersEdit";
 import CapsterKasir from "./pages/capster/CapsterKasir";
 import CapsterAddKasir from "./pages/capster/CapsterAddKasir";
 import CapsterEditKasir from "./pages/capster/CapsterEditKasir";
+import Gaji from "./pages/gaji/Gaji";
+import GajiAdd from "./pages/gaji/GajiAdd";
+import GajiEdit from "./pages/gaji/GajiEdit";
+import BonusAdd from "./pages/gaji/BonusAdd";
+import BonusEdit from "./pages/gaji/BonusEdit";
+import CapsterDashboard from "./pages/dashboard/DashboardCapster";
+import Pengeluaran from "./pages/pengeluaran/Pengeluaran";
+import PengeluaranDetail from "./pages/pengeluaran/PengeluaranDetail";
+import PengeluaranAdminAdd from "./pages/pengeluaran/PengeluaranAdminAdd";
+import PengeluaranAdminEdit from "./pages/pengeluaran/PengeluaranAdminEdit";
+import PengeluaranKasir from "./pages/pengeluaran/PengeluaranKasir";
+import PengeluaranKasirAdd from "./pages/pengeluaran/PengeluaranKasirAdd";
+import PengeluaranKasirEdit from "./pages/pengeluaran/PengeluaranKasirEdit";
+import LaporanPemasukan from "./pages/laporan/LaporanPemasukan";
+import LaporanPengeluaran from "./pages/laporan/LaporanPengeluran";
+import LaporanPemasukanKasir from "./pages/laporan/LaporanPemasukanKasir";
+import LaporanPengeluaranKasir from "./pages/laporan/LaporanPengeluaranKasir";
 
 export default function App() {
   return (
@@ -60,6 +77,14 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/dashboard/capster"
+          element={
+            <ProtectedRoute allowedRoles={["capster"]}>
+              <CapsterDashboard />
+            </ProtectedRoute>
+          }
+        />
         {/* CAPSTER - Admin */}
         <Route
           path="/capster"
@@ -94,7 +119,7 @@ export default function App() {
           }
         />
         <Route
-          path="/capster/addkasir"
+          path="/capster/kasir/add"
           element={
             <ProtectedRoute allowedRoles={["kasir"]}>
               <CapsterAddKasir />
@@ -102,7 +127,7 @@ export default function App() {
           }
         />
         <Route
-          path="/capster/editkasir/:id"
+          path="/capster/kasir/edit/:id"
           element={
             <ProtectedRoute allowedRoles={["kasir"]}>
               <CapsterEditKasir />
@@ -157,7 +182,7 @@ export default function App() {
         />
 
         <Route
-          path="/produk/addkasir"
+          path="/produk/kasir/add"
           element={
             <ProtectedRoute allowedRoles={["kasir"]}>
               <ProdukAddKasir />
@@ -165,7 +190,7 @@ export default function App() {
           }
         />
         <Route
-          path="/produk/editkasir/:id_produk"
+          path="/produk/kasir/edit/:id_produk"
           element={
             <ProtectedRoute allowedRoles={["kasir"]}>
               <ProdukEditKasir />
@@ -195,7 +220,7 @@ export default function App() {
         />
 
         <Route
-          path="/transaksi/store/:id_store"
+          path="/transaksi/admin/store/:id_store"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <TransaksiDetail />
@@ -329,6 +354,153 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <KomisiEdit />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 💼 GAJI & BONUS */}
+        <Route
+          path="/gaji"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Gaji />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/gaji/add"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <GajiAdd />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/gaji/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <GajiEdit />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/gaji/bonus/add"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <BonusAdd />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/gaji/bonus/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <BonusEdit />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 💸 PENGELUARAN - Admin & Kasir */}
+        <Route
+          path="/pengeluaran"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Pengeluaran />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/pengeluaran/kasir"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <PengeluaranKasir />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/pengeluaran/kasir/add"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <PengeluaranKasirAdd />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/pengeluaran/kasir/edit/:id_pengeluaran"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <PengeluaranKasirEdit />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/pengeluaran/:id_store"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <PengeluaranDetail />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/pengeluaran/add"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <PengeluaranAdminAdd />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/pengeluaran/edit/:id_pengeluaran"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <PengeluaranAdminEdit />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Laporan */}
+        <Route
+          path="/laporan/pemasukan"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <LaporanPemasukan />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/laporan/pengeluaran"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <LaporanPengeluaran />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/laporan/kasir/pemasukan"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <LaporanPemasukanKasir />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/laporan/kasir/pengeluaran"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <LaporanPengeluaranKasir />
             </ProtectedRoute>
           }
         />

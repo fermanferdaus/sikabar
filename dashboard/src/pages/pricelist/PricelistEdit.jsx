@@ -99,7 +99,7 @@ export default function PricelistEdit() {
 
   return (
     <MainLayout current="pricelist">
-      <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 transition-all duration-300">
+      <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10">
         {/* === Header === */}
         <div className="border-b border-gray-100 pb-5 mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">

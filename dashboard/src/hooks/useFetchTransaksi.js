@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 
 /* ===========================================================
    🟢 Hook: useFetchTransaksiAdmin
-   Digunakan di halaman TransaksiAdmin.jsx (laporan seluruh toko)
    =========================================================== */
 export default function useFetchTransaksiAdmin(
   filterType = "Bulanan",
@@ -29,26 +28,28 @@ export default function useFetchTransaksiAdmin(
       const result = await res.json();
 
       // ✅ Mapping data agar tidak ada nilai null & auto hitung pendapatan bersih
-      const mapped = result.map((r) => {
-        const pendapatan_kotor = Number(r.pendapatan_kotor) || 0;
-        const laba_produk = Number(r.laba_produk) || 0;
-        const pendapatan_service = Number(r.pendapatan_service) || 0;
-        const total_komisi_capster = Number(r.total_komisi_capster) || 0;
-        const pendapatan_bersih =
-          r.pendapatan_bersih ??
-          laba_produk + (pendapatan_service - total_komisi_capster);
+      const mapped = Array.isArray(result)
+        ? result.map((r) => {
+            const pendapatan_kotor = Number(r.pendapatan_kotor) || 0;
+            const laba_produk = Number(r.laba_produk) || 0;
+            const pendapatan_service = Number(r.pendapatan_service) || 0;
+            const total_komisi_capster = Number(r.total_komisi_capster) || 0;
+            const pendapatan_bersih =
+              r.pendapatan_bersih ??
+              laba_produk + (pendapatan_service - total_komisi_capster);
 
-        return {
-          id_store: r.id_store,
-          nama_store: r.nama_store,
-          total_transaksi: Number(r.total_transaksi) || 0,
-          pendapatan_kotor,
-          laba_produk,
-          pendapatan_service,
-          total_komisi_capster,
-          pendapatan_bersih,
-        };
-      });
+            return {
+              id_store: r.id_store,
+              nama_store: r.nama_store,
+              total_transaksi: Number(r.total_transaksi) || 0,
+              pendapatan_kotor,
+              laba_produk,
+              pendapatan_service,
+              total_komisi_capster,
+              pendapatan_bersih,
+            };
+          })
+        : [];
 
       setData(mapped);
       setError(null);
@@ -69,7 +70,6 @@ export default function useFetchTransaksiAdmin(
 
 /* ===========================================================
    🔵 Hook: useFetchTransaksiStore
-   Digunakan di halaman TransaksiStore.jsx (detail per toko)
    =========================================================== */
 export function useFetchTransaksiStore(
   id_store,
@@ -77,12 +77,17 @@ export function useFetchTransaksiStore(
   tanggal = new Date().toISOString().split("T")[0]
 ) {
   const [data, setData] = useState([]);
+  const [summary, setSummary] = useState({
+    total_transaksi: 0,
+    pendapatan_kotor: 0,
+    pendapatan_bersih: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const API_URL = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role"); // ⬅️ ambil role dari localStorage
+  const role = localStorage.getItem("role");
 
   useEffect(() => {
     if (!id_store) return;
@@ -91,11 +96,11 @@ export function useFetchTransaksiStore(
       try {
         setLoading(true);
 
-        // 🔹 Tentukan endpoint berdasarkan role login
+        // 🔹 Pilih endpoint sesuai role login
         const endpoint =
           role === "admin"
             ? `${API_URL}/transaksi/store/${id_store}?type=${type}&tanggal=${tanggal}`
-            : `${API_URL}/transaksi/keuangan/${id_store}?type=${type}&tanggal=${tanggal}`;
+            : `${API_URL}/transaksi?type=${type}&tanggal=${tanggal}`;
 
         const res = await fetch(endpoint, {
           headers: {
@@ -110,7 +115,26 @@ export function useFetchTransaksiStore(
         }
 
         const result = await res.json();
-        setData(result);
+
+        // ✅ Antisipasi format backend (baru & lama)
+        if (Array.isArray(result)) {
+          setData(result);
+        } else if (result?.data && Array.isArray(result.data)) {
+          setData(result.data);
+          setSummary(result.summary || {});
+        } else if (result?.status === "success" && Array.isArray(result.data)) {
+          setData(result.data);
+          setSummary(result.summary || {});
+        } else {
+          setData([]);
+          setSummary({
+            total_transaksi: 0,
+            pendapatan_kotor: 0,
+            pendapatan_bersih: 0,
+          });
+        }
+
+        setError(null);
       } catch (err) {
         console.error("❌ useFetchTransaksiStore Error:", err);
         setError(err.message);
@@ -122,5 +146,5 @@ export function useFetchTransaksiStore(
     fetchData();
   }, [id_store, type, role, tanggal]);
 
-  return { data, loading, error };
+  return { data, summary, loading, error };
 }

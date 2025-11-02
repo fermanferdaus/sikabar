@@ -54,8 +54,8 @@ export default function KomisiDetail() {
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
             {/* === Header === */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
-              <div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4">
+              <div className="text-left">
                 <h1 className="text-xl font-semibold text-slate-800">
                   Komisi {komisi?.nama_capster || ""}
                 </h1>
@@ -67,7 +67,7 @@ export default function KomisiDetail() {
 
               <button
                 onClick={() => navigate("/komisi")}
-                className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-lg font-medium text-sm transition-all"
+                className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-200"
               >
                 <ArrowLeft size={16} /> Kembali
               </button>
@@ -75,6 +75,7 @@ export default function KomisiDetail() {
 
             {/* === Filter === */}
             <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
+              {/* Filter tipe */}
               <div className="flex items-center gap-2">
                 <label className="text-gray-600 font-medium text-sm">
                   Tipe:
@@ -89,16 +90,26 @@ export default function KomisiDetail() {
                 </select>
               </div>
 
+              {/* Input tanggal adaptif */}
               <div className="flex items-center gap-2">
                 <label className="text-gray-600 font-medium text-sm">
-                  Tanggal:
+                  {filterType === "Harian" ? "Tanggal:" : "Bulan:"}
                 </label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
+                {filterType === "Harian" ? (
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                ) : (
+                  <input
+                    type="month"
+                    value={selectedDate.slice(0, 7)}
+                    onChange={(e) => setSelectedDate(e.target.value + "-01")}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                )}
               </div>
             </div>
 
@@ -155,7 +166,8 @@ function RiwayatTable({ riwayat }) {
     { key: "tanggal", label: "Tanggal" },
     { key: "service", label: "Layanan" },
     { key: "harga", label: "Harga" },
-    { key: "komisi", label: "Komisi" },
+    { key: "persentase", label: "Persentase Komisi (%)" },
+    { key: "komisi", label: "Komisi (Rp)" },
   ];
 
   const data = riwayat.map((r, i) => ({
@@ -165,6 +177,11 @@ function RiwayatTable({ riwayat }) {
     harga: (
       <div className="text-left">
         Rp {(r.harga ?? 0).toLocaleString("id-ID")}
+      </div>
+    ),
+    persentase: (
+      <div className="text-left text-blue-600 font-medium">
+        {r.persentase_capster ? `${r.persentase_capster}%` : "-"}
       </div>
     ),
     komisi: (

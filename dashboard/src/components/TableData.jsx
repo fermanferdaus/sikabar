@@ -35,8 +35,9 @@ export default function TableData({
   return (
     <div className="w-full">
       {/* === Header Controls === */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mb-3">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-3">
+        {/* 🔹 Dropdown "Tampilkan Entri" — di kiri mobile, kanan desktop */}
+        <div className="flex items-center gap-2 text-sm text-gray-600 order-2 sm:order-1 justify-start sm:justify-end w-full sm:w-auto">
           <label>Tampilkan</label>
           <select
             value={perPage}

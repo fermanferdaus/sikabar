@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 export default function ProtectedRoute({ children, allowedRoles }) {
   const [isReady, setIsReady] = useState(false);
@@ -9,20 +10,34 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
 
-    if (!token) {
-      setIsAuthorized(false);
-    } else if (allowedRoles && !allowedRoles.includes(role)) {
-      setIsAuthorized(false);
-    } else {
-      setIsAuthorized(true);
-    }
-    setIsReady(true);
+    const timeout = setTimeout(() => {
+      if (!token) {
+        setIsAuthorized(false);
+      } else if (allowedRoles && !allowedRoles.includes(role)) {
+        setIsAuthorized(false);
+      } else {
+        setIsAuthorized(true);
+      }
+      setIsReady(true);
+    }, 800);
+
+    return () => clearTimeout(timeout);
   }, [allowedRoles]);
 
   if (!isReady)
     return (
-      <div className="flex items-center justify-center min-h-screen text-gray-500">
-        Memeriksa sesi...
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-[#f8fafc] to-[#e2e8f0]">
+        {/* 🔵 Animated Ring Spinner */}
+        <div className="relative w-14 h-14 mb-5">
+          <div className="absolute inset-0 rounded-full border-[3px] border-gray-200"></div>
+          <div className="absolute inset-0 rounded-full border-[3px] border-t-[3px] border-t-blue-600 animate-spin"></div>
+        </div>
+
+        {/* ✨ Text with smooth pulse */}
+        <h2 className="text-gray-700 font-medium text-lg animate-pulse">
+          Memeriksa sesi Anda...
+        </h2>
+        <p className="text-sm text-gray-500 mt-2">Harap tunggu sebentar</p>
       </div>
     );
 

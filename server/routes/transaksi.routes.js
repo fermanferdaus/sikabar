@@ -1,30 +1,49 @@
 import express from "express";
 import {
-  getTransaksiByStore,
+  // ================= ADMIN CONTROLLERS =================
   getAllTransaksi,
-  createTransaksi,
-  deleteTransaksi,
   getLaporanTransaksi,
   getTransaksiByStoreAdmin,
-  getKeuanganChart,
-  getKeuanganByStore
+
+  // ================= KASIR CONTROLLERS =================
+  getTransaksiByStore,
+  getKeuanganByStore,
+  createTransaksi,
+  deleteTransaksi,
 } from "../controllers/transaksi.controller.js";
+
 import { verifyToken } from "../middlewares/auth.middleware.js";
 import { isAdmin, isKasir } from "../middlewares/role.middleware.js";
 
 const router = express.Router();
 
-// ================== ADMIN ==================
+/* =======================================================
+   🟣 ADMIN ROUTES
+   ======================================================= */
+
+// 📊 Laporan semua store (dashboard admin)
 router.get("/laporan", verifyToken, isAdmin, getLaporanTransaksi);
+
+// 📋 Riwayat transaksi per store (admin melihat toko tertentu)
 router.get("/store/:id_store", verifyToken, isAdmin, getTransaksiByStoreAdmin);
+
+// 🧾 Semua transaksi (tanpa filter, jika dibutuhkan)
 router.get("/admin", verifyToken, isAdmin, getAllTransaksi);
-router.get("/keuangan", verifyToken, isAdmin, getKeuanganChart);
+
+// 🗑️ Hapus transaksi (admin)
 router.delete("/:id", verifyToken, isAdmin, deleteTransaksi);
 
-// ================== KASIR ==================
-router.get("/keuangan/:id_store", verifyToken, isKasir, getKeuanganByStore);
-router.get("/keuangan/store/:id_store", verifyToken, isAdmin, getKeuanganByStore);
+/* =======================================================
+   🔵 KASIR ROUTES
+   ======================================================= */
+
+// 📄 Riwayat transaksi kasir (otomatis berdasarkan req.user.id_store)
 router.get("/", verifyToken, isKasir, getTransaksiByStore);
+
+// 💰 Data keuangan (grafik pendapatan harian/bulanan per store)
+router.get("/keuangan/:id_store", verifyToken, isKasir, getKeuanganByStore);
+
+// ➕ Tambah transaksi baru
 router.post("/", verifyToken, isKasir, createTransaksi);
 
 export default router;

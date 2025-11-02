@@ -62,18 +62,30 @@ export default function useProdukAPI() {
       url = `${API_URL}/produk/kasir/add`;
     }
 
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: JSON.stringify({
-        ...produkData,
-        id_store: idStore,
-      }),
-    });
+    try {
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: JSON.stringify({
+          ...produkData,
+          id_store: idStore,
+        }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Gagal menambah produk");
-    return data;
+      // 🧠 Selalu baca respons JSON dulu
+      const data = await res.json();
+
+      // 🔥 Jika gagal, lempar error dari backend
+      if (!res.ok) {
+        throw new Error(data.message || "Gagal menambah produk");
+      }
+
+      return data;
+    } catch (err) {
+      console.error("❌ useProdukAPI addProduk Error:", err);
+      // lempar ulang supaya bisa ditangkap di ProdukAdd.jsx
+      throw err;
+    }
   };
 
   /* ===================== 🔹 UPDATE PRODUK ===================== */

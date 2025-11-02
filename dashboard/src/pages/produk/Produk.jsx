@@ -43,12 +43,14 @@ export default function Produk() {
     total_produk: s.total_produk,
     total_stok: s.total_stok,
     aksi: (
-      <button
-        onClick={() => navigate(`/produk/stok/${s.id_store}`)}
-        className="text-[#0e57b5] hover:underline font-medium"
-      >
-        Lihat Stok
-      </button>
+      <div className="flex items-center justify-left gap-2">
+        <button
+          onClick={() => navigate(`/produk/stok/${s.id_store}`)}
+          className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
+        >
+          Lihat
+        </button>
+      </div>
     ),
   }));
 

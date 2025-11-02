@@ -23,19 +23,30 @@ export const login = (req, res) => {
       const match = await bcrypt.compare(password, user.password);
       if (!match) return res.status(401).json({ message: "Password salah" });
 
-      // 🔑 Buat token
+      // 🔹 Ambil id_capster jika role = capster
+      let id_capster = user.id_capster;
+      if (user.role === "capster" && !id_capster) {
+        const [rows] = await db
+          .promise()
+          .query("SELECT id_capster FROM capster WHERE id_user = ?", [
+            user.id_user,
+          ]);
+        if (rows.length > 0) id_capster = rows[0].id_capster;
+      }
+
+      // 🔑 Buat token JWT
       const token = jwt.sign(
         {
           id_user: user.id_user,
           id_store: user.id_store,
-          id_capster: user.id_capster,
+          id_capster, // ✅ Sekarang id_capster pasti ada
           role: user.role,
         },
         process.env.JWT_SECRET,
         { expiresIn: "8h" }
       );
 
-      // ✅ Kirim format respons baru (kompatibel dengan Login.jsx)
+      // ✅ Format respons ke frontend
       res.status(200).json({
         message: "Login berhasil",
         token,
@@ -43,7 +54,7 @@ export const login = (req, res) => {
         user: {
           id_user: user.id_user,
           id_store: user.id_store,
-          id_capster: user.id_capster,
+          id_capster,
           nama_user: user.nama_user,
         },
       });

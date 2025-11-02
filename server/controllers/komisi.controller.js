@@ -49,6 +49,7 @@ export const getKomisiCapsterById = (req, res) => {
 
 /**
  * 🔁 Fungsi reusable untuk ambil detail komisi capster
+ * Menampilkan juga persentase_capster dari setiap transaksi service
  */
 function ambilKomisiCapster(capsterId, res, type = "Bulanan", tanggal = null) {
   const date = tanggal ? dayjs(tanggal) : dayjs();
@@ -69,6 +70,7 @@ function ambilKomisiCapster(capsterId, res, type = "Bulanan", tanggal = null) {
       s.nama_store,
       p.service AS nama_service,
       tsd.harga AS harga_service,
+      tsd.persentase_capster,
       tsd.komisi_capster,
       tsd.created_at
     FROM transaksi_service_detail tsd
@@ -115,6 +117,7 @@ function ambilKomisiCapster(capsterId, res, type = "Bulanan", tanggal = null) {
         tanggal: r.created_at,
         service: r.nama_service,
         harga: Number(r.harga_service || 0),
+        persentase_capster: Number(r.persentase_capster || 0),
         komisi: Number(r.komisi_capster || 0),
       })),
     });

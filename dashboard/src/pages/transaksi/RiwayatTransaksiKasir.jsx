@@ -4,19 +4,35 @@ import MainLayout from "../../layouts/MainLayout";
 import { useFetchRiwayatKasir } from "../../hooks/useFetchRiwayatKasir";
 import { formatTanggalJam } from "../../utils/dateFormatter";
 import TableData from "../../components/TableData";
+import { Receipt } from "lucide-react";
 
 export default function RiwayatTransaksiKasir() {
   const navigate = useNavigate();
   const [filterType, setFilterType] = useState("Bulanan");
   const [filterTipeTransaksi, setFilterTipeTransaksi] = useState("Semua");
-  const [tanggal, setTanggal] = useState(new Date().toISOString().split("T")[0]);
-  const [showCount, setShowCount] = useState(25); // jumlah data ditampilkan
+  const [tanggal, setTanggal] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [showCount, setShowCount] = useState(25);
 
-  const { data, loading, error } = useFetchRiwayatKasir(filterType, tanggal);
+  // 🔹 Ambil data dari hook
+  const {
+    data: rawData,
+    loading,
+    error,
+  } = useFetchRiwayatKasir(filterType, tanggal);
+
+  // 🔹 Pastikan hasilnya selalu array agar tidak error
+  const data = Array.isArray(rawData)
+    ? rawData
+    : Array.isArray(rawData?.data)
+    ? rawData.data
+    : [];
 
   return (
     <MainLayout current="riwayat transaksi">
       {(searchTerm) => {
+        // 🔍 Filter data
         const filteredData = data
           .filter((d) =>
             filterTipeTransaksi === "Semua"
@@ -25,12 +41,26 @@ export default function RiwayatTransaksiKasir() {
           )
           .filter(
             (d) =>
-              d.metode_bayar?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              d.metode_bayar
+                ?.toLowerCase()
+                .includes(searchTerm.toLowerCase()) ||
               d.produk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
               d.layanan?.toLowerCase().includes(searchTerm.toLowerCase())
           )
-          .slice(0, showCount); // batasi jumlah tampil
+          .slice(0, showCount);
 
+        // 💡 Hitung summary
+        const totalTransaksi = filteredData.length;
+        const totalKotor = filteredData.reduce(
+          (sum, d) => sum + Number(d.subtotal || 0),
+          0
+        );
+        const totalBersih = filteredData.reduce(
+          (sum, d) => sum + Number(d.pendapatan_bersih || 0),
+          0
+        );
+
+        // 📊 Kolom tabel
         const columns = [
           { key: "no", label: "#" },
           { key: "tanggal", label: "Tanggal" },
@@ -38,8 +68,10 @@ export default function RiwayatTransaksiKasir() {
           { key: "detail", label: "Detail" },
           { key: "subtotal", label: "Total" },
           { key: "metode_bayar", label: "Metode Bayar" },
+          { key: "struk", label: "Struk" }, // 🧾 Tambahan kolom baru
         ];
 
+        // 📋 Data tabel
         const tableData = filteredData.map((d, i) => ({
           no: i + 1,
           tanggal: formatTanggalJam(d.created_at),
@@ -59,24 +91,40 @@ export default function RiwayatTransaksiKasir() {
             ),
           subtotal: (
             <div className="text-left font-medium text-slate-700">
-              Rp {Number(d.subtotal).toLocaleString("id-ID")}
+              Rp {Number(d.subtotal || 0).toLocaleString("id-ID")}
             </div>
           ),
-          metode_bayar: (
-            <span className="capitalize">{d.metode_bayar}</span>
+          metode_bayar: <span className="capitalize">{d.metode_bayar}</span>,
+
+          // 🧾 Kolom baru: tombol lihat struk
+          struk: (
+            <button
+              onClick={() =>
+                window.open(
+                  `${import.meta.env.VITE_API_URL}/struk/print/${
+                    d.id_transaksi
+                  }`,
+                  "_blank"
+                )
+              }
+              className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition"
+            >
+              Lihat
+            </button>
           ),
         }));
 
+        // 🧱 Render
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
             {/* === Header === */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
+              <div className="order-1 sm:order-none text-left w-full sm:w-auto">
                 <h1 className="text-xl font-semibold text-slate-800">
                   Riwayat Transaksi Toko
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
-                  Daftar transaksi yang telah di lakukan.
+                  Daftar transaksi yang telah dilakukan.
                 </p>
               </div>
             </div>
@@ -126,6 +174,25 @@ export default function RiwayatTransaksiKasir() {
               </div>
             </div>
 
+            {/* === Summary Cards === */}
+            <div className="grid sm:grid-cols-3 gap-6 mt-4">
+              <SummaryCard
+                title="Total Transaksi"
+                value={`${totalTransaksi}`}
+                color="text-indigo-600"
+              />
+              <SummaryCard
+                title="Pendapatan Kotor"
+                value={`Rp ${totalKotor.toLocaleString("id-ID")}`}
+                color="text-blue-600"
+              />
+              <SummaryCard
+                title="Pendapatan Bersih"
+                value={`Rp ${totalBersih.toLocaleString("id-ID")}`}
+                color="text-green-600"
+              />
+            </div>
+
             {/* === Konten Tabel === */}
             {loading ? (
               <p className="text-gray-500 italic">Memuat data transaksi...</p>
@@ -140,5 +207,17 @@ export default function RiwayatTransaksiKasir() {
         );
       }}
     </MainLayout>
+  );
+}
+
+/* ===============================
+   🔹 COMPONENT SUMMARY CARD
+=============================== */
+function SummaryCard({ title, value, color }) {
+  return (
+    <div className="p-5 bg-white shadow-sm rounded-xl border border-gray-100 text-center transition hover:-translate-y-1 hover:shadow-md duration-300">
+      <p className="text-gray-600">{title}</p>
+      <h2 className={`text-3xl font-bold mt-1 ${color}`}>{value}</h2>
+    </div>
   );
 }

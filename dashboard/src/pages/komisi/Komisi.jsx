@@ -1,113 +1,228 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import useFetchKomisi from "../../hooks/useFetchKomisi";
 import TableData from "../../components/TableData";
+import { Calendar } from "lucide-react";
+import { formatTanggalJam } from "../../utils/dateFormatter";
 
 export default function Komisi() {
-  const { komisi, komisiDetail, loading, error } = useFetchKomisi();
   const navigate = useNavigate();
   const role = localStorage.getItem("role");
+  // 🔹 Filter hanya untuk capster
+  const [filterType, setFilterType] = useState("Bulanan");
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const { komisi, komisiDetail, loading, error } = useFetchKomisi(
+    null,
+    filterType,
+    selectedDate
+  );
 
   const data = role === "capster" ? komisiDetail : komisi;
 
   return (
     <MainLayout current="komisi">
       {(searchTerm) => {
-        // 🔍 Filter untuk admin
-        const filtered =
-          role === "capster"
-            ? data
-            : data.filter(
-                (k) =>
-                  k.nama_capster
-                    ?.toLowerCase()
-                    .includes(searchTerm.toLowerCase()) ||
-                  k.nama_store
-                    ?.toLowerCase()
-                    .includes(searchTerm.toLowerCase())
+        if (role === "capster") {
+          // === Tampilan untuk CAPSTER ===
+          const filteredRiwayat = useMemo(() => {
+            if (!data?.riwayat) return [];
+            const date = new Date(selectedDate);
+            return data.riwayat
+              .filter((item) => {
+                const itemDate = new Date(item.tanggal);
+                return filterType === "Harian"
+                  ? itemDate.getDate() === date.getDate() &&
+                      itemDate.getMonth() === date.getMonth() &&
+                      itemDate.getFullYear() === date.getFullYear()
+                  : itemDate.getMonth() === date.getMonth() &&
+                      itemDate.getFullYear() === date.getFullYear();
+              })
+              .filter((r) =>
+                r.service?.toLowerCase().includes(searchTerm.toLowerCase())
               );
+          }, [data, selectedDate, filterType, searchTerm]);
 
-        return (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
-            {/* === Header Card === */}
-            <div className="border-b border-gray-100 pb-4">
-              <h1 className="text-xl font-semibold text-slate-800">
-                {role === "capster" ? "Komisi Saya" : "Komisi Capster"}
-              </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                {role === "capster"
-                  ? "Lihat pendapatan dan riwayat layanan Anda."
-                  : "Daftar total komisi capster di seluruh cabang."}
-              </p>
+          const totalKotor = filteredRiwayat.reduce(
+            (sum, r) => sum + (r.harga ?? 0),
+            0
+          );
+          const totalBersih = filteredRiwayat.reduce(
+            (sum, r) => sum + (r.komisi ?? 0),
+            0
+          );
+
+          return (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
+              {/* === Header === */}
+              <div className="border-b border-gray-100 pb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <div>
+                  <h1 className="text-xl font-semibold text-slate-800">
+                    Komisi Saya
+                  </h1>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Lihat pendapatan dan riwayat komisi berdasarkan periode.
+                  </p>
+                </div>
+              </div>
+
+              {/* === Filter === */}
+              <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-gray-600 font-medium text-sm">
+                    Tipe:
+                  </label>
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="Harian">Harian</option>
+                    <option value="Bulanan">Bulanan</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-gray-600 font-medium text-sm">
+                    Tanggal:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Calendar size={16} className="text-gray-500" />
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* === Konten === */}
+              {loading ? (
+                <p className="text-gray-500 italic">Memuat data komisi...</p>
+              ) : error ? (
+                <p className="text-red-500">{error}</p>
+              ) : (
+                <>
+                  <SummaryCards
+                    totalKotor={totalKotor}
+                    totalBersih={totalBersih}
+                  />
+                  <RiwayatTable riwayat={filteredRiwayat} />
+                </>
+              )}
             </div>
+          );
+        } else {
+          // === Tampilan untuk ADMIN ===
+          const filtered = data.filter(
+            (k) =>
+              k.nama_capster
+                ?.toLowerCase()
+                .includes(searchTerm.toLowerCase()) ||
+              k.nama_store?.toLowerCase().includes(searchTerm.toLowerCase())
+          );
 
-            {/* === Konten Tabel === */}
-            {loading ? (
-              <p className="text-gray-500">Memuat data...</p>
-            ) : error ? (
-              <p className="text-red-500">{error}</p>
-            ) : role === "capster" && data ? (
-              <KomisiCapster data={data} />
-            ) : filtered.length === 0 ? (
-              <p className="text-gray-500">Data tidak ditemukan.</p>
-            ) : (
-              <KomisiAdmin data={filtered} navigate={navigate} />
-            )}
-          </div>
-        );
+          return (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
+              <div className="border-b border-gray-100 pb-4">
+                <h1 className="text-xl font-semibold text-slate-800">
+                  Komisi Capster
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Rekap total komisi seluruh capster per cabang.
+                </p>
+              </div>
+
+              {loading ? (
+                <p className="text-gray-500 italic">Memuat data...</p>
+              ) : error ? (
+                <p className="text-red-500">{error}</p>
+              ) : filtered.length === 0 ? (
+                <p className="text-gray-500 italic">
+                  Tidak ada data ditemukan.
+                </p>
+              ) : (
+                <KomisiAdmin data={filtered} navigate={navigate} />
+              )}
+            </div>
+          );
+        }
       }}
     </MainLayout>
   );
 }
 
-function KomisiCapster({ data }) {
-  const columns = [
-    { key: "no", label: "#" },
-    { key: "service", label: "Service" },
-    { key: "harga", label: "Harga" },
-    { key: "komisi", label: "Komisi" },
-  ];
-
-  const tableData = data.riwayat.map((r, i) => ({
-    no: i + 1,
-    service: r.service,
-    harga: (
-      <div className="text-right">
-        Rp {r.harga.toLocaleString("id-ID")}
-      </div>
-    ),
-    komisi: (
-      <div className="text-right text-green-600 font-semibold">
-        Rp {r.komisi.toLocaleString("id-ID")}
-      </div>
-    ),
-  }));
-
+/* ===============================
+   🔹 KOMPONEN CAPSTER (Summary + Table)
+=============================== */
+function SummaryCards({ totalKotor, totalBersih }) {
   return (
-    <div className="space-y-6">
-      {/* === Card Komisi === */}
-      <div className="grid sm:grid-cols-2 gap-4 text-center">
-        <div className="p-4 border rounded-xl bg-gray-50">
-          <p className="text-gray-500">Pendapatan Kotor</p>
-          <h2 className="text-2xl font-bold text-blue-600">
-            Rp {Number(data.pendapatan_kotor || 0).toLocaleString("id-ID")}
-          </h2>
-        </div>
-        <div className="p-4 border rounded-xl bg-gray-50">
-          <p className="text-gray-500">Pendapatan Bersih (Komisi)</p>
-          <h2 className="text-2xl font-bold text-green-600">
-            Rp {Number(data.pendapatan_bersih || 0).toLocaleString("id-ID")}
-          </h2>
-        </div>
+    <div className="grid sm:grid-cols-2 gap-6 mb-2">
+      <div className="p-5 bg-white shadow-sm rounded-xl text-center shadow-sm transition hover:-translate-y-1 hover:shadow-md duration-300">
+        <p className="text-gray-600">Pendapatan Kotor</p>
+        <h2 className="text-3xl font-bold text-blue-700 mt-1">
+          Rp {totalKotor.toLocaleString("id-ID")}
+        </h2>
       </div>
 
-      {/* === Tabel === */}
-      <TableData columns={columns} data={tableData} />
+      <div className="p-5 bg-white shadow-sm rounded-xl text-center shadow-sm transition hover:-translate-y-1 hover:shadow-md duration-300">
+        <p className="text-gray-600">Pendapatan Bersih (Komisi)</p>
+        <h2 className="text-3xl font-bold text-green-700 mt-1">
+          Rp {totalBersih.toLocaleString("id-ID")}
+        </h2>
+      </div>
     </div>
   );
 }
 
+function RiwayatTable({ riwayat }) {
+  if (!riwayat || riwayat.length === 0)
+    return (
+      <p className="text-gray-500 italic text-center py-4">
+        Tidak ada data untuk periode ini.
+      </p>
+    );
+
+  const columns = [
+    { key: "no", label: "#" },
+    { key: "tanggal", label: "Tanggal" },
+    { key: "service", label: "Layanan" },
+    { key: "harga", label: "Harga" },
+    { key: "persentase", label: "Persentase Komisi (%)" },
+    { key: "komisi", label: "Komisi" },
+  ];
+
+  const data = riwayat.map((r, i) => ({
+    no: i + 1,
+    tanggal: formatTanggalJam(r.tanggal),
+    service: r.service,
+    harga: (
+      <div className="text-left">
+        Rp {(r.harga ?? 0).toLocaleString("id-ID")}
+      </div>
+    ),
+    persentase: (
+      <div className="text-left text-blue-600 font-medium">
+        {r.persentase_capster ? `${r.persentase_capster}%` : "-"}
+      </div>
+    ),
+    komisi: (
+      <div className="text-left text-green-600 font-semibold">
+        Rp {(r.komisi ?? 0).toLocaleString("id-ID")}
+      </div>
+    ),
+  }));
+
+  return <TableData columns={columns} data={data} />;
+}
+
+/* ===============================
+   🔹 KOMPONEN ADMIN (Tabel Rekap)
+=============================== */
 function KomisiAdmin({ data, navigate }) {
   const columns = [
     { key: "no", label: "#" },
@@ -129,9 +244,9 @@ function KomisiAdmin({ data, navigate }) {
     aksi: (
       <button
         onClick={() => navigate(`/komisi/${k.id_capster}`)}
-        className="text-[#0e57b5] hover:underline font-medium"
+        className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition"
       >
-        Lihat Detail
+        Lihat
       </button>
     ),
   }));

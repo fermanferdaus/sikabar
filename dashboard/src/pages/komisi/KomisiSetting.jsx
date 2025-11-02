@@ -61,14 +61,16 @@ export default function KomisiSetting() {
 
         const columns = [
           { key: "no", label: "#" },
-          { key: "nama_store", label: "Nama Store" },
-          { key: "persentase_capster", label: "Persentase Capster (%)" },
+          { key: "nama_capster", label: "Nama Capster" },
+          { key: "nama_store", label: "Cabang" },
+          { key: "persentase_capster", label: "Persentase Komisi (%)" },
           { key: "updated_at", label: "Update Terakhir" },
           { key: "aksi", label: "Aksi" },
         ];
 
         const tableData = filtered.map((item, i) => ({
           no: i + 1,
+          nama_capster: item.nama_capster,
           nama_store: item.nama_store,
           persentase_capster: (
             <div className="text-left text-blue-700 font-medium">
@@ -81,14 +83,16 @@ export default function KomisiSetting() {
           aksi: (
             <div className="flex items-center justify-left gap-2">
               <button
-                onClick={() => navigate(`/komisi-setting/edit/${item.id_setting}`)}
+                onClick={() =>
+                  navigate(`/komisi-setting/edit/${item.id_setting}`)
+                }
                 className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
                 title="Edit"
               >
                 <Pencil size={16} />
               </button>
               <button
-                onClick={() => handleDelete(item.id_setting, item.nama_store)}
+                onClick={() => handleDelete(item.id_setting, item.nama_capster)}
                 className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
                 title="Hapus"
               >
@@ -101,8 +105,9 @@ export default function KomisiSetting() {
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
             {/* === Header === */}
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-gray-100 pb-4 gap-3">
-              <div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4">
+              {/* Kiri: Judul & Deskripsi */}
+              <div className="text-left">
                 <h1 className="text-xl font-semibold text-slate-800">
                   Pengaturan Komisi Capster
                 </h1>
@@ -111,12 +116,15 @@ export default function KomisiSetting() {
                 </p>
               </div>
 
-              <button
-                onClick={() => navigate("/komisi-setting/add")}
-                className="bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2 rounded-lg font-medium transition"
-              >
-                + Tambah Komisi
-              </button>
+              {/* Kanan: Tombol Tambah */}
+              <div className="w-full sm:w-auto sm:justify-end flex mt-2 sm:mt-0">
+                <button
+                  onClick={() => navigate("/komisi-setting/add")}
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                >
+                  + Tambah Komisi
+                </button>
+              </div>
             </div>
 
             {/* === Notifikasi === */}

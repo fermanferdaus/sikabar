@@ -3,8 +3,15 @@ import MainLayout from "../../layouts/MainLayout";
 import useFetchService from "../../hooks/useFetchService";
 import useFetchProduk from "../../hooks/useFetchProduk";
 import useFetchCapsterByStore from "../../hooks/useFetchCapsterByStore";
-import { Scissors, Package, Layers, CreditCard, Trash } from "lucide-react";
-import ConfirmModal from "../../components/ConfirmModal";
+import {
+  Scissors,
+  Package,
+  Layers,
+  CreditCard,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 
 /* === Helper === */
 const formatRupiah = (angka) =>
@@ -12,12 +19,9 @@ const formatRupiah = (angka) =>
 
 const generateNomorStruk = () => {
   const now = new Date();
-  const tanggal = now
-    .toISOString()
-    .replace(/[-:T.Z]/g, "")
-    .slice(0, 14);
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `STRK-${tanggal}-${rand}`;
+  const tanggal = now.toISOString().slice(2, 10).replace(/-/g, "");
+  const rand = Math.floor(100 + Math.random() * 900);
+  return `STRK${tanggal}${rand}`;
 };
 
 /* =====================================================
@@ -30,9 +34,11 @@ export default function TransaksiAdd() {
   const [subtotal, setSubtotal] = useState(0);
   const [jumlahBayar, setJumlahBayar] = useState(0);
   const [noStruk, setNoStruk] = useState(generateNomorStruk());
-  const [showConfirm, setShowConfirm] = useState({
+  const [loading, setLoading] = useState(false);
+  const [popup, setPopup] = useState({
     visible: false,
-    index: null,
+    type: "success",
+    message: "",
   });
 
   const API_URL = import.meta.env.VITE_API_URL;
@@ -44,7 +50,6 @@ export default function TransaksiAdd() {
   const { produk } = useFetchProduk(id_store);
   const { capsters } = useFetchCapsterByStore(id_store);
 
-  /* === Hitung subtotal === */
   useEffect(() => {
     const total = items.reduce(
       (sum, i) => sum + Number(i.harga || 0) * Number(i.jumlah || 1),
@@ -53,7 +58,6 @@ export default function TransaksiAdd() {
     setSubtotal(total);
   }, [items]);
 
-  /* === Tambah Item === */
   const addItem = (item) => {
     setItems((prev) => {
       const existingIndex = prev.findIndex((i) => {
@@ -69,63 +73,95 @@ export default function TransaksiAdd() {
 
       if (existingIndex !== -1) {
         const updated = [...prev];
-        const existing = updated[existingIndex];
-        const newJumlah =
-          Number(existing.jumlah || 1) + Number(item.jumlah || 1);
-        updated[existingIndex] = {
-          ...existing,
-          jumlah: newJumlah,
-          total: newJumlah * Number(existing.harga),
-        };
+        updated[existingIndex].jumlah += 1;
+        updated[existingIndex].total =
+          updated[existingIndex].jumlah * updated[existingIndex].harga;
         return updated;
       }
       return [...prev, item];
     });
   };
 
-  /* === Submit transaksi === */
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!tipeTransaksi) return alert("Pilih tipe transaksi terlebih dahulu!");
-    if (items.length === 0) return alert("Belum ada item yang ditambahkan!");
-
-    const body = {
-      id_store,
-      id_user,
-      nomor_struk: noStruk,
-      tipe_transaksi: tipeTransaksi,
-      metode_bayar: metode,
-      items,
-      jumlah_bayar: jumlahBayar,
-    };
-
-    const res = await fetch(`${API_URL}/transaksi`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    const result = await res.json();
-    if (res.ok) {
-      alert(`✅ Transaksi berhasil!\nNomor Struk: ${noStruk}`);
-      window.open(`${API_URL}/struk/print/${result.id}`, "_blank");
+  const handleChangeTipe = (newType) => {
+    if (newType !== tipeTransaksi) {
+      setTipeTransaksi(newType);
       setItems([]);
       setSubtotal(0);
       setJumlahBayar(0);
-      setNoStruk(generateNomorStruk());
-      setTipeTransaksi(null);
-    } else {
-      alert(result.message || "Gagal menyimpan transaksi");
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (loading) return;
+    if (!tipeTransaksi)
+      return setPopup({
+        visible: true,
+        type: "error",
+        message: "Pilih tipe transaksi terlebih dahulu!",
+      });
+    if (items.length === 0)
+      return setPopup({
+        visible: true,
+        type: "error",
+        message: "Belum ada item yang ditambahkan!",
+      });
+
+    try {
+      setLoading(true);
+      const body = {
+        id_store,
+        id_user,
+        nomor_struk: noStruk,
+        tipe_transaksi: tipeTransaksi,
+        metode_bayar: metode,
+        items,
+        jumlah_bayar: jumlahBayar,
+      };
+
+      const res = await fetch(`${API_URL}/transaksi`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        setPopup({
+          visible: true,
+          type: "success",
+          message: `Transaksi berhasil disimpan! Nomor Struk: ${noStruk}`,
+        });
+        window.open(`${API_URL}/struk/print/${result.id}`, "_blank");
+        setItems([]);
+        setSubtotal(0);
+        setJumlahBayar(0);
+        setNoStruk(generateNomorStruk());
+        setTipeTransaksi(null);
+      } else {
+        setPopup({
+          visible: true,
+          type: "error",
+          message: result.message || "Gagal menyimpan transaksi.",
+        });
+      }
+    } catch {
+      setPopup({
+        visible: true,
+        type: "error",
+        message: "Terjadi kesalahan jaringan atau server.",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <MainLayout current="transaksi">
       {(searchTerm) => {
-        // Search global: capster, produk, layanan
         const capsterFiltered = capsters.filter((c) =>
           c.nama_capster.toLowerCase().includes(searchTerm.toLowerCase())
         );
@@ -137,157 +173,119 @@ export default function TransaksiAdd() {
         );
 
         return (
-          <div className="space-y-8">
-            {/* === HEADER === */}
+          <div className="space-y-6">
+            {/* === HEADER (FULL WIDTH) === */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-              <h1 className="text-xl font-semibold text-slate-800 mb-2">
-                Tambah Transaksi
-              </h1>
-              <p className="text-gray-500 text-sm">
-                Pilih jenis transaksi, tambahkan item, lalu simpan dan cetak
-                struk.
-              </p>
-            </div>
-
-            {/* === PILIH JENIS TRANSAKSI === */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-              <h2 className="font-semibold text-gray-700 mb-4">
-                Pilih Jenis Transaksi
-              </h2>
-              <div className="grid grid-cols-3 gap-4">
-                {[
-                  { key: "service", icon: <Scissors />, label: "Layanan" },
-                  { key: "produk", icon: <Package />, label: "Produk" },
-                  { key: "campuran", icon: <Layers />, label: "Campuran" },
-                ].map((t) => (
-                  <button
-                    key={t.key}
-                    type="button"
-                    onClick={() => {
-                      if (tipeTransaksi !== t.key) {
-                        setTipeTransaksi(t.key);
-                        setItems([]);
-                        setSubtotal(0);
-                        setJumlahBayar(0);
-                      }
-                    }}
-                    className={`flex flex-col items-center p-5 rounded-xl border transition-all shadow-sm ${
-                      tipeTransaksi === t.key
-                        ? "bg-blue-600 text-white border-blue-700 scale-[1.03]"
-                        : "bg-gray-50 hover:bg-blue-50 border-gray-200 text-gray-700"
-                    }`}
-                  >
-                    {t.icon}
-                    <span className="mt-2 font-medium">{t.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* === GRID ITEM === */}
-            {tipeTransaksi && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-10">
-                {tipeTransaksi !== "produk" && (
-                  <ServiceGrid
-                    capsters={capsterFiltered}
-                    services={serviceFiltered}
-                    onAdd={addItem}
-                  />
-                )}
-                {tipeTransaksi !== "service" && (
-                  <ProdukGrid produk={produkFiltered} onAdd={addItem} />
-                )}
-              </div>
-            )}
-
-            {/* === DAFTAR ITEM === */}
-            {items.length > 0 && (
-              <ItemTable
-                items={items}
-                setItems={setItems}
-                showConfirm={showConfirm}
-                setShowConfirm={setShowConfirm}
-              />
-            )}
-
-            {/* === PEMBAYARAN === */}
-            {items.length > 0 && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-gray-700">Subtotal</h3>
-                  <span className="font-bold text-blue-600 text-lg">
-                    {formatRupiah(subtotal)}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {["cash", "qris"].map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setMetode(m)}
-                      className={`flex items-center justify-center gap-2 p-3 rounded-xl transition-all ${
-                        metode === m
-                          ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                          : "bg-gray-100 hover:bg-blue-50 text-gray-700"
-                      }`}
-                    >
-                      <CreditCard />
-                      {m.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-
+              <div className="flex justify-between items-center">
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1">
-                    Jumlah Bayar
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="Masukkan jumlah bayar"
-                    value={
-                      jumlahBayar
-                        ? "Rp" +
-                          jumlahBayar.toLocaleString("id-ID", {
-                            minimumFractionDigits: 0,
-                          })
-                        : ""
-                    }
-                    onChange={(e) => {
-                      const numericValue = e.target.value.replace(/\D/g, "");
-                      const cleanValue = numericValue.replace(/^0+/, "");
-                      setJumlahBayar(Number(cleanValue || 0));
-                    }}
-                    className="border border-gray-300 rounded-lg px-4 py-2 w-full text-right font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
+                  <h1 className="text-xl font-semibold text-slate-800 mb-1">
+                    Tambah Transaksi
+                  </h1>
+                  <p className="text-gray-500 text-sm">
+                    Pilih jenis transaksi, tambahkan item, lalu simpan dan cetak
+                    struk.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* === GRID UTAMA: KIRI & KANAN === */}
+            <div
+              className="
+                grid 
+                grid-cols-1 xl:grid-cols-[65%_minmax(340px,1fr)] 
+                gap-6 
+                min-h-[calc(100vh-190px)] 
+                relative
+                pr-2
+              "
+            >
+              {/* === KIRI === */}
+              <div className="space-y-6 overflow-y-auto pr-2 h-[calc(100vh-220px)]">
+                {/* PILIH JENIS TRANSAKSI */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+                  <h2 className="font-semibold text-gray-700 mb-4">
+                    Pilih Jenis Transaksi
+                  </h2>
+                  <div className="grid grid-cols-3 gap-4">
+                    {[
+                      { key: "service", icon: <Scissors />, label: "Layanan" },
+                      { key: "produk", icon: <Package />, label: "Produk" },
+                      { key: "campuran", icon: <Layers />, label: "Campuran" },
+                    ].map((t) => (
+                      <button
+                        key={t.key}
+                        onClick={() => handleChangeTipe(t.key)}
+                        className={`flex flex-col items-center justify-center p-5 rounded-xl border font-medium transition-all ${
+                          tipeTransaksi === t.key
+                            ? "bg-[#0e57b5] text-white border-blue-700 scale-[1.03]"
+                            : "bg-gray-50 hover:bg-blue-50 border-gray-200 text-gray-700"
+                        }`}
+                      >
+                        {t.icon}
+                        <span className="mt-2">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {jumlahBayar > 0 && (
-                  <div className="text-right">
-                    {jumlahBayar >= subtotal ? (
-                      <p className="text-green-600 font-semibold">
-                        Kembalian: {formatRupiah(jumlahBayar - subtotal)}
-                      </p>
-                    ) : (
-                      <p className="text-red-600 font-semibold">
-                        Kurang: {formatRupiah(subtotal - jumlahBayar)}
-                      </p>
+                {/* GRID ITEM */}
+                {tipeTransaksi && (
+                  <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-8 space-y-10">
+                    {tipeTransaksi !== "produk" && (
+                      <ServiceGrid
+                        capsters={capsterFiltered}
+                        services={serviceFiltered}
+                        onAdd={addItem}
+                      />
+                    )}
+                    {tipeTransaksi !== "service" && (
+                      <ProdukGrid produk={produkFiltered} onAdd={addItem} />
                     )}
                   </div>
                 )}
+              </div>
 
-                <button
-                  onClick={handleSubmit}
-                  disabled={jumlahBayar < subtotal}
-                  className={`w-full font-medium py-3 rounded-lg transition-all ${
-                    jumlahBayar < subtotal
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                  }`}
-                >
-                  Simpan & Cetak Struk
-                </button>
+              {/* === KANAN === */}
+              <div className="space-y-6 overflow-y-auto pl-2 h-full">
+                <ItemCard items={items} setItems={setItems} />
+                <PembayaranCard
+                  subtotal={subtotal}
+                  metode={metode}
+                  setMetode={setMetode}
+                  jumlahBayar={jumlahBayar}
+                  setJumlahBayar={setJumlahBayar}
+                  handleSubmit={handleSubmit}
+                  loading={loading}
+                />
+              </div>
+            </div>
+
+            {/* === POPUP MODAL === */}
+            {popup.visible && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                <div className="bg-white rounded-2xl shadow-lg p-6 w-[380px] text-center space-y-4">
+                  {popup.type === "success" ? (
+                    <CheckCircle2 className="text-green-500 w-12 h-12 mx-auto" />
+                  ) : (
+                    <XCircle className="text-red-500 w-12 h-12 mx-auto" />
+                  )}
+                  <p className="text-gray-700 font-medium leading-relaxed">
+                    {popup.message}
+                  </p>
+                  <button
+                    onClick={() =>
+                      setPopup({ visible: false, type: "success", message: "" })
+                    }
+                    className={`px-5 py-2 rounded-lg text-white font-medium ${
+                      popup.type === "success"
+                        ? "bg-green-500 hover:bg-green-600"
+                        : "bg-red-500 hover:bg-red-600"
+                    }`}
+                  >
+                    Tutup
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -303,10 +301,10 @@ export default function TransaksiAdd() {
 function ServiceGrid({ services, capsters, onAdd }) {
   const [selectedCapster, setCapster] = useState(null);
   const [showWarning, setShowWarning] = useState(false);
+  const [clicked, setClicked] = useState(null);
 
   return (
     <div className="space-y-8">
-      {/* === CAPSTER === */}
       <div>
         <h4 className="font-semibold text-gray-700 mb-3">Pilih Capster</h4>
         <div className="flex flex-wrap gap-3">
@@ -317,9 +315,9 @@ function ServiceGrid({ services, capsters, onAdd }) {
                 setCapster(c.id_capster);
                 setShowWarning(false);
               }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium ${
                 selectedCapster === c.id_capster
-                  ? "bg-blue-600 text-white"
+                  ? "bg-[#0e57b5] text-white"
                   : "bg-gray-100 hover:bg-blue-50 text-gray-700"
               }`}
             >
@@ -335,7 +333,6 @@ function ServiceGrid({ services, capsters, onAdd }) {
         </div>
       )}
 
-      {/* === LAYANAN === */}
       <div>
         <h4 className="font-semibold text-gray-700 mb-3">Pilih Layanan</h4>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -344,16 +341,23 @@ function ServiceGrid({ services, capsters, onAdd }) {
               key={s.id_pricelist}
               onClick={() => {
                 if (!selectedCapster) return setShowWarning(true);
+                setClicked(s.id_pricelist);
+                setTimeout(() => setClicked(null), 400);
                 onAdd({
                   tipe: "service",
                   id_pricelist: s.id_pricelist,
                   id_capster: selectedCapster,
                   nama: s.service,
                   harga: Number(s.harga),
+                  jumlah: 1,
                   total: Number(s.harga),
                 });
               }}
-              className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center shadow-sm hover:shadow-md hover:-translate-y-1 transition"
+              className={`bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center shadow-sm hover:shadow-md transition ${
+                clicked === s.id_pricelist
+                  ? "ring-2 ring-green-500 scale-[1.02]"
+                  : ""
+              }`}
             >
               <Scissors className="text-blue-600" />
               <p className="mt-1 font-semibold text-gray-800">{s.service}</p>
@@ -372,6 +376,7 @@ function ServiceGrid({ services, capsters, onAdd }) {
    🔹 PRODUK GRID
 ===================================================== */
 function ProdukGrid({ produk, onAdd }) {
+  const [clicked, setClicked] = useState(null);
   return (
     <div>
       <h4 className="font-semibold text-gray-700 mb-3">Pilih Produk</h4>
@@ -379,19 +384,23 @@ function ProdukGrid({ produk, onAdd }) {
         {produk.map((p) => (
           <button
             key={p.id_produk}
-            onClick={() =>
+            onClick={() => {
+              setClicked(p.id_produk);
+              setTimeout(() => setClicked(null), 400);
               onAdd({
                 tipe: "produk",
                 id_produk: p.id_produk,
                 nama: p.nama_produk,
-                harga_awal: Number(p.harga_awal),
-                harga_jual: Number(p.harga_jual),
                 harga: Number(p.harga_jual),
                 jumlah: 1,
                 total: Number(p.harga_jual),
-              })
-            }
-            className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center shadow-sm hover:shadow-md hover:-translate-y-1 transition"
+              });
+            }}
+            className={`bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center shadow-sm hover:shadow-md transition ${
+              clicked === p.id_produk
+                ? "ring-2 ring-green-500 scale-[1.02]"
+                : ""
+            }`}
           >
             <Package className="text-green-600" />
             <p className="mt-1 font-semibold text-gray-800">{p.nama_produk}</p>
@@ -406,84 +415,186 @@ function ProdukGrid({ produk, onAdd }) {
 }
 
 /* ======================================================
-   🔹 ITEM TABLE (CLEAN STYLE)
+   🔹 ITEM LIST KANAN
 ===================================================== */
-function ItemTable({ items, setItems, showConfirm, setShowConfirm }) {
-  const confirmDelete = () => {
-    setItems((prev) => prev.filter((_, i) => i !== showConfirm.index));
-    setShowConfirm({ visible: false, index: null });
+function ItemCard({ items, setItems }) {
+  const handleQuantity = (index, delta) => {
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== index) return item;
+        const newJumlah = Math.max(1, item.jumlah + delta); // minimal 1
+        return {
+          ...item,
+          jumlah: newJumlah,
+          total: item.harga * newJumlah,
+        };
+      })
+    );
+  };
+
+  const handleDelete = (index) => {
+    setItems((prev) => prev.filter((_, j) => j !== index));
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-      <h3 className="font-semibold text-gray-700 mb-4">Daftar Item</h3>
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm border-collapse">
-          <thead className="bg-gray-50 text-gray-700">
-            <tr>
-              <th className="p-3 text-left font-semibold">No</th>
-              <th className="p-3 text-left font-semibold">Nama</th>
-              <th className="p-3 text-right font-semibold">Harga</th>
-              <th className="p-3 text-center font-semibold">Jumlah</th>
-              <th className="p-3 text-right font-semibold">Total</th>
-              <th className="p-3 text-center font-semibold">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="text-center text-gray-500 p-4 italic"
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+      <h3 className="font-semibold text-gray-700 mb-3">Daftar Item</h3>
+
+      {items.length === 0 ? (
+        <div className="flex items-center justify-center h-32 text-gray-400 italic text-sm">
+          Belum ada item ditambahkan
+        </div>
+      ) : (
+        <div className="max-h-[300px] overflow-y-auto space-y-2">
+          {items.map((i, idx) => (
+            <div
+              key={idx}
+              className="flex justify-between items-center py-2 border-b last:border-none"
+            >
+              {/* === Kiri: Nama dan harga satuan === */}
+              <div>
+                <p className="font-medium text-gray-800">{i.nama}</p>
+                <p className="text-sm text-gray-500">{formatRupiah(i.harga)}</p>
+              </div>
+
+              {/* === Kanan: Kontrol jumlah & total === */}
+              <div className="flex items-center gap-2">
+                {/* Tombol Kurangi */}
+                <button
+                  onClick={() => handleQuantity(idx, -1)}
+                  disabled={i.jumlah <= 1}
+                  className={`px-2 py-1 rounded-md font-semibold ${
+                    i.jumlah <= 1
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                  }`}
+                  title="Kurangi jumlah"
                 >
-                  Tidak ada item ditambahkan
-                </td>
-              </tr>
-            ) : (
-              items.map((i, idx) => (
-                <tr
-                  key={idx}
-                  className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                  -
+                </button>
+
+                {/* Jumlah */}
+                <span className="min-w-[28px] text-center text-gray-800 font-medium">
+                  {i.jumlah}
+                </span>
+
+                {/* Tombol Tambah */}
+                <button
+                  onClick={() => handleQuantity(idx, +1)}
+                  className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 font-semibold"
+                  title="Tambah jumlah"
                 >
-                  <td className="p-3 text-gray-700">{idx + 1}</td>
-                  <td className="p-3 text-gray-700">{i.nama}</td>
-                  <td className="p-3 text-right text-gray-700">
-                    {formatRupiah(i.harga)}
-                  </td>
-                  <td className="p-3 text-center text-gray-700">
-                    {i.jumlah || 1}
-                  </td>
-                  <td className="p-3 text-right font-medium text-gray-800">
-                    {formatRupiah(i.total)}
-                  </td>
-                  <td className="p-3 text-center">
-                    <button
-                      onClick={() =>
-                        setShowConfirm({ visible: true, index: idx })
-                      }
-                      className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100 transition"
-                      title="Hapus item"
-                    >
-                      <Trash size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  +
+                </button>
+
+                {/* Total harga */}
+                <span className="font-semibold text-gray-800 ml-2">
+                  {formatRupiah(i.total)}
+                </span>
+
+                {/* Tombol Hapus */}
+                <button
+                  onClick={() => handleDelete(idx)}
+                  className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md transition-all"
+                  title="Hapus item"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ======================================================
+   🔹 PEMBAYARAN CARD
+===================================================== */
+function PembayaranCard({
+  subtotal,
+  metode,
+  setMetode,
+  jumlahBayar,
+  setJumlahBayar,
+  handleSubmit,
+  loading,
+}) {
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 space-y-5">
+      <div className="flex justify-between items-center">
+        <h3 className="font-semibold text-gray-700">Subtotal</h3>
+        <span className="font-bold text-blue-600 text-lg">
+          {formatRupiah(subtotal)}
+        </span>
       </div>
 
-      <ConfirmModal
-        open={showConfirm.visible}
-        onClose={() => setShowConfirm({ visible: false, index: null })}
-        onConfirm={confirmDelete}
-        message={
-          showConfirm.visible
-            ? `Hapus item "${items[showConfirm.index]?.nama}" dari daftar?`
-            : "Apakah Anda yakin ingin menghapus item ini?"
-        }
-      />
+      <div className="grid grid-cols-2 gap-3">
+        {["cash", "qris"].map((m) => (
+          <button
+            key={m}
+            onClick={() => setMetode(m)}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl ${
+              metode === m
+                ? "bg-[#0e57b5] text-white"
+                : "bg-gray-100 hover:bg-blue-50 text-gray-700"
+            }`}
+          >
+            <CreditCard size={16} /> {m.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      <div>
+        <label className="block text-gray-700 font-medium mb-1">
+          Jumlah Bayar
+        </label>
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="Masukkan jumlah bayar"
+          value={
+            jumlahBayar
+              ? "Rp" +
+                jumlahBayar.toLocaleString("id-ID", {
+                  minimumFractionDigits: 0,
+                })
+              : ""
+          }
+          onChange={(e) => {
+            const numericValue = e.target.value.replace(/\D/g, "");
+            setJumlahBayar(Number(numericValue || 0));
+          }}
+          className="border border-gray-300 rounded-lg px-4 py-2 w-full text-right font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        />
+      </div>
+
+      {jumlahBayar > 0 && (
+        <div className="text-right">
+          {jumlahBayar >= subtotal ? (
+            <p className="text-green-600 font-semibold">
+              Kembalian: {formatRupiah(jumlahBayar - subtotal)}
+            </p>
+          ) : (
+            <p className="text-red-600 font-semibold">
+              Kurang: {formatRupiah(subtotal - jumlahBayar)}
+            </p>
+          )}
+        </div>
+      )}
+
+      <button
+        onClick={handleSubmit}
+        disabled={loading || jumlahBayar < subtotal}
+        className={`w-full font-medium py-3 rounded-lg ${
+          loading || jumlahBayar < subtotal
+            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+            : "bg-[#0e57b5] hover:bg-[#0b4894] text-white shadow-sm"
+        }`}
+      >
+        {loading ? "Menyimpan..." : "Simpan & Cetak Struk"}
+      </button>
     </div>
   );
 }

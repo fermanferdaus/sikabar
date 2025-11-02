@@ -96,7 +96,7 @@ export default function Store() {
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
             {/* === Header Card === */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
                   Data Store
@@ -106,13 +106,16 @@ export default function Store() {
                 </p>
               </div>
 
-              <button
-                onClick={() => navigate("/store/add")}
-                className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
-              >
-                <Plus size={16} />
-                Tambah Store
-              </button>
+              {/* 🔹 Tombol Tambah Store: kiri di mobile, kanan di desktop */}
+              <div className="order-1 sm:order-2 flex justify-start sm:justify-end w-full sm:w-auto">
+                <button
+                  onClick={() => navigate("/store/add")}
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                >
+                  <Plus size={16} />
+                  Tambah Store
+                </button>
+              </div>
             </div>
 
             {/* === Notifikasi === */}

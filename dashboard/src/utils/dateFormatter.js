@@ -13,6 +13,16 @@ export function formatJam(tanggalISO) {
   return `${jam} WIB`;
 }
 
+// 🔹 Format periode: Oktober 2025
+export function formatPeriode(periode) {
+  if (!periode) return "-";
+  const [year, month] = periode.split("-");
+  const bulanNama = new Date(`${year}-${month}-01`).toLocaleString("id-ID", {
+    month: "long",
+  });
+  return `${bulanNama} ${year}`;
+}
+
 // 🔹 Gabungan tanggal & jam
 export function formatTanggalJam(tanggalISO) {
   return `${formatTanggal(tanggalISO)}, ${formatJam(tanggalISO)}`;

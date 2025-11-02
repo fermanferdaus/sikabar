@@ -46,59 +46,60 @@ export const createProduk = (req, res) => {
     return res.status(400).json({ message: "Data produk tidak lengkap" });
   }
 
-  // 🟢 Cek apakah produk dengan nama dan harga yang sama sudah ada
-  const checkSql = `
-    SELECT id_produk 
+  // 🔹 Cek apakah nama produk sudah ada di tabel
+  const checkNameSql = `
+    SELECT id_produk, harga_awal, harga_jual 
     FROM produk 
-    WHERE LOWER(nama_produk) = LOWER(?) 
-      AND harga_awal = ? 
-      AND harga_jual = ?
-    LIMIT 1
+    WHERE LOWER(nama_produk) = LOWER(?)
   `;
 
-  db.query(checkSql, [nama_produk, harga_awal, harga_jual], (err, rows) => {
+  db.query(checkNameSql, [nama_produk], (err, rows) => {
     if (err) {
-      console.error("❌ DB Error saat cek produk:", err);
+      console.error("  DB Error saat cek produk:", err);
       return res.status(500).json({ message: "Gagal mengecek produk" });
     }
 
     if (rows.length > 0) {
-      // 🟡 Jika sudah ada → Update produk
-      const id_produk = rows[0].id_produk;
+      const existing = rows[0];
 
-      db.query(
-        `
-        UPDATE produk 
-        SET nama_produk = ?, harga_awal = ?, harga_jual = ?
-        WHERE id_produk = ?
-        `,
-        [nama_produk, harga_awal, harga_jual, id_produk],
-        (err) => {
-          if (err) {
-            console.error("❌ Gagal update produk:", err);
-            return res
-              .status(500)
-              .json({ message: "Gagal memperbarui produk" });
+      // 🔸 Kasus 1: nama sama & harga juga sama → update
+      if (
+        Number(existing.harga_awal) === Number(harga_awal) &&
+        Number(existing.harga_jual) === Number(harga_jual)
+      ) {
+        const id_produk = existing.id_produk;
+        db.query(
+          `UPDATE produk SET nama_produk=?, harga_awal=?, harga_jual=? WHERE id_produk=?`,
+          [nama_produk, harga_awal, harga_jual, id_produk],
+          (err) => {
+            if (err) {
+              console.error("  Gagal update produk:", err);
+              return res
+                .status(500)
+                .json({ message: "Gagal memperbarui produk" });
+            }
+            return res.json({
+              message: "Produk sudah ada, data diperbarui",
+              id: id_produk,
+              updated: true,
+            });
           }
-
-          res.json({
-            message: "Produk sudah ada, data diperbarui",
-            id: id_produk,
-            updated: true,
-          });
-        }
-      );
+        );
+      } else {
+        // 🔸 Kasus 2: nama sama tapi harga beda → kirim alert error
+        return res.status(400).json({
+          message:
+            "Nama produk sudah terdaftar dengan harga berbeda. Silakan ubah harga atau nama produk.",
+        });
+      }
     } else {
-      // 🟢 Jika belum ada → Tambahkan produk baru
+      // 🔹 Kasus 3: nama belum ada → tambahkan
       db.query(
-        `
-        INSERT INTO produk (nama_produk, harga_awal, harga_jual)
-        VALUES (?, ?, ?)
-        `,
+        `INSERT INTO produk (nama_produk, harga_awal, harga_jual) VALUES (?, ?, ?)`,
         [nama_produk, harga_awal, harga_jual],
         (err, result) => {
           if (err) {
-            console.error("❌ Gagal menambah produk:", err);
+            console.error("  Gagal menambah produk:", err);
             return res.status(500).json({ message: "Gagal menambah produk" });
           }
 
@@ -176,7 +177,7 @@ export const deleteStokProduk = (req, res) => {
 
   db.query(sql, [id_store, id_produk], (err, result) => {
     if (err) {
-      console.error("❌ DB Error deleteStokProduk:", err);
+      console.error("  DB Error deleteStokProduk:", err);
       return res.status(500).json({ message: "Gagal menghapus stok produk" });
     }
 
@@ -184,7 +185,7 @@ export const deleteStokProduk = (req, res) => {
       return res.status(404).json({ message: "Stok produk tidak ditemukan" });
     }
 
-    res.json({ message: "✅ Stok produk berhasil dihapus dari toko ini" });
+    res.json({ message: "Stok produk berhasil dihapus dari toko ini" });
   });
 };
 
@@ -198,32 +199,28 @@ export const getProdukByStore = (req, res) => {
       p.nama_produk,
       p.harga_awal,
       p.harga_jual,
-
-      -- stok_awal (jumlah_stok tetap)
       COALESCE(sp.jumlah_stok, 0) AS stok_awal,
-
-      -- stok_sekarang dari stok_akhir (real-time)
       COALESCE(sp.stok_akhir, sp.jumlah_stok) AS stok_sekarang,
-
-      -- total laba berdasarkan transaksi
       COALESCE((
         SELECT SUM(tp.laba_rugi)
         FROM transaksi_produk_detail tp
         JOIN transaksi t ON t.id_transaksi = tp.id_transaksi
         WHERE tp.id_produk = p.id_produk
         AND t.id_store = ?
-      ), 0) AS total_laba
-
+      ), 0) AS total_laba,
+      s.nama_store
     FROM produk p
     INNER JOIN stok_produk sp 
       ON sp.id_produk = p.id_produk 
       AND sp.id_store = ?
+    LEFT JOIN store s 
+      ON s.id_store = sp.id_store
     ORDER BY p.nama_produk ASC;
   `;
 
   db.query(sql, [id_store, id_store], (err, result) => {
     if (err) {
-      console.error("❌ DB Error getProdukByStore:", err);
+      console.error("  DB Error getProdukByStore:", err);
       return res.status(500).json({ message: "Gagal mengambil data stok" });
     }
     res.json(result);
@@ -259,12 +256,12 @@ export const addStokProduk = (req, res) => {
     [id_store, id_produk, jumlah_stok, jumlah_stok],
     (err, result) => {
       if (err) {
-        console.error("❌ DB Error addStokProduk:", err);
+        console.error("  DB Error addStokProduk:", err);
         return res.status(500).json({ message: "Gagal menambah stok", err });
       }
 
       res.json({
-        message: "✅ Stok berhasil ditambahkan atau diperbarui",
+        message: "Stok berhasil ditambahkan atau diperbarui",
         affectedRows: result.affectedRows,
       });
     }
@@ -298,7 +295,7 @@ export const getStokByStoreAndProduk = (req, res) => {
 
   db.query(sql, [id_store, id_store, id_produk], (err, result) => {
     if (err) {
-      console.error("❌ DB Error getStokByStoreAndProduk:", err);
+      console.error("  DB Error getStokByStoreAndProduk:", err);
       return res.status(500).json({ message: "Gagal mengambil data produk" });
     }
 
@@ -332,7 +329,7 @@ export const updateStokProduk = (req, res) => {
 
   db.query(getSql, [id_store, id_produk], (err, rows) => {
     if (err) {
-      console.error("❌ DB Error saat ambil stok lama:", err);
+      console.error("  DB Error saat ambil stok lama:", err);
       return res.status(500).json({ message: "Gagal mengambil stok lama" });
     }
 
@@ -358,13 +355,13 @@ export const updateStokProduk = (req, res) => {
       [id_store, id_produk, jumlah_stok, stokAkhirBaru],
       (err2) => {
         if (err2) {
-          console.error("❌ DB Error updateStokProduk:", err2);
+          console.error("  DB Error updateStokProduk:", err2);
           return res.status(500).json({ message: "Gagal memperbarui stok" });
         }
 
         res.json({
           message:
-            "✅ Stok berhasil diperbarui dengan penyesuaian proporsional",
+            "Stok berhasil diperbarui dengan penyesuaian proporsional",
           stok_awal_lama: stokLama.jumlah_stok,
           stok_awal_baru: jumlah_stok,
           stok_akhir_baru: stokAkhirBaru,
@@ -383,46 +380,104 @@ export const addProdukByKasir = (req, res) => {
     return res.status(400).json({ message: "Data tidak lengkap" });
   }
 
-  // 🔹 1️⃣ Tambah produk baru ke tabel produk
-  const insertProdukSql = `
-    INSERT INTO produk (nama_produk, harga_awal, harga_jual)
-    VALUES (?, ?, ?)
+  // 🔹 1️⃣ Cek apakah nama produk sudah ada
+  const checkNameSql = `
+    SELECT id_produk, harga_awal, harga_jual 
+    FROM produk 
+    WHERE LOWER(nama_produk) = LOWER(?)
   `;
 
-  db.query(
-    insertProdukSql,
-    [nama_produk, harga_awal, harga_jual],
-    (err, result) => {
-      if (err) {
-        console.error("❌ DB Error saat menambah produk (kasir):", err);
-        return res.status(500).json({ message: "Gagal menambah produk baru" });
-      }
+  db.query(checkNameSql, [nama_produk], (err, rows) => {
+    if (err) {
+      console.error("  DB Error saat cek produk (kasir):", err);
+      return res.status(500).json({ message: "Gagal mengecek produk" });
+    }
 
-      const id_produk = result.insertId;
+    if (rows.length > 0) {
+      const existing = rows[0];
 
-      // 🔹 2️⃣ Tambah stok produk di toko kasir
-      const insertStokSql = `
-      INSERT INTO stok_produk (id_store, id_produk, jumlah_stok, stok_akhir)
-      VALUES (?, ?, ?, ?)
-    `;
+      // 🔸 Kasus 1: nama sama & harga sama → pakai id lama
+      if (
+        Number(existing.harga_awal) === Number(harga_awal) &&
+        Number(existing.harga_jual) === Number(harga_jual)
+      ) {
+        const id_produk = existing.id_produk;
 
-      db.query(
-        insertStokSql,
-        [id_store, id_produk, jumlah_stok || 0, jumlah_stok || 0],
-        (err2) => {
-          if (err2) {
-            console.error("❌ DB Error saat menambah stok (kasir):", err2);
-            return res.status(500).json({
-              message: "Produk dibuat, tapi gagal menambah stok",
+        // Tambahkan stok di toko kasir
+        const insertStokSql = `
+          INSERT INTO stok_produk (id_store, id_produk, jumlah_stok, stok_akhir)
+          VALUES (?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE 
+            jumlah_stok = jumlah_stok + VALUES(jumlah_stok),
+            stok_akhir = stok_akhir + VALUES(stok_akhir)
+        `;
+
+        db.query(
+          insertStokSql,
+          [id_store, id_produk, jumlah_stok || 0, jumlah_stok || 0],
+          (err2) => {
+            if (err2) {
+              console.error("  DB Error saat tambah stok:", err2);
+              return res
+                .status(500)
+                .json({ message: "Produk sudah ada tapi gagal menambah stok" });
+            }
+
+            return res.json({
+              message: "Produk sudah ada, stok diperbarui di toko ini",
+              id_produk,
             });
           }
+        );
+      } else {
+        // 🔸 Kasus 2: nama sama tapi harga beda → error
+        return res.status(400).json({
+          message:
+            "Nama produk sudah terdaftar dengan harga berbeda. Silakan ubah nama atau sesuaikan harga.",
+        });
+      }
+    } else {
+      // 🔹 2️⃣ Jika produk belum ada → buat baru
+      const insertProdukSql = `
+        INSERT INTO produk (nama_produk, harga_awal, harga_jual)
+        VALUES (?, ?, ?)
+      `;
+      db.query(
+        insertProdukSql,
+        [nama_produk, harga_awal, harga_jual],
+        (err, result) => {
+          if (err) {
+            console.error("  DB Error saat menambah produk (kasir):", err);
+            return res
+              .status(500)
+              .json({ message: "Gagal menambah produk baru" });
+          }
 
-          res.json({
-            message: "✅ Produk dan stok berhasil ditambahkan oleh kasir",
-            id_produk,
-          });
+          const id_produk = result.insertId;
+
+          const insertStokSql = `
+            INSERT INTO stok_produk (id_store, id_produk, jumlah_stok, stok_akhir)
+            VALUES (?, ?, ?, ?)
+          `;
+          db.query(
+            insertStokSql,
+            [id_store, id_produk, jumlah_stok || 0, jumlah_stok || 0],
+            (err2) => {
+              if (err2) {
+                console.error("DB Error saat menambah stok (kasir):", err2);
+                return res.status(500).json({
+                  message: "Produk dibuat, tapi gagal menambah stok",
+                });
+              }
+
+              return res.json({
+                message: "Produk dan stok berhasil ditambahkan oleh kasir",
+                id_produk,
+              });
+            }
+          );
         }
       );
     }
-  );
+  });
 };

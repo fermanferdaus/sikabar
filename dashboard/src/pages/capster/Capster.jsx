@@ -117,7 +117,7 @@ export default function Capster() {
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
                   Data Capster
@@ -129,13 +129,15 @@ export default function Capster() {
               </div>
 
               {role === "admin" && (
-                <Link
-                  to="/capster/add"
-                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
-                >
-                  <Plus size={16} />
-                  Tambah Capster
-                </Link>
+                <div className="order-1 sm:order-2 w-full sm:w-auto flex justify-start sm:justify-end">
+                  <Link
+                    to="/capster/add"
+                    className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
+                  >
+                    <Plus size={16} />
+                    Tambah Capster
+                  </Link>
+                </div>
               )}
             </div>
 

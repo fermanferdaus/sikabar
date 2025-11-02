@@ -57,12 +57,12 @@ export default function ProdukKasir() {
 
   // ➕ Tambah produk baru
   const handleAddProduk = () => {
-    navigate(`/produk/addkasir`, { state: { fromStore: id_store } });
+    navigate(`/produk/kasir/add`, { state: { fromStore: id_store } });
   };
 
   // ✏️ Edit produk
   const handleEdit = (id_produk) => {
-    navigate(`/produk/editkasir/${id_produk}`, {
+    navigate(`/produk/kasir/edit/${id_produk}`, {
       state: { fromStore: id_store },
     });
   };
@@ -135,8 +135,8 @@ export default function ProdukKasir() {
         const data = filteredProduk.map((p, i) => ({
           no: i + 1,
           nama_produk: p.nama_produk,
-          harga_awal: `Rp ${p.harga_awal.toLocaleString("id-ID")}`,
-          harga_jual: `Rp ${p.harga_jual.toLocaleString("id-ID")}`,
+          harga_awal: `Rp ${Number(p.harga_awal).toLocaleString("id-ID")}`,
+          harga_jual: `Rp ${Number(p.harga_jual).toLocaleString("id-ID")}`,
           stok_awal: p.stok_awal,
           stok_sekarang: p.stok_sekarang,
           total_laba: (
@@ -167,7 +167,7 @@ export default function ProdukKasir() {
         return (
           <div className="bg-white shadow-md rounded-2xl border border-gray-100 p-8 space-y-6">
             {/* === Header === */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
                   Produk Kasir – {storeName || `Store #${id_store}`}
@@ -177,10 +177,11 @@ export default function ProdukKasir() {
                 </p>
               </div>
 
-              <div className="flex gap-2">
+              {/* 🔹 Tombol Tambah Produk: kiri di mobile, kanan di desktop */}
+              <div className="order-1 sm:order-2 flex justify-start sm:justify-end gap-2 w-full sm:w-auto">
                 <button
                   onClick={handleAddProduk}
-                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
                 >
                   <Plus size={16} />
                   Tambah Produk

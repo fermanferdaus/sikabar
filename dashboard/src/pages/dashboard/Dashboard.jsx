@@ -1,39 +1,76 @@
+import React, { useEffect, useState } from "react";
 import MainLayout from "../../layouts/MainLayout";
 import ChartKeuangan from "../../components/ChartKeuangan";
-import { Store, Scissors, Package, DollarSign } from "lucide-react";
+import {
+  Store,
+  Scissors,
+  Package,
+  DollarSign,
+  ArrowDownCircle,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import useFetchCapster from "../../hooks/useFetchCapster";
 import useFetchProduk from "../../hooks/useFetchProduk";
 import useFetchTransaksiAdmin from "../../hooks/useFetchTransaksi";
 import useFetchStore from "../../hooks/useFetchStore";
 import useFetchKeuangan from "../../hooks/useFetchKeuangan";
+import CardStat from "../../components/CardStat";
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
-  // 🔹 Ambil data dari hooks
+  // 🔹 Data dari berbagai hook
   const { data: storeData } = useFetchStore();
   const { capsters } = useFetchCapster();
   const { produk } = useFetchProduk();
   const { data: transaksiData } = useFetchTransaksiAdmin("Bulanan");
-  const { data: keuangan, loading: loadKeuangan } = useFetchKeuangan();
+  const { data: grafikKeuangan, loading: loadKeuangan } = useFetchKeuangan(); // ✅ ganti nama variabel agar tidak bentrok
 
-  // 💰 Hitung total
+  // 🔹 State untuk summary keuangan bulanan (real dari backend)
+  const [summary, setSummary] = useState(null);
+  const [loadingSummary, setLoadingSummary] = useState(true);
+  const API_URL = import.meta.env.VITE_API_URL;
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const res = await fetch(`${API_URL}/keuangan/summary`);
+        const json = await res.json();
+        if (json.status === "success") setSummary(json.data);
+      } catch (err) {
+        console.error("❌ Error load keuangan summary:", err);
+      } finally {
+        setLoadingSummary(false);
+      }
+    };
+    fetchSummary();
+  }, []);
+
+  // 🔹 Ambil nilai total dari summary (real tanpa pembulatan)
+  const totalPendapatanKotor = Number(summary?.total?.pendapatan_kotor || 0);
+  const totalPengeluaran = Number(summary?.total?.pengeluaran || 0);
+  const totalPendapatanBersih = Number(summary?.total?.pendapatan_bersih || 0);
   const totalTransaksi = transaksiData.reduce(
     (sum, d) => sum + Number(d.total_transaksi || 0),
-    0
-  );
-  const totalPendapatanKotor = transaksiData.reduce(
-    (sum, d) => sum + Number(d.pendapatan_kotor || 0),
-    0
-  );
-  const totalPendapatanBersih = transaksiData.reduce(
-    (sum, d) => sum + Number(d.pendapatan_bersih || 0),
     0
   );
 
   const goTo = (path) => navigate(path);
 
+  // 🔹 Loading state
+  if (loadingSummary && loadKeuangan) {
+    return (
+      <MainLayout current="dashboard">
+        <div className="p-10 text-center text-gray-500">
+          Memuat data dashboard admin...
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // ===============================================================
+  // 🧭 DASHBOARD UI
+  // ===============================================================
   return (
     <MainLayout current="dashboard">
       {(searchTerm) => {
@@ -51,114 +88,98 @@ export default function Dashboard() {
         );
 
         return (
-          <div className="bg-white shadow-md rounded-2xl border border-gray-100 p-7 space-y-8 transition-all duration-300">
-            {/* === BARIS 1: Data utama === */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-7 space-y-8 transition-all duration-300">
+            <h1 className="text-2xl font-semibold text-slate-800">
+              Dashboard Admin
+            </h1>
+
+            {/* === BARIS 1 === */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+              <CardStat
+                gradient="from-indigo-500 to-blue-500"
+                title="Total Cabang"
+                subtitle="Cabang aktif"
+                value={filteredStore?.length || 0}
+                icon={<Store size={32} />}
                 onClick={() => goTo("/store")}
-                className="cursor-pointer bg-[#0f62fe] text-white rounded-xl p-6 shadow hover:shadow-lg hover:-translate-y-1 transition-all"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm opacity-90">Total Cabang</p>
-                  <Store size={28} />
-                </div>
-                <h2 className="text-3xl font-semibold">
-                  {filteredStore?.length || 0}
-                </h2>
-                <p className="text-xs opacity-80 mt-1">Cabang aktif</p>
-              </div>
-
-              <div
+              />
+              <CardStat
+                gradient="from-blue-400 to-cyan-400"
+                title="Total Capster"
+                subtitle="Karyawan terdaftar"
+                value={filteredCapster?.length || 0}
+                icon={<Scissors size={32} />}
                 onClick={() => goTo("/capster")}
-                className="cursor-pointer bg-[#1d4ed8] text-white rounded-xl p-6 shadow hover:shadow-lg hover:-translate-y-1 transition-all"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm opacity-90">Total Capster</p>
-                  <Scissors size={28} />
-                </div>
-                <h2 className="text-3xl font-semibold">
-                  {filteredCapster?.length || 0}
-                </h2>
-                <p className="text-xs opacity-80 mt-1">Karyawan terdaftar</p>
-              </div>
-
-              <div
+              />
+              <CardStat
+                gradient="from-cyan-400 to-sky-500"
+                title="Total Produk"
+                subtitle="Produk tersedia"
+                value={filteredProduk?.length || 0}
+                icon={<Package size={32} />}
                 onClick={() => goTo("/produk")}
-                className="cursor-pointer bg-[#2563eb] text-white rounded-xl p-6 shadow hover:shadow-lg hover:-translate-y-1 transition-all"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm opacity-90">Total Produk</p>
-                  <Package size={28} />
-                </div>
-                <h2 className="text-3xl font-semibold">
-                  {filteredProduk?.length || 0}
-                </h2>
-                <p className="text-xs opacity-80 mt-1">Produk tersedia</p>
-              </div>
-
-              <div
+              />
+              <CardStat
+                gradient="from-teal-400 to-cyan-500"
+                title="Total Transaksi"
+                subtitle="Transaksi bulan ini"
+                value={totalTransaksi.toLocaleString("id-ID")}
+                icon={<DollarSign size={32} />}
                 onClick={() => goTo("/transaksi/admin")}
-                className="cursor-pointer bg-[#38bdf8] text-white rounded-xl p-6 shadow hover:shadow-lg hover:-translate-y-1 transition-all"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm opacity-90">Total Transaksi</p>
-                  <DollarSign size={28} />
-                </div>
-                <h2 className="text-3xl font-semibold">
-                  {totalTransaksi.toLocaleString("id-ID")}
-                </h2>
-                <p className="text-xs opacity-80 mt-1">Transaksi bulan ini</p>
-              </div>
+              />
             </div>
 
-            {/* === BARIS 2: Pendapatan === */}
+            {/* === BARIS 2 === */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div
+              <CardStat
+                gradient="from-sky-500 to-blue-600"
+                title="Pendapatan Kotor"
+                subtitle="Sebelum dikurangi pengeluaran"
+                value={
+                  loadingSummary
+                    ? "Memuat..."
+                    : `Rp ${totalPendapatanKotor.toLocaleString("id-ID")}`
+                }
+                icon={<DollarSign size={32} />}
                 onClick={() => goTo("/transaksi/admin")}
-                className="cursor-pointer bg-[#22d3ee] text-white rounded-xl p-6 shadow hover:shadow-lg hover:-translate-y-1 transition-all"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm opacity-90">
-                    Pendapatan Kotor Bulan Ini
-                  </p>
-                  <DollarSign size={28} />
-                </div>
-                <h2 className="text-3xl font-semibold">
-                  Rp {totalPendapatanKotor.toLocaleString("id-ID")}
-                </h2>
-                <p className="text-xs opacity-80 mt-1">
-                  Sebelum pemotongan komisi
-                </p>
-              </div>
-
-              <div
-                onClick={() => goTo("/transaksi/admin")}
-                className="cursor-pointer bg-[#34d399] text-white rounded-xl p-6 shadow hover:shadow-lg hover:-translate-y-1 transition-all"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm opacity-90">
-                    Pendapatan Bersih Bulan Ini
-                  </p>
-                  <DollarSign size={28} />
-                </div>
-                <h2 className="text-3xl font-semibold">
-                  Rp {totalPendapatanBersih.toLocaleString("id-ID")}
-                </h2>
-                <p className="text-xs opacity-80 mt-1">
-                  Setelah pembagian komisi
-                </p>
-              </div>
+              />
+              <CardStat
+                gradient="from-rose-400 to-red-500"
+                title="Total Pengeluaran"
+                subtitle="Biaya operasional"
+                value={
+                  loadingSummary
+                    ? "Memuat..."
+                    : `Rp ${totalPengeluaran.toLocaleString("id-ID")}`
+                }
+                icon={<ArrowDownCircle size={32} />}
+                onClick={() => goTo("/pengeluaran")}
+              />
             </div>
 
-            {/* === Grafik Keuangan === */}
+            {/* === BARIS 3 === */}
+            <div>
+              <CardStat
+                gradient="from-emerald-400 to-green-500"
+                title="Pendapatan Bersih"
+                subtitle="Setelah dikurangi pengeluaran"
+                value={
+                  loadingSummary
+                    ? "Memuat..."
+                    : `Rp ${totalPendapatanBersih.toLocaleString("id-ID")}`
+                }
+                icon={<DollarSign size={32} />}
+                onClick={() => goTo("/transaksi/admin")}
+              />
+            </div>
+
+            {/* === GRAFIK === */}
             {loadKeuangan ? (
               <div className="bg-[#f9fafb] rounded-2xl border border-gray-100 p-6 text-center text-gray-500 shadow-inner">
                 Memuat grafik...
               </div>
             ) : (
-              <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                <ChartKeuangan data={keuangan} />
-              </div>
+              <ChartKeuangan data={grafikKeuangan} /> // ✅ hanya kirim data grafik
             )}
           </div>
         );

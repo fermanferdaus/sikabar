@@ -10,7 +10,13 @@ import PricelistRoutes from "./routes/pricelist.routes.js";
 import TransaksiRoutes from "./routes/transaksi.routes.js";
 import KomisiRoutes from "./routes/komisi.routes.js";
 import UserRoutes from "./routes/users.routes.js";
-import komisiSettingRoutes from "./routes/komisiSetting.route.js"
+import komisiSettingRoutes from "./routes/komisiSetting.route.js";
+import gajiSettingRoutes from "./routes/gajiSetting.routes.js";
+import dashboardRoutes from "./routes/dashboard.routes.js";
+import pengeluaranRoutes from "./routes/pengeluaran.routes.js";
+import keuanganRoutes from "./routes/keuangan.routes.js";
+import strukRoutes from "./routes/struk.routes.js";
+import laporanRoutes from "./routes/laporan.routes.js";
 
 dotenv.config();
 const app = express();
@@ -27,6 +33,14 @@ app.use("/api/transaksi", TransaksiRoutes);
 app.use("/api/komisi", KomisiRoutes);
 app.use("/api/users", UserRoutes);
 app.use("/api/komisi-setting", komisiSettingRoutes);
+app.use("/api/gaji", gajiSettingRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/pengeluaran", pengeluaranRoutes);
+app.use("/api/laporan", laporanRoutes);
+app.use("/uploads", express.static("uploads"));
+app.use("/api", keuanganRoutes);
+app.use("/api/struk", strukRoutes);
+app.use(express.static("public"));
 
 // === Server ===
 const PORT = process.env.PORT || 5000;

@@ -1,7 +1,7 @@
 import db from "../config/db.js";
 import dayjs from "dayjs";
 
-// 🟢 Get Semua Transaksi berdasarkan store kasir login
+// 🟢 Get Semua Transaksi berdasarkan store kasir login (lengkap + pendapatan bersih)
 export const getTransaksiByStore = (req, res) => {
   const { id_store } = req.user;
   const { type = "Bulanan", tanggal } = req.query;
@@ -11,8 +11,9 @@ export const getTransaksiByStore = (req, res) => {
   if (type === "Harian") {
     dateCondition = `AND DATE(t.created_at) = '${date.format("YYYY-MM-DD")}'`;
   } else if (type === "Bulanan") {
-    dateCondition = `AND MONTH(t.created_at) = ${date.month() + 1}
-                     AND YEAR(t.created_at) = ${date.year()}`;
+    const start = date.startOf("month").format("YYYY-MM-DD");
+    const end = date.endOf("month").format("YYYY-MM-DD");
+    dateCondition = `AND DATE(t.created_at) BETWEEN '${start}' AND '${end}'`;
   }
 
   const sql = `
@@ -25,25 +26,49 @@ export const getTransaksiByStore = (req, res) => {
       t.created_at,
       u.nama_user AS kasir,
       s.nama_store,
-      GROUP_CONCAT(DISTINCT p.nama_produk SEPARATOR ', ') AS produk,
-      GROUP_CONCAT(DISTINCT pr.service SEPARATOR ', ') AS layanan
+      COALESCE(GROUP_CONCAT(DISTINCT c.nama_capster SEPARATOR ', '), '-') AS capster,
+      COALESCE(GROUP_CONCAT(DISTINCT pr.service SEPARATOR ', '), '-') AS layanan,
+      COALESCE(GROUP_CONCAT(DISTINCT p.nama_produk SEPARATOR ', '), '-') AS produk,
+
+      -- 💰 Total Komisi capster
+      COALESCE((
+        SELECT COALESCE(SUM(tsd.komisi_capster), 0)
+        FROM transaksi_service_detail tsd
+        WHERE tsd.id_transaksi = t.id_transaksi
+      ), 0) AS total_komisi,
+
+      -- 📦 Total Laba Produk
+      COALESCE((
+        SELECT COALESCE(SUM(tpd.laba_rugi), 0)
+        FROM transaksi_produk_detail tpd
+        WHERE tpd.id_transaksi = t.id_transaksi
+      ), 0) AS laba_produk,
+
+      -- 💸 Pendapatan Bersih per transaksi
+      (
+        COALESCE((
+          SELECT COALESCE(SUM(tpd.laba_rugi), 0)
+          FROM transaksi_produk_detail tpd
+          WHERE tpd.id_transaksi = t.id_transaksi
+        ), 0)
+        +
+        COALESCE((
+          SELECT COALESCE(SUM(tsd.harga - tsd.komisi_capster), 0)
+          FROM transaksi_service_detail tsd
+          WHERE tsd.id_transaksi = t.id_transaksi
+        ), 0)
+      ) AS pendapatan_bersih
+
     FROM transaksi t
     JOIN users u ON t.id_user = u.id_user
     JOIN store s ON t.id_store = s.id_store
-    LEFT JOIN transaksi_produk_detail tpd ON t.id_transaksi = tpd.id_transaksi
-    LEFT JOIN produk p ON tpd.id_produk = p.id_produk
     LEFT JOIN transaksi_service_detail tsd ON t.id_transaksi = tsd.id_transaksi
     LEFT JOIN pricelist pr ON tsd.id_pricelist = pr.id_pricelist
+    LEFT JOIN capster c ON tsd.id_capster = c.id_capster
+    LEFT JOIN transaksi_produk_detail tpd ON t.id_transaksi = tpd.id_transaksi
+    LEFT JOIN produk p ON tpd.id_produk = p.id_produk
     WHERE t.id_store = ? ${dateCondition}
-    GROUP BY 
-      t.id_transaksi, 
-      t.tipe_transaksi, 
-      t.metode_bayar, 
-      t.subtotal, 
-      t.jumlah_bayar, 
-      t.created_at, 
-      u.nama_user, 
-      s.nama_store
+    GROUP BY t.id_transaksi
     ORDER BY t.created_at DESC
   `;
 
@@ -54,7 +79,21 @@ export const getTransaksiByStore = (req, res) => {
         .status(500)
         .json({ message: "Gagal mengambil riwayat transaksi" });
     }
-    res.json(result);
+
+    // ✅ Tambahkan summary agar bisa langsung dipakai di frontend
+    const summary = {
+      total_transaksi: result.length,
+      pendapatan_kotor: result.reduce(
+        (sum, r) => sum + Number(r.subtotal || 0),
+        0
+      ),
+      pendapatan_bersih: result.reduce(
+        (sum, r) => sum + Number(r.pendapatan_bersih || 0),
+        0
+      ),
+    };
+
+    res.json({ status: "success", data: result, summary });
   });
 };
 
@@ -79,13 +118,14 @@ export const getLaporanTransaksi = (req, res) => {
   const { type = "Bulanan", tanggal } = req.query;
   const date = tanggal ? dayjs(tanggal) : dayjs();
 
-  // filter tanggal dinamis
+  // 🔹 Filter waktu
   let dateCondition = "";
   if (type === "Harian") {
     dateCondition = `AND DATE(t.created_at) = '${date.format("YYYY-MM-DD")}'`;
   } else if (type === "Bulanan") {
-    dateCondition = `AND MONTH(t.created_at) = ${date.month() + 1}
-                     AND YEAR(t.created_at) = ${date.year()}`;
+    const start = date.startOf("month").format("YYYY-MM-DD");
+    const end = date.endOf("month").format("YYYY-MM-DD");
+    dateCondition = `AND DATE(t.created_at) BETWEEN '${start}' AND '${end}'`;
   }
 
   const sql = `
@@ -94,36 +134,54 @@ export const getLaporanTransaksi = (req, res) => {
       s.nama_store,
       COUNT(DISTINCT t.id_transaksi) AS total_transaksi,
 
-      -- 💰 Pendapatan Kotor
+      -- 💰 Pendapatan Kotor: total subtotal transaksi (produk + layanan)
       COALESCE(SUM(t.subtotal), 0) AS pendapatan_kotor,
 
-      -- 📦 Laba Produk
-      COALESCE(SUM(tp.laba_rugi), 0) AS laba_produk,
+      -- 📦 Total Laba Produk dari subquery per transaksi
+      COALESCE(SUM((
+        SELECT COALESCE(SUM(tp.laba_rugi), 0)
+        FROM transaksi_produk_detail tp
+        WHERE tp.id_transaksi = t.id_transaksi
+      )), 0) AS laba_produk,
 
-      -- ✂️ Pendapatan Service
-      COALESCE(SUM(tsd.harga), 0) AS pendapatan_service,
+      -- ✂️ Total Pendapatan Layanan (harga service)
+      COALESCE(SUM((
+        SELECT COALESCE(SUM(tsd.harga), 0)
+        FROM transaksi_service_detail tsd
+        WHERE tsd.id_transaksi = t.id_transaksi
+      )), 0) AS pendapatan_service,
 
       -- 👨‍🔧 Total Komisi Capster
-      COALESCE(SUM(tsd.komisi_capster), 0) AS total_komisi_capster,
+      COALESCE(SUM((
+        SELECT COALESCE(SUM(tsd.komisi_capster), 0)
+        FROM transaksi_service_detail tsd
+        WHERE tsd.id_transaksi = t.id_transaksi
+      )), 0) AS total_komisi_capster,
 
-      -- 💸 Pendapatan Bersih
+      -- 💸 Pendapatan Bersih = laba_produk + (pendapatan_service - komisi)
       (
-        COALESCE(SUM(tp.laba_rugi), 0) +
-        (COALESCE(SUM(tsd.harga), 0) - COALESCE(SUM(tsd.komisi_capster), 0))
+        COALESCE(SUM((
+          SELECT COALESCE(SUM(tp.laba_rugi), 0)
+          FROM transaksi_produk_detail tp
+          WHERE tp.id_transaksi = t.id_transaksi
+        )), 0)
+        +
+        COALESCE(SUM((
+          SELECT COALESCE(SUM(tsd.harga - tsd.komisi_capster), 0)
+          FROM transaksi_service_detail tsd
+          WHERE tsd.id_transaksi = t.id_transaksi
+        )), 0)
       ) AS pendapatan_bersih
 
     FROM store s
     LEFT JOIN transaksi t ON s.id_store = t.id_store ${dateCondition}
-    LEFT JOIN transaksi_produk_detail tp ON t.id_transaksi = tp.id_transaksi
-    LEFT JOIN transaksi_service_detail tsd ON t.id_transaksi = tsd.id_transaksi
-
     GROUP BY s.id_store, s.nama_store
     ORDER BY pendapatan_kotor DESC
   `;
 
   db.query(sql, (err, result) => {
     if (err) {
-      console.error("❌ DB Error laporan:", err);
+      console.error("❌ DB Error getLaporanTransaksi:", err);
       return res.status(500).json({ message: "Gagal ambil laporan transaksi" });
     }
     res.json(result);
@@ -154,20 +212,31 @@ export const getTransaksiByStoreAdmin = (req, res) => {
       t.created_at,
       u.nama_user AS kasir,
       s.nama_store,
-
-      -- tambahkan capster
       COALESCE(GROUP_CONCAT(DISTINCT c.nama_capster SEPARATOR ', '), '-') AS capster,
-
-      -- ambil daftar layanan & produk
       COALESCE(GROUP_CONCAT(DISTINCT pr.service SEPARATOR ', '), '-') AS layanan,
-      COALESCE(GROUP_CONCAT(DISTINCT p.nama_produk SEPARATOR ', '), '-') AS produk
+      COALESCE(GROUP_CONCAT(DISTINCT p.nama_produk SEPARATOR ', '), '-') AS produk,
+
+      -- 💰 Pendapatan Bersih per transaksi
+      (
+        COALESCE((
+          SELECT COALESCE(SUM(tp.laba_rugi), 0)
+          FROM transaksi_produk_detail tp
+          WHERE tp.id_transaksi = t.id_transaksi
+        ), 0)
+        +
+        COALESCE((
+          SELECT COALESCE(SUM(tsd.harga - tsd.komisi_capster), 0)
+          FROM transaksi_service_detail tsd
+          WHERE tsd.id_transaksi = t.id_transaksi
+        ), 0)
+      ) AS pendapatan_bersih
 
     FROM transaksi t
     JOIN users u ON t.id_user = u.id_user
     JOIN store s ON t.id_store = s.id_store
     LEFT JOIN transaksi_service_detail tsd ON t.id_transaksi = tsd.id_transaksi
     LEFT JOIN pricelist pr ON tsd.id_pricelist = pr.id_pricelist
-    LEFT JOIN capster c ON tsd.id_capster = c.id_capster   -- 🟢 tambahkan ini
+    LEFT JOIN capster c ON tsd.id_capster = c.id_capster
     LEFT JOIN transaksi_produk_detail tpd ON t.id_transaksi = tpd.id_transaksi
     LEFT JOIN produk p ON tpd.id_produk = p.id_produk
     WHERE t.id_store = ? ${dateCondition}
@@ -202,10 +271,10 @@ export const createTransaksi = (req, res) => {
     !nomor_struk ||
     !tipe_transaksi ||
     !items?.length
-  )
+  ) {
     return res.status(400).json({ message: "Data transaksi tidak lengkap" });
+  }
 
-  // Hitung subtotal dan kembalian
   let subtotal = 0;
   items.forEach((i) => (subtotal += i.total || i.harga * (i.jumlah || 1)));
   const kembalian = jumlah_bayar - subtotal;
@@ -242,7 +311,7 @@ export const createTransaksi = (req, res) => {
 
         const id_transaksi = result.insertId;
 
-        // 2️⃣ Simpan ke tabel struk
+        // 2️⃣ Simpan struk
         const file_path = `/uploads/struk/${nomor_struk}.pdf`;
         db.query(
           `INSERT INTO struk (id_transaksi, nomor_struk, file_path) VALUES (?, ?, ?)`,
@@ -251,12 +320,12 @@ export const createTransaksi = (req, res) => {
             if (err) {
               console.error("❌ Gagal simpan struk:", err);
               db.rollback(() =>
-                res.status(500).json({ message: "Gagal simpan data struk" })
+                res.status(500).json({ message: "Gagal simpan struk" })
               );
               return;
             }
 
-            // === Helper commit akhir ===
+            // Helper commit akhir
             const finish = () => {
               db.commit((err) => {
                 if (err) {
@@ -269,7 +338,6 @@ export const createTransaksi = (req, res) => {
                   message: "Transaksi berhasil disimpan",
                   id: id_transaksi,
                   nomor_struk,
-                  metode_bayar,
                   subtotal,
                   jumlah_bayar,
                   kembalian,
@@ -277,7 +345,7 @@ export const createTransaksi = (req, res) => {
               });
             };
 
-            // === Simpan detail produk (dan update stok akhir) ===
+            // === Simpan detail produk
             const saveProduk = (cb) => {
               const produkValues = items
                 .filter((i) => i.tipe === "produk")
@@ -285,11 +353,9 @@ export const createTransaksi = (req, res) => {
                   const jumlah = Number(i.jumlah) || 0;
                   const hargaAwal = Number(i.harga_awal) || 0;
                   const hargaJual = Number(i.harga_jual) || 0;
-
                   const totalPenjualan = jumlah * hargaJual;
                   const totalModal = jumlah * hargaAwal;
                   const labaRugi = totalPenjualan - totalModal;
-
                   return [
                     id_transaksi,
                     i.id_produk,
@@ -302,34 +368,34 @@ export const createTransaksi = (req, res) => {
                   ];
                 });
 
-              if (produkValues.length === 0) return cb();
+              if (!produkValues.length) return cb();
 
               db.query(
                 `INSERT INTO transaksi_produk_detail 
-                  (id_transaksi, id_produk, jumlah, harga_awal, harga_jual, total_penjualan, total_modal, laba_rugi)
-                  VALUES ?`,
+                 (id_transaksi, id_produk, jumlah, harga_awal, harga_jual, total_penjualan, total_modal, laba_rugi)
+                 VALUES ?`,
                 [produkValues],
                 (err) => {
                   if (err) {
                     console.error("❌ Gagal simpan detail produk:", err);
                     db.rollback(() =>
-                      res.status(500).json({
-                        message: "Gagal simpan detail produk: " + err.message,
-                      })
+                      res
+                        .status(500)
+                        .json({ message: "Gagal simpan detail produk" })
                     );
                     return;
                   }
 
-                  // ✅ Update stok akhir di tabel stok_produk
+                  // Update stok akhir
                   let done = 0;
                   produkValues.forEach((p) => {
                     const [_, id_produk, jumlah] = p;
                     db.query(
                       `
-                      UPDATE stok_produk 
-                      SET stok_akhir = GREATEST(stok_akhir - ?, 0), 
-                          updated_at = NOW()
-                      WHERE id_produk = ? AND id_store = ?
+                        UPDATE stok_produk
+                        SET stok_akhir = GREATEST(stok_akhir - ?, 0),
+                            updated_at = NOW()
+                        WHERE id_produk = ? AND id_store = ?
                       `,
                       [jumlah, id_produk, id_store],
                       () => {
@@ -342,14 +408,19 @@ export const createTransaksi = (req, res) => {
               );
             };
 
-            // === Simpan detail service (jika ada)
+            // === Simpan detail service (dengan komisi per capster)
             const saveService = (cb) => {
               const serviceItems = items.filter((i) => i.tipe === "service");
-              if (serviceItems.length === 0) return cb();
+              if (!serviceItems.length) return cb();
+
+              // Ambil daftar id_capster unik
+              const capsterIds = [
+                ...new Set(serviceItems.map((i) => i.id_capster)),
+              ];
 
               db.query(
-                `SELECT persentase_capster FROM komisi_setting WHERE id_store = ? LIMIT 1`,
-                [id_store],
+                `SELECT id_capster, persentase_capster FROM komisi_setting WHERE id_capster IN (?)`,
+                [capsterIds],
                 (err, rows) => {
                   if (err) {
                     console.error("❌ Gagal ambil data komisi:", err);
@@ -361,26 +432,31 @@ export const createTransaksi = (req, res) => {
                     return;
                   }
 
-                  const persentase =
-                    rows.length > 0
-                      ? parseFloat(rows[0].persentase_capster)
-                      : 0;
+                  // Buat mapping { id_capster: persentase }
+                  const komisiMap = Object.fromEntries(
+                    rows.map((r) => [
+                      r.id_capster,
+                      parseFloat(r.persentase_capster),
+                    ])
+                  );
 
                   const serviceValues = serviceItems.map((srv) => {
+                    const persentase = komisiMap[srv.id_capster] || 0;
                     const komisiNominal = (srv.harga * persentase) / 100;
                     return [
                       id_transaksi,
                       srv.id_pricelist,
                       srv.id_capster,
                       srv.harga,
+                      persentase, // simpan persentase di sini
                       komisiNominal,
                     ];
                   });
 
                   db.query(
                     `INSERT INTO transaksi_service_detail 
-                      (id_transaksi, id_pricelist, id_capster, harga, komisi_capster)
-                      VALUES ?`,
+                     (id_transaksi, id_pricelist, id_capster, harga, persentase_capster, komisi_capster)
+                     VALUES ?`,
                     [serviceValues],
                     (err) => {
                       if (err) {
@@ -400,7 +476,7 @@ export const createTransaksi = (req, res) => {
               );
             };
 
-            // Jalankan sequence
+            // Jalankan sesuai tipe
             if (tipe_transaksi === "service") saveService(() => finish());
             else if (tipe_transaksi === "produk") saveProduk(() => finish());
             else if (tipe_transaksi === "campuran")
@@ -426,36 +502,13 @@ export const deleteTransaksi = (req, res) => {
   );
 };
 
-export const getKeuanganChart = (req, res) => {
-  const sql = `
-    SELECT 
-      DATE(t.created_at) AS tanggal,
-      SUM(t.subtotal) AS pendapatan_kotor,
-      SUM(
-        (SELECT COALESCE(SUM(laba_rugi), 0) FROM transaksi_produk_detail d WHERE d.id_transaksi = t.id_transaksi)
-      ) +
-      SUM(
-        (SELECT COALESCE(SUM(tsd.harga - tsd.komisi_capster), 0) FROM transaksi_service_detail tsd WHERE tsd.id_transaksi = t.id_transaksi)
-      ) AS pendapatan_bersih
-    FROM transaksi t
-    GROUP BY DATE(t.created_at)
-    ORDER BY DATE(t.created_at)
-  `;
-
-  db.query(sql, (err, result) => {
-    if (err)
-      return res.status(500).json({ message: "Gagal ambil data keuangan" });
-    res.json(result);
-  });
-};
-
-// 🟢 Get Keuangan (Pendapatan) per Store untuk Dashboard Kasir
+// 🟢 Get Keuangan (Pendapatan + Pengeluaran) per Store untuk Dashboard Kasir
 export const getKeuanganByStore = (req, res) => {
   const { id_store } = req.params;
   const { type = "Bulanan", tanggal } = req.query;
   const date = tanggal ? dayjs(tanggal) : dayjs();
 
-  // 🔹 Buat filter waktu (harian/bulanan)
+  // 🔹 Filter waktu (harian/bulanan)
   let dateCondition = "";
   if (type === "Harian") {
     dateCondition = `AND DATE(t.created_at) = '${date.format("YYYY-MM-DD")}'`;
@@ -467,40 +520,66 @@ export const getKeuanganByStore = (req, res) => {
 
   const sql = `
     SELECT 
-      DATE(t.created_at) AS tanggal,
-      COUNT(DISTINCT t.id_transaksi) AS total_transaksi,
+      tanggal,
+      SUM(pendapatan_kotor) AS pendapatan_kotor,
+      SUM(pengeluaran) AS pengeluaran,
+      SUM(pendapatan_bersih) AS pendapatan_bersih
+    FROM (
+      -- 🧾 Pendapatan (Transaksi)
+      SELECT 
+        DATE(t.created_at) AS tanggal,
+        COALESCE(SUM(t.subtotal), 0) AS pendapatan_kotor,
+        0 AS pengeluaran,
+        (
+          COALESCE(SUM(
+            (SELECT COALESCE(SUM(tp.laba_rugi), 0)
+             FROM transaksi_produk_detail tp
+             WHERE tp.id_transaksi = t.id_transaksi)
+          ), 0)
+          +
+          COALESCE(SUM(
+            (SELECT COALESCE(SUM(tsd.harga - tsd.komisi_capster), 0)
+             FROM transaksi_service_detail tsd
+             WHERE tsd.id_transaksi = t.id_transaksi)
+          ), 0)
+        ) AS pendapatan_bersih
+      FROM transaksi t
+      WHERE t.id_store = ? ${dateCondition}
+      GROUP BY DATE(t.created_at)
 
-      -- 💰 Pendapatan Kotor
-      COALESCE(SUM(t.subtotal), 0) AS pendapatan_kotor,
+      UNION ALL
 
-      -- 💵 Pendapatan Bersih (produk + service - komisi)
-      (
-        COALESCE(SUM(
-          (SELECT COALESCE(SUM(tp.laba_rugi), 0)
-           FROM transaksi_produk_detail tp
-           WHERE tp.id_transaksi = t.id_transaksi)
-        ), 0)
-        +
-        COALESCE(SUM(
-          (SELECT COALESCE(SUM(tsd.harga - tsd.komisi_capster), 0)
-           FROM transaksi_service_detail tsd
-           WHERE tsd.id_transaksi = t.id_transaksi)
-        ), 0)
-      ) AS pendapatan_bersih
-
-    FROM transaksi t
-    WHERE t.id_store = ? ${dateCondition}
-    GROUP BY DATE(t.created_at)
-    ORDER BY DATE(t.created_at)
+      -- 💸 Pengeluaran
+      SELECT 
+        DATE(p.tanggal) AS tanggal,
+        0 AS pendapatan_kotor,
+        COALESCE(SUM(p.jumlah), 0) AS pengeluaran,
+        0 AS pendapatan_bersih
+      FROM pengeluaran p
+      WHERE p.id_store = ?
+      GROUP BY DATE(p.tanggal)
+    ) gabungan
+    GROUP BY tanggal
+    ORDER BY tanggal ASC;
   `;
 
-  db.query(sql, [id_store], (err, result) => {
+  db.query(sql, [id_store, id_store], (err, result) => {
     if (err) {
       console.error("❌ DB Error getKeuanganByStore:", err);
       return res
         .status(500)
         .json({ message: "Gagal mengambil data keuangan store" });
     }
-    res.json(result);
+
+    // ✅ Hitung ulang pendapatan bersih akhir
+    const formatted = result.map((r) => ({
+      tanggal: r.tanggal,
+      pendapatan_kotor: Number(r.pendapatan_kotor || 0),
+      pengeluaran: Number(r.pengeluaran || 0),
+      pendapatan_bersih:
+        Number(r.pendapatan_bersih || 0) - Number(r.pengeluaran || 0),
+    }));
+
+    res.json({ status: "success", data: formatted });
   });
 };

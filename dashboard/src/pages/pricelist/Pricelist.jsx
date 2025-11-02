@@ -63,6 +63,7 @@ export default function Pricelist() {
         const columns = [
           { key: "no", label: "#" },
           { key: "service", label: "Nama Layanan" },
+          { key: "keterangan", label: "Keterangan" },
           { key: "harga", label: "Harga" },
           { key: "aksi", label: "Aksi" },
         ];
@@ -70,6 +71,7 @@ export default function Pricelist() {
         const tableData = filteredData.map((item, i) => ({
           no: i + 1,
           service: item.service,
+          keterangan: item.keterangan || "-", // ✅ tampilkan deskripsi atau "-"
           harga: (
             <div className="text-left text-green-600 font-semibold">
               Rp {Number(item.harga).toLocaleString("id-ID")}
@@ -98,7 +100,7 @@ export default function Pricelist() {
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
             {/* === Header Card === */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
                   Daftar Layanan
@@ -108,13 +110,16 @@ export default function Pricelist() {
                 </p>
               </div>
 
-              <button
-                onClick={() => navigate("/pricelist/add")}
-                className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
-              >
-                <Plus size={16} />
-                Tambah Layanan
-              </button>
+              {/* 🔹 Tombol Tambah Layanan: kiri di mobile, kanan di desktop */}
+              <div className="order-1 sm:order-2 flex justify-start sm:justify-end w-full sm:w-auto">
+                <button
+                  onClick={() => navigate("/pricelist/add")}
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                >
+                  <Plus size={16} />
+                  Tambah Layanan
+                </button>
+              </div>
             </div>
 
             {/* === Notifikasi === */}

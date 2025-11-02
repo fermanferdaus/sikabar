@@ -8,7 +8,6 @@ export default function useFetchStore() {
   const API_URL = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem("token");
 
-  // 🔹 Ambil semua data store
   const fetchStore = async () => {
     setLoading(true);
     try {
@@ -17,7 +16,9 @@ export default function useFetchStore() {
       });
       if (!res.ok) throw new Error("Gagal mengambil data store");
       const result = await res.json();
-      setData(result);
+
+      // ✅ fix di sini
+      setData(result || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -25,7 +26,6 @@ export default function useFetchStore() {
     }
   };
 
-  // 🔹 Tambah store baru
   const addStore = async (store) => {
     try {
       const res = await fetch(`${API_URL}/store`, {
@@ -36,7 +36,7 @@ export default function useFetchStore() {
         },
         body: JSON.stringify({
           nama_store: store.nama_store,
-          alamat_store: store.alamat_store, // ✅ gunakan key yang dikirim dari StoreAdd.jsx
+          alamat_store: store.alamat_store,
         }),
       });
 
@@ -52,7 +52,6 @@ export default function useFetchStore() {
     }
   };
 
-  // 🔹 Update store
   const updateStore = async (id_store, updatedStore) => {
     try {
       const res = await fetch(`${API_URL}/store/${id_store}`, {
@@ -71,7 +70,6 @@ export default function useFetchStore() {
     }
   };
 
-  // 🔹 Hapus store (tanpa confirm bawaan browser)
   const deleteStore = async (id_store) => {
     try {
       const res = await fetch(`${API_URL}/store/${id_store}`, {

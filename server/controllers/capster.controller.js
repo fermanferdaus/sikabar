@@ -98,23 +98,38 @@ export const createCapster = (req, res) => {
   const { nama_capster, id_store, status } = req.body;
 
   if (!nama_capster || !id_store) {
-    return res
-      .status(400)
-      .json({ message: "Nama capster dan store wajib diisi" });
+    return res.status(400).json({ message: "Nama dan store wajib diisi" });
   }
 
+  // 🔍 Cek apakah capster dengan nama sama sudah ada di store yang sama
   db.query(
-    "INSERT INTO capster (nama_capster, id_store, status) VALUES (?, ?, ?)",
-    [nama_capster, id_store, status || "aktif"],
+    `SELECT * FROM capster WHERE nama_capster = ? AND id_store = ?`,
+    [nama_capster, id_store],
     (err, result) => {
-      if (err) {
-        console.error("❌ DB Error createCapster:", err);
-        return res.status(500).json({ message: "Gagal menambah capster" });
+      if (err) return res.status(500).json({ message: "Kesalahan database" });
+      if (result.length > 0) {
+        return res
+          .status(400)
+          .json({ message: "Nama capster sudah terdaftar di store ini" });
       }
-      res.json({
-        message: "Capster berhasil ditambahkan",
-        id_capster: result.insertId,
-      });
+
+      // ✅ Jika belum ada, lanjutkan insert
+      db.query(
+        `INSERT INTO capster (nama_capster, id_store, status) VALUES (?, ?, ?)`,
+        [nama_capster, id_store, status],
+        (err, insertResult) => {
+          if (err) {
+            console.error("❌ Gagal menambahkan capster:", err);
+            return res
+              .status(500)
+              .json({ message: "Gagal menambahkan capster" });
+          }
+          res.json({
+            message: "Capster berhasil ditambahkan",
+            id_capster: insertResult.insertId,
+          });
+        }
+      );
     }
   );
 };
@@ -167,4 +182,56 @@ export const deleteCapster = (req, res) => {
       res.json({ message: "Capster berhasil dihapus" });
     }
   );
+};
+
+/* ==========================================================
+   🟢 Dashboard Capster (Pendapatan Bulanan)
+   ========================================================== */
+export const getCapsterDashboard = (req, res) => {
+  const { id_capster } = req.params;
+  if (!id_capster)
+    return res.status(400).json({ message: "ID capster tidak ditemukan" });
+
+  const bulanSekarang = dayjs().format("YYYY-MM");
+
+  const sql = `
+    SELECT 
+      IFNULL(SUM(t.harga), 0) AS pendapatan_kotor,
+      IFNULL((
+        SELECT gaji_pokok 
+        FROM gaji_setting 
+        WHERE id_capster = ? 
+        LIMIT 1
+      ), 0) AS gaji_pokok,
+      IFNULL((
+        SELECT SUM(b.jumlah) 
+        FROM bonus b 
+        WHERE b.id_capster = ? AND b.periode = ?
+      ), 0) AS bonus_bulanan
+    FROM transaksi t
+    WHERE t.id_capster = ? 
+      AND DATE_FORMAT(t.tanggal, '%Y-%m') = ?
+  `;
+
+  db.query(sql, [id_capster, id_capster, bulanSekarang, id_capster, bulanSekarang], (err, result) => {
+    if (err) {
+      console.error("❌ DB Error getCapsterDashboard:", err);
+      return res.status(500).json({ message: "Gagal mengambil data dashboard capster" });
+    }
+
+    const row = result[0];
+    const totalPendapatan =
+      Number(row.pendapatan_kotor) +
+      Number(row.bonus_bulanan) +
+      Number(row.gaji_pokok);
+
+    res.json({
+      success: true,
+      periode: bulanSekarang,
+      pendapatan_kotor: row.pendapatan_kotor,
+      gaji_pokok: row.gaji_pokok,
+      bonus_bulanan: row.bonus_bulanan,
+      total_pendapatan: totalPendapatan,
+    });
+  });
 };

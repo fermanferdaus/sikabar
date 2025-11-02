@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import { useFetchTransaksiStore } from "../../hooks/useFetchTransaksi";
@@ -12,32 +12,63 @@ export default function TransaksiDetail() {
 
   const [filterType, setFilterType] = useState("Bulanan");
   const [filterTipeTransaksi, setFilterTipeTransaksi] = useState("Semua");
-  const [tanggal, setTanggal] = useState(new Date().toISOString().split("T")[0]);
-  const [showCount, setShowCount] = useState(25); // jumlah data ditampilkan
+  const [tanggal, setTanggal] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [showCount, setShowCount] = useState(25);
 
-  const { data, loading, error } = useFetchTransaksiStore(
+  const { data, summary, loading, error } = useFetchTransaksiStore(
     id_store,
     filterType,
     tanggal
   );
 
+  // 🔹 Filter berdasarkan tipe transaksi
+  const filteredData = useMemo(() => {
+    return data.filter((d) =>
+      filterTipeTransaksi === "Semua"
+        ? true
+        : d.tipe_transaksi === filterTipeTransaksi
+    );
+  }, [data, filterTipeTransaksi]);
+
+  // 🔹 Summary fallback manual jika tidak dikirim backend
+  const totalTransaksi = summary?.total_transaksi || filteredData.length || 0;
+  const totalPendapatanKotor =
+    summary?.pendapatan_kotor && summary.pendapatan_kotor > 0
+      ? summary.pendapatan_kotor
+      : filteredData.reduce((sum, d) => sum + (Number(d.subtotal) || 0), 0);
+
+  const totalPendapatanBersih =
+    summary?.pendapatan_bersih && summary.pendapatan_bersih > 0
+      ? summary.pendapatan_bersih
+      : filteredData.reduce(
+          (sum, d) => sum + (Number(d.pendapatan_bersih || d.subtotal) || 0),
+          0
+        );
+
+  // 🔹 Format Rupiah
+  const formatRupiah = (angka) =>
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(Number(angka) || 0);
+
   return (
     <MainLayout current="transaksi">
       {(searchTerm) => {
-        const filteredData = data
-          .filter((d) =>
-            filterTipeTransaksi === "Semua"
-              ? true
-              : d.tipe_transaksi === filterTipeTransaksi
-          )
+        const searched = filteredData
           .filter(
             (d) =>
               d.kasir?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              d.metode_bayar?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              d.metode_bayar
+                ?.toLowerCase()
+                .includes(searchTerm.toLowerCase()) ||
               d.produk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
               d.layanan?.toLowerCase().includes(searchTerm.toLowerCase())
           )
-          .slice(0, showCount); // batasi jumlah tampil
+          .slice(0, showCount);
 
         const columns = [
           { key: "no", label: "#" },
@@ -47,12 +78,13 @@ export default function TransaksiDetail() {
           { key: "detail", label: "Detail" },
           { key: "subtotal", label: "Total" },
           { key: "metode_bayar", label: "Metode Bayar" },
+          { key: "struk", label: "Struk" },
         ];
 
-        const tableData = filteredData.map((d, i) => ({
+        const tableData = searched.map((d, i) => ({
           no: i + 1,
           tanggal: formatTanggalJam(d.created_at),
-          kasir: d.kasir,
+          kasir: d.kasir || "-",
           tipe_transaksi: (
             <span className="capitalize">{d.tipe_transaksi}</span>
           ),
@@ -69,38 +101,57 @@ export default function TransaksiDetail() {
             ),
           subtotal: (
             <div className="text-left font-medium text-slate-700">
-              Rp {Number(d.subtotal).toLocaleString("id-ID")}
+              {formatRupiah(d.subtotal)}
             </div>
           ),
           metode_bayar: (
-            <span className="capitalize">{d.metode_bayar}</span>
+            <span className="capitalize">{d.metode_bayar || "-"}</span>
+          ),
+          struk: (
+            <button
+              onClick={() =>
+                window.open(
+                  `${import.meta.env.VITE_API_URL}/struk/print/${
+                    d.id_transaksi
+                  }`,
+                  "_blank"
+                )
+              }
+              className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition"
+            >
+              Lihat
+            </button>
           ),
         }));
 
         return (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
-            {/* === Header Card === */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-8 transition-all duration-300">
+            {/* === Header === */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
                   Detail Transaksi Toko
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
-                  Riwayat transaksi kasir, layanan, dan produk.
+                  Riwayat transaksi kasir, layanan, dan produk berdasarkan
+                  periode tertentu.
                 </p>
               </div>
 
-              <button
-                onClick={() => navigate("/transaksi/admin")}
-                className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-xl font-medium text-sm transition-all"
-              >
-                <ArrowLeft size={16} />
-                Kembali
-              </button>
+              <div className="order-1 sm:order-2 flex justify-start sm:justify-end w-full sm:w-auto">
+                <button
+                  onClick={() => navigate("/transaksi/admin")}
+                  className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                >
+                  <ArrowLeft size={16} />
+                  Kembali
+                </button>
+              </div>
             </div>
 
             {/* === Filter Bar === */}
-            <div className="flex flex-wrap items-center gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4">
+            <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
+              {/* Filter Periode */}
               <div className="flex items-center gap-2">
                 <label className="text-gray-600 font-medium text-sm">
                   Tipe:
@@ -115,21 +166,32 @@ export default function TransaksiDetail() {
                 </select>
               </div>
 
+              {/* Input Kalender Adaptif */}
               <div className="flex items-center gap-2">
                 <label className="text-gray-600 font-medium text-sm">
-                  Tanggal:
+                  {filterType === "Harian" ? "Tanggal:" : "Bulan:"}
                 </label>
-                <input
-                  type="date"
-                  value={tanggal}
-                  onChange={(e) => setTanggal(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
+                {filterType === "Harian" ? (
+                  <input
+                    type="date"
+                    value={tanggal}
+                    onChange={(e) => setTanggal(e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                ) : (
+                  <input
+                    type="month"
+                    value={tanggal.slice(0, 7)}
+                    onChange={(e) => setTanggal(e.target.value + "-01")}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                )}
               </div>
 
+              {/* Filter Tipe Transaksi */}
               <div className="flex items-center gap-2">
                 <label className="text-gray-600 font-medium text-sm">
-                  Tipe Transaksi:
+                  Jenis Transaksi:
                 </label>
                 <select
                   value={filterTipeTransaksi}
@@ -144,12 +206,34 @@ export default function TransaksiDetail() {
               </div>
             </div>
 
+            {/* === Summary Cards === */}
+            <div className="grid sm:grid-cols-3 gap-6 mt-2">
+              <div className="p-5 bg-white shadow-sm rounded-xl text-center transition hover:-translate-y-1 hover:shadow-md duration-300">
+                <p className="text-gray-500">Jumlah Transaksi</p>
+                <h2 className="text-3xl font-bold text-blue-600 mt-1">
+                  {totalTransaksi}
+                </h2>
+              </div>
+              <div className="p-5 bg-white shadow-sm rounded-xl text-center transition hover:-translate-y-1 hover:shadow-md duration-300">
+                <p className="text-gray-500">Pendapatan Kotor</p>
+                <h2 className="text-3xl font-bold text-sky-600 mt-1">
+                  {formatRupiah(totalPendapatanKotor)}
+                </h2>
+              </div>
+              <div className="p-5 bg-white shadow-sm rounded-xl text-center transition hover:-translate-y-1 hover:shadow-md duration-300">
+                <p className="text-gray-500">Pendapatan Bersih</p>
+                <h2 className="text-3xl font-bold text-emerald-600 mt-1">
+                  {formatRupiah(totalPendapatanBersih)}
+                </h2>
+              </div>
+            </div>
+
             {/* === Tabel === */}
             {loading ? (
               <p className="text-gray-500 italic">Memuat data transaksi...</p>
             ) : error ? (
               <p className="text-red-500">{error}</p>
-            ) : filteredData.length === 0 ? (
+            ) : searched.length === 0 ? (
               <p className="text-gray-500 italic">Tidak ada transaksi.</p>
             ) : (
               <TableData columns={columns} data={tableData} />

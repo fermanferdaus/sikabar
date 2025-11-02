@@ -53,12 +53,19 @@ export default function useCapsterKasir(id_store) {
         }),
       });
 
-      if (!res.ok) throw new Error("Gagal menambah capster");
+      const data = await res.json();
+
+      // 🔍 Jika respon gagal, lempar pesan asli dari backend
+      if (!res.ok) {
+        throw new Error(data.message || "Gagal menambahkan capster");
+      }
+
+      // ✅ Jika berhasil, refresh data
       await fetchCapsters();
       return true;
     } catch (err) {
       console.error("❌ useCapsterKasir addCapster:", err);
-      throw err;
+      throw err; // biar error-nya sampai ke komponen
     }
   };
 

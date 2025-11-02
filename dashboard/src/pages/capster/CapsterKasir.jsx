@@ -92,7 +92,7 @@ export default function CapsterKasir() {
           aksi: (
             <div className="flex items-center justify-left gap-2">
               <Link
-                to={`/capster/editkasir/${c.id_capster}`}
+                to={`/capster/kasir/edit/${c.id_capster}`}
                 className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
                 title="Edit"
               >
@@ -112,7 +112,7 @@ export default function CapsterKasir() {
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
             {/* === Header Card === */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
                   Data Capster Toko
@@ -122,13 +122,16 @@ export default function CapsterKasir() {
                 </p>
               </div>
 
-              <Link
-                to="/capster/addkasir"
-                className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
-              >
-                <Plus size={16} />
-                Tambah Capster
-              </Link>
+              {/* 🔹 Tombol Tambah Capster: kiri di mobile, kanan di desktop */}
+              <div className="order-1 sm:order-2 w-full sm:w-auto flex justify-start sm:justify-end">
+                <Link
+                  to="/capster/kasir/add"
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
+                >
+                  <Plus size={16} />
+                  Tambah Capster
+                </Link>
+              </div>
             </div>
 
             {/* === Alert === */}

@@ -33,34 +33,72 @@ export const getUserById = (req, res) => {
   );
 };
 
-// 🟡 Tambah User (Admin Only)
 export const createUser = async (req, res) => {
   try {
-    const { nama_user, username, password, role, id_store, id_capster } =
-      req.body;
+    const { nama_user, username, password, role, id_store } = req.body;
+    console.log("📥 Data diterima:", req.body);
 
     if (!username || !password || !role) {
       return res.status(400).json({ message: "Data tidak lengkap" });
     }
 
+    // 🔍 Cek username sudah ada belum
+    const [existing] = await db
+      .promise()
+      .query("SELECT * FROM users WHERE username = ?", [username]);
+
+    if (existing.length > 0) {
+      return res.status(400).json({ message: "Username sudah digunakan!" });
+    }
+
     const hashed = await bcrypt.hash(password, 10);
 
-    db.query(
-      "INSERT INTO users (nama_user, username, password, role, id_store, id_capster) VALUES (?,?,?,?,?,?)",
-      [nama_user, username, hashed, role, id_store || null, id_capster || null],
-      (err, result) => {
-        if (err) {
-          if (err.code === "ER_DUP_ENTRY") {
-            return res
-              .status(400)
-              .json({ message: "Username sudah digunakan" });
-          }
-          return res.status(500).json({ message: "Gagal menambah user" });
-        }
-        res.json({ message: "User berhasil ditambahkan", id: result.insertId });
-      }
-    );
+    const [userResult] = await db
+      .promise()
+      .query(
+        "INSERT INTO users (nama_user, username, password, role, id_store) VALUES (?,?,?,?,?)",
+        [nama_user, username, hashed, role, id_store || null]
+      );
+
+    console.log("✅ User berhasil ditambah:", userResult.insertId);
+
+    const id_user = userResult.insertId;
+    let id_capster = null;
+
+    // Jika role capster → tambahkan ke tabel capster
+    if (role === "capster") {
+      console.log("🟢 Menambahkan ke tabel capster...");
+      const [capsterResult] = await db
+        .promise()
+        .query(
+          "INSERT INTO capster (nama_capster, id_store, id_user) VALUES (?, ?, ?)",
+          [nama_user, id_store, id_user]
+        );
+
+      id_capster = capsterResult.insertId;
+
+      await db
+        .promise()
+        .query("UPDATE users SET id_capster = ? WHERE id_user = ?", [
+          id_capster,
+          id_user,
+        ]);
+      console.log("🔁 User diperbarui dengan id_capster:", id_capster);
+    }
+
+    res.status(201).json({
+      message: "User berhasil ditambahkan",
+      user: {
+        id_user,
+        nama_user,
+        username,
+        role,
+        id_store,
+        id_capster,
+      },
+    });
   } catch (error) {
+    console.error("❌ Gagal menambahkan user:", error);
     res.status(500).json({ message: "Terjadi kesalahan server" });
   }
 };

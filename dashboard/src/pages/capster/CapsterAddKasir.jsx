@@ -25,7 +25,6 @@ export default function CapsterAddKasir() {
       setError(null);
       await addCapster(nama);
 
-      // ✅ Simpan pesan untuk alert di halaman daftar
       localStorage.setItem(
         "capsterMessageKasir",
         JSON.stringify({
@@ -37,7 +36,13 @@ export default function CapsterAddKasir() {
       navigate("/capster/kasir");
     } catch (err) {
       console.error("❌ handleAddCapster Error:", err);
-      setError("Gagal menambahkan capster: " + err.message);
+
+      // 🔍 Cek apakah server mengirim pesan error custom
+      if (err.response && err.response.data && err.response.data.message) {
+        setError(err.response.data.message);
+      } else {
+        setError(err.message);
+      }
     }
   };
 
@@ -97,7 +102,7 @@ export default function CapsterAddKasir() {
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              {loading ? "Menyimpan..." : "Simpan Capster"}
+              {loading ? "Menyimpan..." : <> Simpan Capster</>}
             </button>
           </div>
         </form>
