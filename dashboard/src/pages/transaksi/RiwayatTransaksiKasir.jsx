@@ -15,14 +15,12 @@ export default function RiwayatTransaksiKasir() {
   );
   const [showCount, setShowCount] = useState(25);
 
-  // 🔹 Ambil data dari hook
   const {
     data: rawData,
     loading,
     error,
   } = useFetchRiwayatKasir(filterType, tanggal);
 
-  // 🔹 Pastikan hasilnya selalu array agar tidak error
   const data = Array.isArray(rawData)
     ? rawData
     : Array.isArray(rawData?.data)
@@ -32,7 +30,6 @@ export default function RiwayatTransaksiKasir() {
   return (
     <MainLayout current="riwayat transaksi">
       {(searchTerm) => {
-        // 🔍 Filter data
         const filteredData = data
           .filter((d) =>
             filterTipeTransaksi === "Semua"
@@ -49,7 +46,6 @@ export default function RiwayatTransaksiKasir() {
           )
           .slice(0, showCount);
 
-        // 💡 Hitung summary
         const totalTransaksi = filteredData.length;
         const totalKotor = filteredData.reduce(
           (sum, d) => sum + Number(d.subtotal || 0),
@@ -60,7 +56,6 @@ export default function RiwayatTransaksiKasir() {
           0
         );
 
-        // 📊 Kolom tabel
         const columns = [
           { key: "no", label: "#" },
           { key: "tanggal", label: "Tanggal" },
@@ -68,10 +63,9 @@ export default function RiwayatTransaksiKasir() {
           { key: "detail", label: "Detail" },
           { key: "subtotal", label: "Total" },
           { key: "metode_bayar", label: "Metode Bayar" },
-          { key: "struk", label: "Struk" }, // 🧾 Tambahan kolom baru
+          { key: "struk", label: "Struk" },
         ];
 
-        // 📋 Data tabel
         const tableData = filteredData.map((d, i) => ({
           no: i + 1,
           tanggal: formatTanggalJam(d.created_at),
@@ -95,8 +89,6 @@ export default function RiwayatTransaksiKasir() {
             </div>
           ),
           metode_bayar: <span className="capitalize">{d.metode_bayar}</span>,
-
-          // 🧾 Kolom baru: tombol lihat struk
           struk: (
             <button
               onClick={() =>
@@ -114,7 +106,6 @@ export default function RiwayatTransaksiKasir() {
           ),
         }));
 
-        // 🧱 Render
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
             {/* === Header === */}
@@ -131,6 +122,7 @@ export default function RiwayatTransaksiKasir() {
 
             {/* === Filter Bar === */}
             <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
+              {/* Filter Periode */}
               <div className="flex items-center gap-2">
                 <label className="text-gray-600 font-medium text-sm">
                   Tipe:
@@ -145,21 +137,32 @@ export default function RiwayatTransaksiKasir() {
                 </select>
               </div>
 
+              {/* Input Kalender Adaptif */}
               <div className="flex items-center gap-2">
                 <label className="text-gray-600 font-medium text-sm">
-                  Tanggal:
+                  {filterType === "Harian" ? "Tanggal:" : "Bulan:"}
                 </label>
-                <input
-                  type="date"
-                  value={tanggal}
-                  onChange={(e) => setTanggal(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
+                {filterType === "Harian" ? (
+                  <input
+                    type="date"
+                    value={tanggal}
+                    onChange={(e) => setTanggal(e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                ) : (
+                  <input
+                    type="month"
+                    value={tanggal.slice(0, 7)}
+                    onChange={(e) => setTanggal(e.target.value + "-01")}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                )}
               </div>
 
+              {/* Filter Jenis Transaksi */}
               <div className="flex items-center gap-2">
                 <label className="text-gray-600 font-medium text-sm">
-                  Tipe Transaksi:
+                  Jenis Transaksi:
                 </label>
                 <select
                   value={filterTipeTransaksi}

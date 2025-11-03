@@ -2,149 +2,206 @@
 !theme materia
 
 skinparam defaultFontName "Consolas"
-skinparam defaultFontSize 30
+skinparam defaultFontSize 26
 skinparam entity {
-  FontSize 30
-  FontName "Consolas"
+  FontSize 24
   BackgroundColor #FFFFFF
   BorderColor #555555
 }
 skinparam note {
-  FontSize 30
+  FontSize 22
 }
 
+left to right direction
 
-entity "users" as users {
-  *id_user : INT <<PK>>
-  --
-  nama_user : VARCHAR(100)
-  username : VARCHAR(50)
-  password : VARCHAR(255)
-  role : ENUM('admin','kasir','capster')
-  id_store : INT <<FK>>
-  id_capster : INT <<FK>>
-  created_at : DATETIME
+' ===========================
+'        ENTITIES
+' ===========================
+
+together {
+  entity "users" as users {
+    *id_user : INT <<PK>>
+    --
+    nama_user : VARCHAR(100)
+    username : VARCHAR(50)
+    password : VARCHAR(255)
+    role : ENUM
+    id_store : INT <<FK>>
+    id_capster : INT <<FK>>
+    created_at : DATETIME
+  }
+
+  entity "store" as store {
+    *id_store : INT <<PK>>
+    --
+    nama_store : VARCHAR(100)
+    alamat_store : TEXT
+    created_at : DATETIME
+  }
+
+  entity "capster" as capster {
+    *id_capster : INT <<PK>>
+    --
+    nama_capster : VARCHAR(100)
+    id_store : INT <<FK>>
+    id_user : INT <<FK>>
+    status : ENUM
+    created_at : DATETIME
+  }
+
+  entity "produk" as produk {
+    *id_produk : INT <<PK>>
+    --
+    nama_produk : VARCHAR(100)
+    harga_awal : DECIMAL
+    harga_jual : DECIMAL
+    created_at : DATETIME
+  }
 }
 
-entity "store" as store {
-  *id_store : INT <<PK>>
-  --
-  nama_store : VARCHAR(100)
-  alamat_store : TEXT
-  created_at : DATETIME
+together {
+  entity "pengeluaran" as pengeluaran {
+    *id_pengeluaran : INT <<PK>>
+    --
+    id_store : INT <<FK>>
+    id_user : INT <<FK>>
+    kategori : VARCHAR(100)
+    deskripsi : TEXT
+    jumlah : DECIMAL
+    tanggal : DATE
+    bukti_path : VARCHAR(255)
+    created_at : DATETIME
+  }
+
+  entity "stok_produk" as stok_produk {
+    *id_stok : INT <<PK>>
+    --
+    id_produk : INT <<FK>>
+    id_store : INT <<FK>>
+    jumlah_stok : INT
+    stok_akhir : INT
+    updated_at : DATETIME
+  }
+
+  entity "transaksi" as transaksi {
+    *id_transaksi : INT <<PK>>
+    --
+    id_store : INT <<FK>>
+    id_user : INT <<FK>>
+    tipe_transaksi : ENUM
+    metode_bayar : VARCHAR(20)
+    subtotal : DECIMAL
+    jumlah_bayar : DECIMAL
+    kembalian : DECIMAL
+    created_at : DATETIME
+  }
 }
 
-entity "capster" as capster {
-  *id_capster : INT <<PK>>
-  --
-  nama_capster : VARCHAR(100)
-  id_store : INT <<FK>>
-  status : ENUM('aktif','nonaktif')
-  created_at : DATETIME
+together {
+  entity "struk" as struk {
+    *id_struk : INT <<PK>>
+    --
+    id_transaksi : INT <<FK>>
+    nomor_struk : VARCHAR(30)
+    file_path : VARCHAR(255)
+    created_at : DATETIME
+  }
+
+  entity "transaksi_service_detail" as transaksi_service_detail {
+    *id_detail : INT <<PK>>
+    --
+    id_transaksi : INT <<FK>>
+    id_pricelist : INT <<FK>>
+    id_capster : INT <<FK>>
+    harga : DECIMAL
+    persentase_capster : DECIMAL
+    komisi_capster : DECIMAL
+    created_at : DATETIME
+  }
+
+  entity "transaksi_produk_detail" as transaksi_produk_detail {
+    *id_detail : INT <<PK>>
+    --
+    id_transaksi : INT <<FK>>
+    id_produk : INT <<FK>>
+    jumlah : INT
+    harga_awal : DECIMAL
+    harga_jual : DECIMAL
+    total_penjualan : DECIMAL
+    total_modal : DECIMAL
+    laba_rugi : DECIMAL
+    created_at : DATETIME
+  }
 }
 
-entity "komisi_setting" as komisi_setting {
-  *id_setting : INT <<PK>>
-  --
-  id_store : INT <<FK>>
-  persentase_capster : DECIMAL(5,2)
-  updated_at : DATETIME
+together {
+  entity "pricelist" as pricelist {
+    *id_pricelist : INT <<PK>>
+    --
+    service : VARCHAR(100)
+    keterangan : TEXT
+    harga : DECIMAL
+    created_at : DATETIME
+  }
+
+  entity "komisi_setting" as komisi_setting {
+    *id_setting : INT <<PK>>
+    --
+    id_capster : INT <<FK>>
+    persentase_capster : DECIMAL
+    updated_at : DATETIME
+  }
+
+  entity "gaji_setting" as gaji_setting {
+    *id_gaji_setting : INT <<PK>>
+    --
+    id_capster : INT <<FK>>
+    id_user : INT <<FK>>
+    gaji_pokok : DECIMAL
+    periode : ENUM
+    updated_at : DATETIME
+  }
+
+  entity "bonus" as bonus {
+    *id_bonus : INT <<PK>>
+    --
+    id_capster : INT <<FK>>
+    id_user : INT <<FK>>
+    judul_bonus : VARCHAR(100)
+    jumlah : DECIMAL
+    keterangan : TEXT
+    tanggal_diberikan : DATE
+    periode : CHAR(7)
+    created_at : DATETIME
+  }
 }
 
-entity "pricelist" as pricelist {
-  *id_pricelist : INT <<PK>>
-  --
-  service : VARCHAR(100)
-  keterangan : TEXT
-  harga : DECIMAL(12,2)
-  created_at : DATETIME
-}
+' ===========================
+'       RELATIONSHIPS
+' ===========================
 
-entity "produk" as produk {
-  *id_produk : INT <<PK>>
-  --
-  nama_produk : VARCHAR(100)
-  harga_awal : DECIMAL(12,2)
-  harga_jual : DECIMAL(12,2)
-  created_at : DATETIME
-}
+store ||--o{ capster : memiliki
+store ||--o{ stok_produk : memiliki_stok
+store ||--o{ transaksi : melayani_transaksi
+store ||--o{ pengeluaran : memiliki_pengeluaran
 
-entity "stok_produk" as stok_produk {
-  *id_stok : INT <<PK>>
-  --
-  id_produk : INT <<FK>>
-  id_store : INT <<FK>>
-  jumlah_stok : INT
-  updated_at : DATETIME
-}
+users ||--o{ transaksi : dicatat_oleh
+users ||--o{ pengeluaran : mencatat
+users ||--|| capster : terhubung
+users ||--|| store : bekerja_di
 
-entity "transaksi" as transaksi {
-  *id_transaksi : INT <<PK>>
-  --
-  id_store : INT <<FK>>
-  id_user : INT <<FK>>
-  tipe_transaksi : ENUM('service','produk','campuran')
-  subtotal : DECIMAL(12,2)
-  jumlah_bayar : DECIMAL(12,2)
-  kembalian : DECIMAL(12,2)
-  created_at : DATETIME
-}
+capster ||--o{ komisi_setting : memiliki_komisi
+capster ||--o{ gaji_setting : memiliki_gaji
+capster ||--o{ bonus : mendapat_bonus
+capster ||--o{ transaksi_service_detail : melayani
 
-entity "transaksi_service_detail" as transaksi_service_detail {
-  *id_detail : INT <<PK>>
-  --
-  id_transaksi : INT <<FK>>
-  id_pricelist : INT <<FK>>
-  id_capster : INT <<FK>>
-  harga : DECIMAL(12,2)
-  komisi_capster : DECIMAL(12,2)
-  created_at : DATETIME
-}
+produk ||--o{ stok_produk : tersedia_di
+produk ||--o{ transaksi_produk_detail : terjual_dalam
 
-entity "transaksi_produk_detail" as transaksi_produk_detail {
-  *id_detail : INT <<PK>>
-  --
-  id_transaksi : INT <<FK>>
-  id_produk : INT <<FK>>
-  jumlah : INT
-  harga_awal : DECIMAL(12,2)
-  harga_jual : DECIMAL(12,2)
-  total_penjualan : DECIMAL(12,2)
-  total_modal : DECIMAL(12,2)
-  laba_rugi : DECIMAL(12,2)
-  created_at : DATETIME
-}
+pricelist ||--o{ transaksi_service_detail : digunakan_pada
 
-entity "struk" as struk {
-  *id_struk : INT <<PK>>
-  --
-  id_transaksi : INT <<FK>>
-  nomor_struk : VARCHAR(30)
-  file_path : VARCHAR(255)
-  created_at : DATETIME
-}
-
-'============================
-' RELATIONSHIPS
-'============================
-
-store ||--o{ capster : "memiliki"
-store ||--o{ komisi_setting : "aturan komisi"
-store ||--o{ stok_produk : "memiliki stok"
-store ||--o{ transaksi : "melayani transaksi"
-
-users ||--o{ transaksi : "dicatat oleh"
-users ||--|| store : "bekerja di"
-users ||--|| capster : "terkait dengan"
-
-produk ||--o{ stok_produk : "tersedia di"
-produk ||--o{ transaksi_produk_detail : "terjual melalui"
-
-pricelist ||--o{ transaksi_service_detail : "dipakai dalam"
-capster ||--o{ transaksi_service_detail : "melayani"
-
-transaksi ||--o{ transaksi_service_detail : "memiliki detail service"
-transaksi ||--o{ transaksi_produk_detail : "memiliki detail produk"
-transaksi ||--|| struk : "memiliki 1 struk"
+transaksi ||--o{ transaksi_service_detail : detail_service
+transaksi ||--o{ transaksi_produk_detail : detail_produk
+transaksi ||--|| struk : memiliki_struk
 
 @enduml

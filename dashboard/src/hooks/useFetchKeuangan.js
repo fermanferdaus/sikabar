@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 
 export default function useFetchKeuangan({
   id_store = null,
-  type = "Bulanan",
-  includeSummary = false, // optional: untuk ambil summary (kasir/admin)
+  includeSummary = true, // default: ambil summary juga
+  includeGrafik = true, // default: ambil grafik juga
 } = {}) {
-  const [data, setData] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [grafik, setGrafik] = useState([]); // 🎯 Pisahkan grafik dari summary
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -16,67 +16,82 @@ export default function useFetchKeuangan({
   useEffect(() => {
     const fetchKeuangan = async () => {
       try {
-        let url;
-        if (id_store) {
-          // 🔹 Mode kasir atau per-store
-          url = `${API_URL}/keuangan/store/${id_store}`;
-        } else {
-          // 🔹 Mode admin (global)
-          url = `${API_URL}/keuangan`;
-        }
+        setLoading(true);
 
-        const res = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        // =========================================================
+        // 🔹 1️⃣ Fetch Grafik Keuangan (harian)
+        // =========================================================
+        if (includeGrafik) {
+          let grafikUrl = id_store
+            ? `${API_URL}/keuangan/store/${id_store}/grafik`
+            : `${API_URL}/keuangan`;
 
-        if (!res.ok) throw new Error("Gagal memuat data keuangan");
-
-        const json = await res.json();
-
-        // 🔹 Untuk endpoint /keuangan (grafik harian)
-        if (Array.isArray(json.data)) {
-          const mapped = json.data.map((r) => {
-            let tanggalLabel = r.tanggal;
-            try {
-              if (r.tanggal?.includes("T")) {
-                const [y, m, d] = r.tanggal.split("T")[0].split("-");
-                const bulanNama = new Date(`${y}-${m}-01`).toLocaleString("id-ID", {
-                  month: "short",
-                });
-                tanggalLabel = `${d} ${bulanNama}`;
-              }
-            } catch {
-              tanggalLabel = r.tanggal;
-            }
-
-            return {
-              tanggal: tanggalLabel,
-              pendapatan_kotor: Number(r.pendapatan_kotor) || 0,
-              pengeluaran: Number(r.pengeluaran) || 0,
-              pendapatan_bersih: Number(r.pendapatan_bersih) || 0,
-            };
+          const resGrafik = await fetch(grafikUrl, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
           });
 
-          setData(mapped);
+          if (!resGrafik.ok)
+            throw new Error("Gagal memuat data grafik keuangan");
+
+          const jsonGrafik = await resGrafik.json();
+          if (
+            jsonGrafik.status === "success" &&
+            Array.isArray(jsonGrafik.data)
+          ) {
+            const mapped = jsonGrafik.data.map((r) => {
+              let tanggalLabel = r.tanggal;
+              try {
+                if (r.tanggal?.includes("T")) {
+                  const [y, m, d] = r.tanggal.split("T")[0].split("-");
+                  const bulanNama = new Date(`${y}-${m}-01`).toLocaleString(
+                    "id-ID",
+                    { month: "short" }
+                  );
+                  tanggalLabel = `${d} ${bulanNama}`;
+                }
+              } catch {
+                tanggalLabel = r.tanggal;
+              }
+
+              return {
+                tanggal: tanggalLabel,
+                pendapatan_kotor: Number(r.pendapatan_kotor) || 0,
+                pengeluaran: Number(r.pengeluaran) || 0,
+                pendapatan_bersih: Number(r.pendapatan_bersih) || 0,
+              };
+            });
+            setGrafik(mapped);
+          }
         }
 
-        // 🔹 Jika ingin include summary bulanan
-        if (includeSummary && !id_store) {
-          const resSummary = await fetch(`${API_URL}/keuangan/summary`, {
+        // =========================================================
+        // 🔹 2️⃣ Fetch Summary Keuangan (bulanan)
+        // =========================================================
+        if (includeSummary) {
+          let summaryUrl;
+
+          if (id_store) {
+            summaryUrl = `${API_URL}/keuangan/store/${id_store}`;
+          } else {
+            summaryUrl = `${API_URL}/keuangan/summary`;
+          }
+
+          const resSummary = await fetch(summaryUrl, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          const sumJson = await resSummary.json();
-          if (sumJson.status === "success") setSummary(sumJson.data.total);
-        }
 
-        // 🔹 Untuk kasir (id_store)
-        if (id_store && json.status === "success" && json.data) {
-          setSummary(json.data);
-        }
+          if (!resSummary.ok)
+            throw new Error("Gagal memuat ringkasan keuangan");
 
+          const jsonSum = await resSummary.json();
+          if (jsonSum.status === "success") {
+            if (id_store) setSummary(jsonSum.data);
+            else setSummary(jsonSum.data.total);
+          }
+        }
       } catch (err) {
         console.error("❌ useFetchKeuangan Error:", err);
         setError(err.message);
@@ -86,7 +101,7 @@ export default function useFetchKeuangan({
     };
 
     fetchKeuangan();
-  }, [id_store, type, includeSummary]);
+  }, [id_store, includeSummary, includeGrafik]);
 
-  return { data, summary, loading, error };
+  return { grafik, summary, loading, error };
 }

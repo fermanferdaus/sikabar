@@ -25,10 +25,16 @@ export default function Pengeluaran() {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
 
-  // === Filter State ===
-  const [filterType, setFilterType] = useState("Bulanan");
+  // === Filter Cabang ===
+  const [filterTypeCabang, setFilterTypeCabang] = useState("Bulanan");
+  const [tanggalCabang, setTanggalCabang] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+
+  // === Filter Admin ===
+  const [filterTypeAdmin, setFilterTypeAdmin] = useState("Bulanan");
   const [filterKategori, setFilterKategori] = useState("Semua");
-  const [tanggal, setTanggal] = useState(
+  const [tanggalAdmin, setTanggalAdmin] = useState(
     new Date().toISOString().split("T")[0]
   );
 
@@ -49,9 +55,13 @@ export default function Pengeluaran() {
   useEffect(() => {
     const fetchCabang = async () => {
       try {
-        const res = await fetch(`${API_URL}/pengeluaran/total`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        setLoading(true);
+        const res = await fetch(
+          `${API_URL}/pengeluaran/total?tipe=${filterTypeCabang}&tanggal=${tanggalCabang}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         const json = await res.json();
         if (json.status !== "success")
           throw new Error(json.message || "Gagal memuat data pengeluaran");
@@ -63,16 +73,19 @@ export default function Pengeluaran() {
       }
     };
     fetchCabang();
-  }, []);
+  }, [filterTypeCabang, tanggalCabang]); // 🔹 panggil ulang kalau filter berubah
 
   // === Ambil pengeluaran admin ===
   useEffect(() => {
     if (role === "admin") {
       const fetchAdminPengeluaran = async () => {
         try {
-          const res = await fetch(`${API_URL}/pengeluaran`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const res = await fetch(
+            `${API_URL}/pengeluaran?tipe=${filterTypeAdmin}&tanggal=${tanggalAdmin}&kategori=${filterKategori}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
           const json = await res.json();
           if (json.status !== "success")
             throw new Error(json.message || "Gagal memuat pengeluaran admin");
@@ -84,7 +97,7 @@ export default function Pengeluaran() {
       };
       fetchAdminPengeluaran();
     }
-  }, [role]);
+  }, [role, filterTypeAdmin, tanggalAdmin, filterKategori]); // 🔹 refresh kalau filter berubah
 
   // === Hapus data ===
   const handleDeleteClick = (id_pengeluaran) => {
@@ -136,15 +149,30 @@ export default function Pengeluaran() {
     { key: "aksi", label: "Aksi" },
   ];
 
+  // === Filter rekap cabang berdasarkan periode ===
+  const filteredStoresByDate = stores.filter((s) => {
+    if (!s.tanggal) return true;
+    const tgl = new Date(s.tanggal);
+    const selected = new Date(tanggalCabang);
+    if (filterTypeCabang === "Harian") {
+      return formatLocalDate(tgl) === formatLocalDate(selected);
+    } else {
+      return (
+        tgl.getMonth() === selected.getMonth() &&
+        tgl.getFullYear() === selected.getFullYear()
+      );
+    }
+  });
+
   // === Filter pengeluaran admin ===
   const filteredAdminData = adminPengeluaran.filter((p) => {
     const matchKategori =
       filterKategori === "Semua" ||
       (p.kategori || "").toLowerCase() === filterKategori.toLowerCase();
     const tgl = new Date(p.tanggal);
-    const selected = new Date(tanggal);
+    const selected = new Date(tanggalAdmin);
     const matchTanggal =
-      filterType === "Harian"
+      filterTypeAdmin === "Harian"
         ? formatLocalDate(tgl) === formatLocalDate(selected)
         : tgl.getMonth() === selected.getMonth() &&
           tgl.getFullYear() === selected.getFullYear();
@@ -159,7 +187,7 @@ export default function Pengeluaran() {
   return (
     <MainLayout current="pengeluaran">
       {(searchTerm) => {
-        const filteredStores = stores.filter((s) =>
+        const filteredStores = filteredStoresByDate.filter((s) =>
           s.nama_store.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
@@ -224,7 +252,7 @@ export default function Pengeluaran() {
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-10 transition-all duration-300">
               {/* === REKAP CABANG === */}
-              <div className="border-b border-gray-100 pb-4">
+              <div className="border-b border-gray-100 pb-4 mb-4">
                 <h1 className="text-xl font-semibold text-slate-800">
                   Rekap Pengeluaran per Cabang
                 </h1>
@@ -233,12 +261,53 @@ export default function Pengeluaran() {
                 </p>
               </div>
 
+              {/* === FILTER CABANG === */}
+              <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Tipe:
+                  </label>
+                  <select
+                    value={filterTypeCabang}
+                    onChange={(e) => setFilterTypeCabang(e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="Harian">Harian</option>
+                    <option value="Bulanan">Bulanan</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    {filterTypeCabang === "Harian" ? "Tanggal:" : "Bulan:"}
+                  </label>
+                  {filterTypeCabang === "Harian" ? (
+                    <input
+                      type="date"
+                      value={tanggalCabang}
+                      onChange={(e) => setTanggalCabang(e.target.value)}
+                      className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  ) : (
+                    <input
+                      type="month"
+                      value={tanggalCabang.slice(0, 7)}
+                      onChange={(e) => setTanggalCabang(e.target.value + "-01")}
+                      className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* === TABEL REKAP === */}
               {loading ? (
                 <p className="text-gray-500">Memuat data...</p>
               ) : error ? (
                 <p className="text-red-500">{error}</p>
               ) : filteredStores.length === 0 ? (
-                <p className="text-gray-500">Data tidak ditemukan.</p>
+                <p className="text-gray-500 italic">
+                  Tidak ada data pengeluaran untuk periode ini.
+                </p>
               ) : (
                 <TableData
                   columns={columnsCabang}
@@ -255,14 +324,12 @@ export default function Pengeluaran() {
                       </div>
                     ),
                     aksi: (
-                      <div className="flex items-center justify-left gap-2">
-                        <button
-                          onClick={() => navigate(`/pengeluaran/${s.id_store}`)}
-                          className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
-                        >
-                          Lihat
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => navigate(`/pengeluaran/${s.id_store}`)}
+                        className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-3 py-1.5 rounded-md text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                      >
+                        Lihat
+                      </button>
                     ),
                   }))}
                 />
@@ -273,9 +340,9 @@ export default function Pengeluaran() {
                 <div className="mt-12">
                   <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-4">
                     <div>
-                      <h2 className="text-lg font-semibold text-slate-800">
+                      <h1 className="text-lg font-semibold text-slate-800">
                         Pengeluaran Pusat (Admin)
-                      </h2>
+                      </h1>
                       <p className="text-sm text-gray-500 mt-1">
                         Daftar pengeluaran yang dilakukan langsung oleh admin
                         pusat.
@@ -302,16 +369,15 @@ export default function Pengeluaran() {
                     </div>
                   )}
 
-                  {/* === FILTER BAR === */}
+                  {/* === FILTER ADMIN === */}
                   <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4 mb-4">
-                    {/* Filter Periode */}
                     <div className="flex items-center gap-2">
                       <label className="text-sm font-medium text-gray-700">
                         Tipe:
                       </label>
                       <select
-                        value={filterType}
-                        onChange={(e) => setFilterType(e.target.value)}
+                        value={filterTypeAdmin}
+                        onChange={(e) => setFilterTypeAdmin(e.target.value)}
                         className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       >
                         <option value="Harian">Harian</option>
@@ -319,29 +385,29 @@ export default function Pengeluaran() {
                       </select>
                     </div>
 
-                    {/* Input kalender adaptif */}
                     <div className="flex items-center gap-2">
                       <label className="text-sm font-medium text-gray-700">
-                        {filterType === "Harian" ? "Tanggal:" : "Bulan:"}
+                        {filterTypeAdmin === "Harian" ? "Tanggal:" : "Bulan:"}
                       </label>
-                      {filterType === "Harian" ? (
+                      {filterTypeAdmin === "Harian" ? (
                         <input
                           type="date"
-                          value={tanggal}
-                          onChange={(e) => setTanggal(e.target.value)}
+                          value={tanggalAdmin}
+                          onChange={(e) => setTanggalAdmin(e.target.value)}
                           className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         />
                       ) : (
                         <input
                           type="month"
-                          value={tanggal.slice(0, 7)}
-                          onChange={(e) => setTanggal(e.target.value + "-01")}
+                          value={tanggalAdmin.slice(0, 7)}
+                          onChange={(e) =>
+                            setTanggalAdmin(e.target.value + "-01")
+                          }
                           className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         />
                       )}
                     </div>
 
-                    {/* Filter kategori */}
                     <div className="flex items-center gap-2">
                       <label className="text-sm font-medium text-gray-700">
                         Kategori:

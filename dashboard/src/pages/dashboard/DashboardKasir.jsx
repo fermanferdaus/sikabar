@@ -40,8 +40,14 @@ export default function DashboardKasir() {
   const { data: transaksiList } = useFetchTransaksiStore(idStore, "Bulanan");
 
   // 🔹 Data keuangan (grafik + summary)
-  const { data: grafikKeuangan, summary, loading } = useFetchKeuangan({
+  const {
+    grafik: grafikKeuangan,
+    summary,
+    loading,
+  } = useFetchKeuangan({
     id_store: idStore,
+    includeSummary: true,
+    includeGrafik: true,
   });
 
   // 🔹 Ambil data pendapatan kasir & bonus

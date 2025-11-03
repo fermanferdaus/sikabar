@@ -47,6 +47,7 @@ export const getPengeluaran = (req, res) => {
 export const getTotalPengeluaran = (req, res) => {
   const role = req.user?.role;
   const id_store = req.user?.id_store;
+  const { tipe, tanggal } = req.query; // ← ambil dari query params frontend
 
   let sql = `
     SELECT 
@@ -59,10 +60,25 @@ export const getTotalPengeluaran = (req, res) => {
   `;
 
   const params = [];
+  const whereClauses = [];
 
+  // 🔹 Filter role kasir
   if (role === "kasir") {
-    sql += " WHERE s.id_store = ?";
+    whereClauses.push("s.id_store = ?");
     params.push(id_store);
+  }
+
+  // 🔹 Filter tanggal dari query
+  if (tanggal && tipe === "Harian") {
+    whereClauses.push("DATE(p.tanggal) = ?");
+    params.push(tanggal);
+  } else if (tanggal && tipe === "Bulanan") {
+    whereClauses.push("MONTH(p.tanggal) = MONTH(?) AND YEAR(p.tanggal) = YEAR(?)");
+    params.push(tanggal, tanggal);
+  }
+
+  if (whereClauses.length > 0) {
+    sql += " WHERE " + whereClauses.join(" AND ");
   }
 
   sql += " GROUP BY s.id_store ORDER BY s.nama_store ASC";

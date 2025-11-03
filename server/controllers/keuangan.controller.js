@@ -427,3 +427,68 @@ export const getKeuanganStoreSummary = (req, res) => {
     });
   });
 };
+
+// Grafik harian khusus per store (bukan summary saja)
+export const getKeuanganStoreGrafik = (req, res) => {
+  const { id_store } = req.params;
+  if (!id_store)
+    return res.status(400).json({
+      status: "error",
+      message: "id_store wajib disertakan",
+    });
+
+  const now = dayjs();
+  const bulan = now.month() + 1;
+  const tahun = now.year();
+
+  const query = `
+    SELECT 
+      DATE_FORMAT(CONVERT_TZ(t.created_at, '+00:00', '+07:00'), '%Y-%m-%d') AS tanggal,
+      COALESCE(SUM(t.subtotal), 0) AS pendapatan_kotor,
+      COALESCE(SUM(tsd.komisi_capster), 0) AS total_komisi_capster,
+      COALESCE(SUM(tpd.laba_rugi), 0) AS laba_produk,
+      (
+        SELECT COALESCE(SUM(p.jumlah), 0)
+        FROM pengeluaran p
+        WHERE p.id_store = ? 
+        AND DATE_FORMAT(p.tanggal, '%Y-%m-%d') = DATE_FORMAT(CONVERT_TZ(t.created_at, '+00:00', '+07:00'), '%Y-%m-%d')
+      ) AS pengeluaran
+    FROM transaksi t
+    LEFT JOIN transaksi_service_detail tsd ON tsd.id_transaksi = t.id_transaksi
+    LEFT JOIN transaksi_produk_detail tpd ON tpd.id_transaksi = t.id_transaksi
+    WHERE t.id_store = ?
+    AND MONTH(t.created_at) = ?
+    AND YEAR(t.created_at) = ?
+    GROUP BY DATE_FORMAT(CONVERT_TZ(t.created_at, '+00:00', '+07:00'), '%Y-%m-%d')
+    ORDER BY tanggal ASC;
+  `;
+
+  db.query(query, [id_store, id_store, bulan, tahun], (err, rows) => {
+    if (err) {
+      console.error("❌ Error getKeuanganStoreGrafik:", err);
+      return res.status(500).json({
+        status: "error",
+        message: "Gagal mengambil data grafik keuangan toko",
+      });
+    }
+
+    const result = rows.map((r) => {
+      const pendapatan_bersih =
+        Number(r.pendapatan_kotor || 0) -
+        Number(r.total_komisi_capster || 0) +
+        Number(r.laba_produk || 0) -
+        Number(r.pengeluaran || 0);
+
+      return {
+        tanggal: r.tanggal,
+        pendapatan_kotor: Number(r.pendapatan_kotor || 0),
+        komisi_capster: Number(r.total_komisi_capster || 0),
+        laba_produk: Number(r.laba_produk || 0),
+        pengeluaran: Number(r.pengeluaran || 0),
+        pendapatan_bersih,
+      };
+    });
+
+    res.json({ status: "success", data: result });
+  });
+};

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import MainLayout from "../../layouts/MainLayout";
 import ChartKeuangan from "../../components/ChartKeuangan";
 import {
@@ -24,44 +24,29 @@ export default function Dashboard() {
   const { capsters } = useFetchCapster();
   const { produk } = useFetchProduk();
   const { data: transaksiData } = useFetchTransaksiAdmin("Bulanan");
-  const { data: grafikKeuangan, loading: loadKeuangan } = useFetchKeuangan(); // ✅ ganti nama variabel agar tidak bentrok
 
-  // 🔹 State untuk summary keuangan bulanan (real dari backend)
-  const [summary, setSummary] = useState(null);
-  const [loadingSummary, setLoadingSummary] = useState(true);
-  const API_URL = import.meta.env.VITE_API_URL;
+  // 🔹 Ambil grafik & summary global dari hook keuangan
+  const { grafik: grafikKeuangan, summary, loading } = useFetchKeuangan({
+    includeSummary: true,
+    includeGrafik: true,
+  });
 
-  useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        const res = await fetch(`${API_URL}/keuangan/summary`);
-        const json = await res.json();
-        if (json.status === "success") setSummary(json.data);
-      } catch (err) {
-        console.error("❌ Error load keuangan summary:", err);
-      } finally {
-        setLoadingSummary(false);
-      }
-    };
-    fetchSummary();
-  }, []);
+  const goTo = (path) => navigate(path);
 
   // 🔹 Ambil nilai total dari summary (real tanpa pembulatan)
-  const totalPendapatanKotor = Number(summary?.total?.pendapatan_kotor || 0);
-  const totalPengeluaran = Number(summary?.total?.pengeluaran || 0);
-  const totalPendapatanBersih = Number(summary?.total?.pendapatan_bersih || 0);
+  const totalPendapatanKotor = Number(summary?.pendapatan_kotor || 0);
+  const totalPengeluaran = Number(summary?.pengeluaran || 0);
+  const totalPendapatanBersih = Number(summary?.pendapatan_bersih || 0);
   const totalTransaksi = transaksiData.reduce(
     (sum, d) => sum + Number(d.total_transaksi || 0),
     0
   );
 
-  const goTo = (path) => navigate(path);
-
   // 🔹 Loading state
-  if (loadingSummary && loadKeuangan) {
+  if (loading) {
     return (
       <MainLayout current="dashboard">
-        <div className="p-10 text-center text-gray-500">
+        <div className="flex items-center justify-center min-h-screen text-gray-500">
           Memuat data dashboard admin...
         </div>
       </MainLayout>
@@ -89,11 +74,12 @@ export default function Dashboard() {
 
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-7 space-y-8 transition-all duration-300">
+            {/* === TITLE === */}
             <h1 className="text-2xl font-semibold text-slate-800">
               Dashboard Admin
             </h1>
 
-            {/* === BARIS 1 === */}
+            {/* === BARIS 1: Statistik Umum === */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
               <CardStat
                 gradient="from-indigo-500 to-blue-500"
@@ -129,17 +115,13 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* === BARIS 2 === */}
+            {/* === BARIS 2: Pendapatan & Pengeluaran === */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <CardStat
                 gradient="from-sky-500 to-blue-600"
                 title="Pendapatan Kotor"
                 subtitle="Sebelum dikurangi pengeluaran"
-                value={
-                  loadingSummary
-                    ? "Memuat..."
-                    : `Rp ${totalPendapatanKotor.toLocaleString("id-ID")}`
-                }
+                value={`Rp ${totalPendapatanKotor.toLocaleString("id-ID")}`}
                 icon={<DollarSign size={32} />}
                 onClick={() => goTo("/transaksi/admin")}
               />
@@ -147,39 +129,31 @@ export default function Dashboard() {
                 gradient="from-rose-400 to-red-500"
                 title="Total Pengeluaran"
                 subtitle="Biaya operasional"
-                value={
-                  loadingSummary
-                    ? "Memuat..."
-                    : `Rp ${totalPengeluaran.toLocaleString("id-ID")}`
-                }
+                value={`Rp ${totalPengeluaran.toLocaleString("id-ID")}`}
                 icon={<ArrowDownCircle size={32} />}
                 onClick={() => goTo("/pengeluaran")}
               />
             </div>
 
-            {/* === BARIS 3 === */}
+            {/* === BARIS 3: Pendapatan Bersih === */}
             <div>
               <CardStat
                 gradient="from-emerald-400 to-green-500"
                 title="Pendapatan Bersih"
                 subtitle="Setelah dikurangi pengeluaran"
-                value={
-                  loadingSummary
-                    ? "Memuat..."
-                    : `Rp ${totalPendapatanBersih.toLocaleString("id-ID")}`
-                }
+                value={`Rp ${totalPendapatanBersih.toLocaleString("id-ID")}`}
                 icon={<DollarSign size={32} />}
                 onClick={() => goTo("/transaksi/admin")}
               />
             </div>
 
-            {/* === GRAFIK === */}
-            {loadKeuangan ? (
-              <div className="bg-[#f9fafb] rounded-2xl border border-gray-100 p-6 text-center text-gray-500 shadow-inner">
-                Memuat grafik...
+            {/* === GRAFIK GLOBAL === */}
+            {grafikKeuangan.length === 0 ? (
+              <div className="bg-[#f9fafb] rounded-2xl border border-gray-100 p-6 text-center text-gray-400 italic">
+                Belum ada data keuangan global.
               </div>
             ) : (
-              <ChartKeuangan data={grafikKeuangan} /> // ✅ hanya kirim data grafik
+              <ChartKeuangan data={grafikKeuangan} />
             )}
           </div>
         );
