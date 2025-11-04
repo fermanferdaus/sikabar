@@ -135,14 +135,26 @@ export const deleteProduk = (req, res) => {
 
 // === 1. Ambil total stok per store ===
 export const getStokPerStore = (req, res) => {
+  const { filterType, tanggal } = req.query;
+
+  // Contoh logika: nanti bisa dikaitkan dengan histori stok / transaksi
+  let dateFilter = "";
+  if (filterType === "Harian" && tanggal) {
+    dateFilter = `WHERE DATE(sp.updated_at) = '${tanggal}'`;
+  } else if (filterType === "Bulanan" && tanggal) {
+    const bulan = tanggal.slice(0, 7);
+    dateFilter = `WHERE DATE_FORMAT(sp.updated_at, '%Y-%m') = '${bulan}'`;
+  }
+
   const sql = `
     SELECT 
       st.id_store,
       st.nama_store,
-      IFNULL(COUNT(DISTINCT s.id_produk), 0) AS total_produk,
-      IFNULL(SUM(s.stok_akhir), 0) AS total_stok
+      IFNULL(COUNT(DISTINCT sp.id_produk), 0) AS total_produk,
+      IFNULL(SUM(sp.stok_akhir), 0) AS total_stok
     FROM store st
-    LEFT JOIN stok_produk s ON st.id_store = s.id_store
+    LEFT JOIN stok_produk sp ON st.id_store = sp.id_store
+    ${dateFilter}
     GROUP BY st.id_store, st.nama_store
     ORDER BY st.nama_store ASC
   `;
@@ -192,6 +204,15 @@ export const deleteStokProduk = (req, res) => {
 // === 2. Ambil detail stok produk untuk store tertentu ===
 export const getProdukByStore = (req, res) => {
   const { id_store } = req.params;
+  const { filterType, tanggal } = req.query;
+
+  let dateCondition = "";
+  if (filterType === "Harian" && tanggal) {
+    dateCondition = `AND DATE(t.created_at) = '${tanggal}'`;
+  } else if (filterType === "Bulanan" && tanggal) {
+    const bulan = tanggal.slice(0, 7);
+    dateCondition = `AND DATE_FORMAT(t.created_at, '%Y-%m') = '${bulan}'`;
+  }
 
   const sql = `
     SELECT 
@@ -199,32 +220,71 @@ export const getProdukByStore = (req, res) => {
       p.nama_produk,
       p.harga_awal,
       p.harga_jual,
-      COALESCE(sp.jumlah_stok, 0) AS stok_awal,
-      COALESCE(sp.stok_akhir, sp.jumlah_stok) AS stok_sekarang,
+      COALESCE(sp.stok_akhir, 0) AS stok_akhir_sistem,
+
+      COALESCE((
+        SELECT SUM(tp.jumlah)
+        FROM transaksi_produk_detail tp
+        JOIN transaksi t ON t.id_transaksi = tp.id_transaksi
+        WHERE tp.id_produk = p.id_produk
+          AND t.id_store = ?
+          ${dateCondition}
+      ), 0) AS terjual_periode,
+
+      (COALESCE(sp.stok_akhir, 0) + 
+        COALESCE((
+          SELECT SUM(tp.jumlah)
+          FROM transaksi_produk_detail tp
+          JOIN transaksi t ON t.id_transaksi = tp.id_transaksi
+          WHERE tp.id_produk = p.id_produk
+            AND t.id_store = ?
+            ${dateCondition}
+        ), 0)
+      ) AS stok_awal,
+
+      (COALESCE(sp.stok_akhir, 0) - 
+        COALESCE((
+          SELECT SUM(tp.jumlah)
+          FROM transaksi_produk_detail tp
+          JOIN transaksi t ON t.id_transaksi = tp.id_transaksi
+          WHERE tp.id_produk = p.id_produk
+            AND t.id_store = ?
+            ${dateCondition}
+        ), 0)
+      ) AS stok_sekarang,
+
       COALESCE((
         SELECT SUM(tp.laba_rugi)
         FROM transaksi_produk_detail tp
         JOIN transaksi t ON t.id_transaksi = tp.id_transaksi
         WHERE tp.id_produk = p.id_produk
-        AND t.id_store = ?
+          AND t.id_store = ?
+          ${dateCondition}
       ), 0) AS total_laba,
+
+      -- 🟢 Ambil nama store langsung dari tabel store
       s.nama_store
+
     FROM produk p
-    INNER JOIN stok_produk sp 
+    LEFT JOIN stok_produk sp 
       ON sp.id_produk = p.id_produk 
       AND sp.id_store = ?
     LEFT JOIN store s 
-      ON s.id_store = sp.id_store
+      ON s.id_store = ?  -- <<=== Langsung join ke id_store URL param
     ORDER BY p.nama_produk ASC;
   `;
 
-  db.query(sql, [id_store, id_store], (err, result) => {
-    if (err) {
-      console.error("  DB Error getProdukByStore:", err);
-      return res.status(500).json({ message: "Gagal mengambil data stok" });
+  db.query(
+    sql,
+    [id_store, id_store, id_store, id_store, id_store, id_store, id_store],
+    (err, result) => {
+      if (err) {
+        console.error("⚠️ DB Error getProdukByStore:", err);
+        return res.status(500).json({ message: "Gagal mengambil data stok" });
+      }
+      res.json(result);
     }
-    res.json(result);
-  });
+  );
 };
 
 // === Tambah stok untuk produk tertentu di store ===
@@ -360,8 +420,7 @@ export const updateStokProduk = (req, res) => {
         }
 
         res.json({
-          message:
-            "Stok berhasil diperbarui dengan penyesuaian proporsional",
+          message: "Stok berhasil diperbarui dengan penyesuaian proporsional",
           stok_awal_lama: stokLama.jumlah_stok,
           stok_awal_baru: jumlah_stok,
           stok_akhir_baru: stokAkhirBaru,

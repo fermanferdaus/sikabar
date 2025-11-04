@@ -20,11 +20,15 @@ export default function ProdukStokDetail() {
   const [selectedProduk, setSelectedProduk] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // 🔹 Tambahan filter
+  const [filterType, setFilterType] = useState("Bulanan");
+  const [tanggal, setTanggal] = useState(new Date().toISOString().split("T")[0]);
+
   // 🔁 Ambil data stok produk
   const loadProduk = async () => {
     setLoading(true);
     try {
-      const data = await getProdukByStore(id_store);
+      const data = await getProdukByStore(id_store, filterType, tanggal);
       setProduk(data);
       if (data.length > 0) setStoreName(data[0].nama_store || "");
     } catch (err) {
@@ -36,7 +40,7 @@ export default function ProdukStokDetail() {
 
   useEffect(() => {
     loadProduk();
-  }, [id_store]);
+  }, [id_store, filterType, tanggal]);
 
   const handleAddProduk = () => {
     navigate(`/produk/add`, { state: { fromStore: id_store } });
@@ -75,7 +79,6 @@ export default function ProdukStokDetail() {
     }
   };
 
-  // === Komponen utama ===
   return (
     <MainLayout current="produk">
       {(searchTerm) => {
@@ -135,37 +138,71 @@ export default function ProdukStokDetail() {
           <div className="bg-white shadow-md rounded-2xl border border-gray-100 p-8 space-y-6">
             {/* === Header === */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
-  <div>
-    <h1 className="text-xl font-semibold text-slate-800">
-      Stok Produk – {storeName || `Store #${id_store}`}
-    </h1>
-    <p className="text-sm text-gray-500 mt-1">
-      Kelola data produk dan stok yang tersedia di toko ini.
-    </p>
-  </div>
+              <div>
+                <h1 className="text-xl font-semibold text-slate-800">
+                  Stok Produk – {storeName || `Store #${id_store}`}
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Kelola data produk dan stok yang tersedia di toko ini.
+                </p>
+              </div>
 
-  {/* 🔹 Tombol Aksi: rata kiri di mobile, kanan di desktop */}
-  <div className="order-1 sm:order-2 flex justify-start sm:justify-end gap-2 w-full sm:w-auto">
-    {/* Tombol Tambah Produk */}
-    <button
-      onClick={handleAddProduk}
-      className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
-    >
-      <Plus size={16} />
-      Tambah Produk
-    </button>
+              <div className="order-1 sm:order-2 flex justify-start sm:justify-end gap-2 w-full sm:w-auto">
+                <button
+                  onClick={handleAddProduk}
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                >
+                  <Plus size={16} />
+                  Tambah Produk
+                </button>
 
-    {/* Tombol Kembali */}
-    <button
-      onClick={() => navigate(`/produk`)}
-      className="flex items-center gap-2 bg-[#f3f6fb] text-[#0e57b5] px-4 py-2.5 rounded-xl text-sm font-medium border border-[#e4e7ec] hover:bg-[#eaf0fa] hover:shadow-sm transition-all duration-200"
-    >
-      <ArrowLeft size={16} />
-      Kembali
-    </button>
-  </div>
-</div>
+                <button
+                  onClick={() => navigate(`/produk`)}
+                  className="flex items-center gap-2 bg-[#f3f6fb] text-[#0e57b5] px-4 py-2.5 rounded-xl text-sm font-medium border border-[#e4e7ec] hover:bg-[#eaf0fa] hover:shadow-sm transition-all duration-200"
+                >
+                  <ArrowLeft size={16} />
+                  Kembali
+                </button>
+              </div>
+            </div>
 
+            {/* === Filter Bar === */}
+            <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
+              <div className="flex items-center gap-2">
+                <label className="text-gray-600 font-medium text-sm">
+                  Tipe:
+                </label>
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="Harian">Harian</option>
+                  <option value="Bulanan">Bulanan</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-gray-600 font-medium text-sm">
+                  {filterType === "Harian" ? "Tanggal:" : "Bulan:"}
+                </label>
+                {filterType === "Harian" ? (
+                  <input
+                    type="date"
+                    value={tanggal}
+                    onChange={(e) => setTanggal(e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                ) : (
+                  <input
+                    type="month"
+                    value={tanggal.slice(0, 7)}
+                    onChange={(e) => setTanggal(e.target.value + "-01")}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                )}
+              </div>
+            </div>
 
             {/* 🔔 Notifikasi */}
             {notif && (
@@ -189,11 +226,7 @@ export default function ProdukStokDetail() {
               <p className="text-gray-500">Produk tidak ditemukan.</p>
             ) : (
               <>
-                <TableData
-                  columns={columns}
-                  data={data}
-                  searchTerm={searchTerm}
-                />
+                <TableData columns={columns} data={data} searchTerm={searchTerm} />
                 <div className="flex justify-end mt-4 text-sm font-semibold text-gray-700 border-t border-gray-200 pt-3">
                   <span>
                     Total Laba:&nbsp;
@@ -205,7 +238,6 @@ export default function ProdukStokDetail() {
               </>
             )}
 
-            {/* 🗑️ Modal Konfirmasi Hapus */}
             <ConfirmModal
               open={showModal}
               onClose={() => setShowModal(false)}

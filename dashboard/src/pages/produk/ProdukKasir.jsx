@@ -22,6 +22,12 @@ export default function ProdukKasir() {
   const [selectedProduk, setSelectedProduk] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // 🟡 Tambahan filter
+  const [filterType, setFilterType] = useState("Bulanan");
+  const [tanggal, setTanggal] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+
   // 🔔 Tampilkan notifikasi sukses setelah tambah/edit produk
   useEffect(() => {
     const savedMessage = localStorage.getItem("produkMessage");
@@ -33,10 +39,11 @@ export default function ProdukKasir() {
     }
   }, []);
 
+  // 🔁 Ambil data stok produk
   const loadProduk = async () => {
     setLoading(true);
     try {
-      const data = await getProdukByStore(id_store);
+      const data = await getProdukByStore(id_store, filterType, tanggal);
       setProduk(data);
       if (data.length > 0) setStoreName(data[0].nama_store || "");
     } catch (err) {
@@ -53,7 +60,7 @@ export default function ProdukKasir() {
     } else {
       loadProduk();
     }
-  }, [id_store]);
+  }, [id_store, filterType, tanggal]); // 🔹 Refresh otomatis saat filter berubah
 
   // ➕ Tambah produk baru
   const handleAddProduk = () => {
@@ -177,7 +184,6 @@ export default function ProdukKasir() {
                 </p>
               </div>
 
-              {/* 🔹 Tombol Tambah Produk: kiri di mobile, kanan di desktop */}
               <div className="order-1 sm:order-2 flex justify-start sm:justify-end gap-2 w-full sm:w-auto">
                 <button
                   onClick={handleAddProduk}
@@ -186,6 +192,44 @@ export default function ProdukKasir() {
                   <Plus size={16} />
                   Tambah Produk
                 </button>
+              </div>
+            </div>
+
+            {/* === Filter Bar === */}
+            <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
+              <div className="flex items-center gap-2">
+                <label className="text-gray-600 font-medium text-sm">
+                  Tipe:
+                </label>
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="Harian">Harian</option>
+                  <option value="Bulanan">Bulanan</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-gray-600 font-medium text-sm">
+                  {filterType === "Harian" ? "Tanggal:" : "Bulan:"}
+                </label>
+                {filterType === "Harian" ? (
+                  <input
+                    type="date"
+                    value={tanggal}
+                    onChange={(e) => setTanggal(e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                ) : (
+                  <input
+                    type="month"
+                    value={tanggal.slice(0, 7)}
+                    onChange={(e) => setTanggal(e.target.value + "-01")}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                )}
               </div>
             </div>
 
@@ -227,7 +271,6 @@ export default function ProdukKasir() {
               </>
             )}
 
-            {/* 🗑️ Modal Hapus */}
             <ConfirmModal
               open={showModal}
               onClose={() => setShowModal(false)}

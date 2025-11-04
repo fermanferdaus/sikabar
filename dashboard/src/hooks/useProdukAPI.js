@@ -27,8 +27,13 @@ export default function useProdukAPI() {
 
   /* ===================== 🔹 PRODUK PER STORE ===================== */
 
-  const getProdukByStore = async (id_store) => {
-    const res = await fetch(`${API_URL}/produk/stok/${id_store}`, { headers });
+  const getProdukByStore = async (
+    id_store,
+    filterType = "Bulanan",
+    tanggal = new Date().toISOString().split("T")[0]
+  ) => {
+    const url = `${API_URL}/produk/stok/${id_store}?filterType=${filterType}&tanggal=${tanggal}`;
+    const res = await fetch(url, { headers });
     const data = await res.json();
     if (!res.ok)
       throw new Error(data.message || "Gagal memuat data stok produk");

@@ -2,14 +2,14 @@
 !theme materia
 
 skinparam defaultFontName "Consolas"
-skinparam defaultFontSize 26
+skinparam defaultFontSize 40
 skinparam entity {
-  FontSize 24
+  FontSize 39
   BackgroundColor #FFFFFF
   BorderColor #555555
 }
 skinparam note {
-  FontSize 22
+  FontSize 36
 }
 
 left to right direction
