@@ -44,7 +44,7 @@ const ChevronTriple = memo(({ direction = "right", size = 26 }) => {
 });
 
 // ======================
-// 🔹 Komponen MenuGroup (dibuat memo agar tidak re-render berulang)
+// 🔹 MenuGroup (memoized)
 // ======================
 const MenuGroup = memo(
   ({
@@ -141,7 +141,7 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
   const isAutoExpanding = useRef(false);
   const role = localStorage.getItem("role");
 
-  // 🧠 Responsive handler
+  // Responsive handler
   useEffect(() => {
     const isMobile = window.innerWidth < 1024;
     if (isMobile && isOpen) {
@@ -150,9 +150,41 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
     }
   }, [isOpen]);
 
-  // ======================
-  // 🔹 Menu Groups
-  // ======================
+  // 🧭 Expand grup aktif sesuai route
+  useEffect(() => {
+    isAutoExpanding.current = true;
+    const activeGroups = [];
+    menuGroups.forEach((group) => {
+      const active = group.items.some(
+        (item) =>
+          location.pathname === item.path ||
+          location.pathname.startsWith(item.path + "/")
+      );
+      if (active) activeGroups.push(group.title);
+    });
+    setOpenGroups(activeGroups);
+    setTimeout(() => (isAutoExpanding.current = false), 150);
+  }, [location.pathname]);
+
+  const toggleGroup = (title) => {
+    setOpenGroups((prev) =>
+      prev.includes(title) ? prev.filter((g) => g !== title) : [...prev, title]
+    );
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = "/login";
+  };
+
+  const toggleCollapse = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    localStorage.setItem("sidebarCollapsed", JSON.stringify(newState));
+    onCollapseChange?.(newState);
+  };
+
+  // Menu Items
   const menuGroups = [
     {
       title: "Menu Utama",
@@ -277,40 +309,6 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
     },
   ];
 
-  // 🧭 Expand grup aktif sesuai route
-  useEffect(() => {
-    isAutoExpanding.current = true;
-    const activeGroups = [];
-    menuGroups.forEach((group) => {
-      const active = group.items.some(
-        (item) =>
-          location.pathname === item.path ||
-          location.pathname.startsWith(item.path + "/")
-      );
-      if (active) activeGroups.push(group.title);
-    });
-    setOpenGroups(activeGroups);
-    setTimeout(() => (isAutoExpanding.current = false), 150);
-  }, [location.pathname]);
-
-  const toggleGroup = (title) => {
-    setOpenGroups((prev) =>
-      prev.includes(title) ? prev.filter((g) => g !== title) : [...prev, title]
-    );
-  };
-
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = "/login";
-  };
-
-  const toggleCollapse = () => {
-    const newState = !isCollapsed;
-    setIsCollapsed(newState);
-    localStorage.setItem("sidebarCollapsed", JSON.stringify(newState));
-    onCollapseChange?.(newState);
-  };
-
   return (
     <>
       {/* Overlay mobile */}
@@ -374,11 +372,11 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
         >
           {/* MENU LIST */}
           <nav
-            className={`w-full overflow-y-auto scrollbar-thin hover:scrollbar-thumb-gray-400 ${
+            className={`w-full overflow-y-auto ${
               isCollapsed
                 ? "flex flex-col items-center gap-5 pt-5 px-0"
                 : "px-3 pb-4"
-            }`}
+            } hide-scrollbar`}
           >
             {menuGroups.map((group, idx) => (
               <MenuGroup
@@ -415,6 +413,17 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
           </div>
         </div>
       </aside>
+
+      {/* 🔹 Styling untuk sembunyikan scrollbar tapi tetap bisa scroll */}
+      <style>{`
+        .hide-scrollbar {
+          scrollbar-width: none;        /* Firefox */
+          -ms-overflow-style: none;     /* IE/Edge */
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;                /* Chrome/Safari/Opera */
+        }
+      `}</style>
     </>
   );
 }
