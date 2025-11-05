@@ -1,12 +1,11 @@
-import { Search, Bell, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Search, X, LogOut } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 
-// 🔹 Komponen ikon 3 garis miring dengan aksen biru
 const ChevronTriple = ({
   direction = "right",
   size = 26,
-  primary = "#0e57b5", // biru tengah
-  secondary = "#94a3b8", // abu pinggir
+  primary = "#0e57b5",
+  secondary = "#94a3b8",
 }) => {
   const rotate = direction === "left" ? "rotate(180deg)" : "rotate(0deg)";
   return (
@@ -30,30 +29,42 @@ export default function Navbar({
   onSearch,
   onToggleSidebar,
   isSidebarOpen,
-  isCollapsed, // ← status dari MainLayout
+  isCollapsed,
 }) {
   const [query, setQuery] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const profileRef = useRef(null);
 
-  const role = localStorage.getItem("role") || "Guest";
-  const name =
-    role === "admin"
-      ? "Admin"
-      : role === "kasir"
-      ? "Kasir"
-      : role === "capster"
-      ? "Capster"
-      : "User";
+  // 🔹 Ambil data user langsung dari localStorage
+  const storedName = localStorage.getItem("nama_user") || "Pengguna";
+  const storedRole = localStorage.getItem("role") || "Guest";
 
-  // 🔹 Deteksi tampilan mobile
+  // 🔹 Responsif (cek ukuran layar)
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // 🔹 Input pencarian
+  // 🔹 Tutup dropdown kalau klik di luar area profil
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setShowProfile(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // 🔹 Fungsi logout
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = "/login";
+  };
+
   const handleChange = (e) => {
     const value = e.target.value;
     setQuery(value);
@@ -65,7 +76,6 @@ export default function Navbar({
     onSearch && onSearch("");
   };
 
-  // 🔹 Toggle Sidebar (mobile: buka/tutup)
   const handleToggleSidebar = () => {
     onToggleSidebar(!isSidebarOpen);
   };
@@ -75,13 +85,18 @@ export default function Navbar({
       {/* ===================== NAVBAR WRAPPER ===================== */}
       <div
         className={`fixed top-0 right-0 z-40 bg-gray-50 px-4 sm:px-6 md:px-8 pt-4 pb-3 transition-all duration-300
-        ${isMobile ? "left-0" : isCollapsed ? "left-20" : "left-64"}`}
+    ${
+      isMobile
+        ? "left-0 w-full" // 📱 iPad & mobile: full width
+        : isCollapsed
+        ? "left-20 right-0"
+        : "left-64 right-0"
+    }`}
       >
         <header className="flex justify-between items-center bg-white rounded-xl shadow-sm border border-gray-100 px-4 sm:px-6 md:px-8 py-6 transition-all duration-300">
           {/* === LEFT: HAMBURGER + SEARCH === */}
           <div className="flex items-center gap-3 w-full max-w-md relative">
-            {/* 🔹 Tombol toggle — beda antara mobile & desktop */}
-            {isMobile ? (
+            {isMobile && (
               <button
                 onClick={handleToggleSidebar}
                 className="flex items-center justify-center w-10 h-10 transition-transform duration-300 hover:scale-105"
@@ -93,7 +108,7 @@ export default function Navbar({
                   <ChevronTriple direction="right" />
                 )}
               </button>
-            ) : null}
+            )}
 
             {/* 🔍 Search bar */}
             <div className="flex-1 relative">
@@ -103,7 +118,7 @@ export default function Navbar({
               />
               <input
                 type="text"
-                placeholder="Cari capster, produk, layanan..."
+                placeholder="Cari data disini..."
                 value={query}
                 onChange={handleChange}
                 className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-9 py-2.5 text-[15px] text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -119,37 +134,70 @@ export default function Navbar({
             </div>
           </div>
 
-          {/* === RIGHT: NOTIFICATION + PROFILE === */}
+          {/* === RIGHT: PROFILE DROPDOWN === */}
           <div className="flex items-center gap-4 sm:gap-5 ml-3 sm:ml-6 flex-shrink-0">
-            {/* 🔔 Notifikasi */}
-            <button className="relative flex-shrink-0 hover:bg-gray-100 p-2 rounded-full transition">
-              <Bell size={22} className="text-gray-500" />
-              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-medium w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
-                2
-              </span>
-            </button>
+            <div className="relative" ref={profileRef}>
+              <div
+                className="flex items-center gap-3 cursor-pointer group"
+                onClick={() => setShowProfile((prev) => !prev)}
+              >
+                {/* Info user */}
+                <div className="hidden md:flex flex-col items-end leading-tight">
+                  <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 transition">
+                    {storedName}
+                  </p>
+                  <p className="text-xs text-gray-500 capitalize">
+                    {storedRole}
+                  </p>
+                </div>
 
-            {/* Divider */}
-            <div className="hidden sm:block h-6 w-px bg-gray-200"></div>
-
-            {/* 🧑‍ User Info */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="hidden md:block text-right leading-tight">
-                <p className="text-sm font-medium text-gray-800">{name}</p>
+                {/* Foto profil */}
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden border border-gray-200 group-hover:ring-2 group-hover:ring-blue-400 transition-all duration-300">
+                  <img
+                    src="/user.png"
+                    alt="profile"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </div>
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden border border-gray-200">
-                <img
-                  src="/user.png"
-                  alt="profile"
-                  className="w-full h-full object-cover"
-                />
+
+              {/* === DROPDOWN === */}
+              <div
+                className={`absolute right-0 mt-3 w-64 bg-white rounded-xl border border-gray-100 shadow-lg transition-all duration-200 origin-top-right ${
+                  showProfile
+                    ? "opacity-100 scale-100 visible"
+                    : "opacity-0 scale-95 invisible"
+                }`}
+              >
+                <div className="p-5 flex flex-col items-center text-center">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 mb-3">
+                    <img
+                      src="/user.png"
+                      alt="profile"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <h2 className="font-semibold text-gray-800 text-base">
+                    {storedName}
+                  </h2>
+                  <p className="text-sm text-gray-500 mb-3 capitalize">
+                    {storedRole}
+                  </p>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-gray-600 hover:text-red-600 transition font-medium text-sm hover:bg-gray-50"
+                  >
+                    <LogOut size={18} strokeWidth={1.6} />
+                    Keluar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </header>
       </div>
 
-      {/* Spacer biar konten gak ketimpa navbar */}
+      {/* Spacer supaya konten gak ketimpa navbar */}
       <div className="h-10 md:h-7"></div>
     </>
   );

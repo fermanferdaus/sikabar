@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 
-export default function useFetchKomisi(idCapster = null, filterType = null, tanggal = null) {
+export default function useFetchKomisi(
+  idCapster = null,
+  filterType = null,
+  tanggal = null
+) {
   const [komisi, setKomisi] = useState([]); // untuk admin
   const [komisiDetail, setKomisiDetail] = useState({
     pendapatan_kotor: 0,
@@ -21,13 +25,16 @@ export default function useFetchKomisi(idCapster = null, filterType = null, tang
         let endpoint = "/komisi";
 
         if (role === "capster") endpoint = "/komisi/me";
-        else if (role === "admin" && idCapster) endpoint = `/komisi/${idCapster}`;
+        else if (role === "admin" && idCapster)
+          endpoint = `/komisi/${idCapster}`;
 
         const params = new URLSearchParams();
         if (filterType) params.append("type", filterType);
         if (tanggal) params.append("tanggal", tanggal);
 
-        const url = `${API_URL}${endpoint}${params.toString() ? `?${params}` : ""}`;
+        const url = `${API_URL}${endpoint}${
+          params.toString() ? `?${params}` : ""
+        }`;
 
         const res = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` },

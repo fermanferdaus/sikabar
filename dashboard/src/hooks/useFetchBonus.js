@@ -92,6 +92,29 @@ export default function useFetchBonus() {
   };
 
   /* =======================================================
+   🔄 Update Status Bonus
+======================================================= */
+  const updateBonusStatus = async (id_bonus, status) => {
+    try {
+      const res = await fetch(`${API_URL}/gaji/bonus/status/${id_bonus}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || "Gagal update status");
+      await fetchBonus();
+      return { success: true, message: result.message };
+    } catch (err) {
+      console.error("❌ updateBonusStatus Error:", err);
+      return { success: false, message: err.message };
+    }
+  };
+
+  /* =======================================================
      🗑️ Hapus Bonus
   ======================================================= */
   const deleteBonus = async (id_bonus) => {
@@ -138,6 +161,7 @@ export default function useFetchBonus() {
     refresh: fetchBonus,
     saveBonus,
     updateBonus,
+    updateBonusStatus,
     getBonusById,
     deleteBonus,
   };

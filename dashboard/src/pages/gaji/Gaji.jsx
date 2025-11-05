@@ -20,6 +20,7 @@ export default function Gaji() {
     loading: loadBonus,
     deleteBonus,
     refresh: refreshBonus,
+    updateBonusStatus,
   } = useFetchBonus();
 
   const [showModal, setShowModal] = useState(false);
@@ -230,6 +231,7 @@ export default function Gaji() {
                     { key: "jumlah", label: "Jumlah" },
                     { key: "periode", label: "Periode" },
                     { key: "tanggal_diberikan", label: "Tanggal Diberikan" },
+                    { key: "status", label: "Status" },
                     { key: "keterangan", label: "Keterangan" },
                     { key: "aksi", label: "Aksi" },
                   ]}
@@ -241,6 +243,19 @@ export default function Gaji() {
                     tanggal_diberikan: b.tanggal
                       ? formatTanggal(b.tanggal)
                       : "-",
+                    status: (
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          b.status === "sudah_diberikan"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {b.status === "sudah_diberikan"
+                          ? "Sudah Diberikan"
+                          : "Belum Diberikan"}
+                      </span>
+                    ),
                     aksi: (
                       <div className="flex items-left justify-left gap-2">
                         <button
@@ -258,6 +273,64 @@ export default function Gaji() {
                           title="Hapus Bonus"
                         >
                           <Trash2 size={16} />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            const newStatus =
+                              b.status === "belum_diberikan"
+                                ? "sudah_diberikan"
+                                : "belum_diberikan";
+                            await updateBonusStatus(b.id_bonus, newStatus);
+                          }}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium text-sm shadow-sm transition-all duration-200
+    ${
+      b.status === "belum_diberikan"
+        ? "bg-blue-600 hover:bg-blue-700 text-white"
+        : "bg-green-600 hover:bg-green-700 text-white"
+    }`}
+                          title={
+                            b.status === "belum_diberikan"
+                              ? "Tandai sebagai sudah diberikan"
+                              : "Kembalikan ke belum diberikan"
+                          }
+                        >
+                          {b.status === "belum_diberikan" ? (
+                            <>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                              <span>Sudah Diberikan</span>
+                            </>
+                          ) : (
+                            <>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 4v16M4 12h16"
+                                />
+                              </svg>
+                              <span>Belum Diberikan</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     ),

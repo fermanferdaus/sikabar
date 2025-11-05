@@ -12,14 +12,19 @@ export default function PricelistEdit() {
   } = useFetchPricelist();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ service: "", keterangan: "", harga: "" });
+  const [form, setForm] = useState({
+    service: "",
+    keterangan: "",
+    harga: 0,
+    hargaFormatted: "",
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 🔹 Format angka ke Rupiah
-  const formatRupiah = (value) => {
-    const number = value.replace(/\D/g, "");
-    return number ? `Rp${Number(number).toLocaleString("id-ID")}` : "";
+  // 🔹 Format angka ke Rupiah (untuk tampilan)
+  const formatRupiah = (num) => {
+    if (!num) return "";
+    return `Rp${Number(num).toLocaleString("id-ID")}`;
   };
 
   // 🔹 Ambil data pricelist untuk diedit (saat sudah ready)
@@ -29,11 +34,12 @@ export default function PricelistEdit() {
         (item) => String(item.id_pricelist) === String(id)
       );
       if (layanan) {
+        const hargaAsli = Number(layanan.harga);
         setForm({
           service: layanan.service,
           keterangan: layanan.keterangan || "",
-          harga: layanan.harga.toString(),
-          hargaFormatted: formatRupiah(layanan.harga.toString()),
+          harga: hargaAsli,
+          hargaFormatted: formatRupiah(hargaAsli),
         });
         setError(null);
       } else {
@@ -44,11 +50,14 @@ export default function PricelistEdit() {
 
   // 🔹 Handle perubahan harga agar otomatis format Rp
   const handleHargaChange = (e) => {
-    const numericValue = e.target.value.replace(/\D/g, "");
+    let value = e.target.value.replace(/[^\d]/g, ""); // hanya angka
+    if (value.startsWith("0")) value = value.replace(/^0+/, ""); // hilangkan nol depan
+
+    const numeric = Number(value) || 0;
     setForm({
       ...form,
-      harga: numericValue,
-      hargaFormatted: formatRupiah(numericValue),
+      harga: numeric, // simpan nilai angka mentah
+      hargaFormatted: numeric ? formatRupiah(numeric) : "",
     });
   };
 
@@ -67,7 +76,7 @@ export default function PricelistEdit() {
       await updatePricelist(id, {
         service: form.service,
         keterangan: form.keterangan,
-        harga: Number(form.harga),
+        harga: form.harga, // langsung kirim angka mentah
       });
 
       localStorage.setItem(
@@ -156,7 +165,7 @@ export default function PricelistEdit() {
             <input
               type="text"
               inputMode="numeric"
-              value={form.hargaFormatted || ""}
+              value={form.hargaFormatted}
               onChange={handleHargaChange}
               placeholder="Masukkan harga layanan"
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"

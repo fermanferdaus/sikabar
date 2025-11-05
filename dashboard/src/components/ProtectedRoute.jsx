@@ -35,7 +35,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
         {/* ✨ Text with smooth pulse */}
         <h2 className="text-gray-700 font-medium text-lg animate-pulse">
-          Memeriksa sesi Anda...
+          Loading...
         </h2>
         <p className="text-sm text-gray-500 mt-2">Harap tunggu sebentar</p>
       </div>

@@ -8,7 +8,9 @@ import {
   deleteGajiSetting,
   getBonusById,
   updateBonus,
-  updateGajiSetting
+  updateGajiSetting,
+  updateBonusStatus,
+  getSlipGaji, // ⬅️ tambahkan ini
 } from "../controllers/gajiSetting.controller.js";
 import { verifyToken } from "../middlewares/auth.middleware.js";
 
@@ -19,9 +21,7 @@ const router = express.Router();
 // ===============================
 router.get("/setting", verifyToken, getAllGajiSetting);
 router.post("/setting", verifyToken, createOrUpdateGajiSetting);
-// 💼 Update Gaji Pokok by ID
 router.put("/setting/:id", verifyToken, updateGajiSetting);
-
 
 // ===============================
 // 🎁 ROUTE: Bonus
@@ -29,9 +29,14 @@ router.put("/setting/:id", verifyToken, updateGajiSetting);
 router.get("/bonus", verifyToken, getAllBonus);
 router.get("/bonus/:id", verifyToken, getBonusById);
 router.post("/bonus", verifyToken, addBonus);
-router.put("/bonus/:id", verifyToken, updateBonus); 
+router.put("/bonus/:id", verifyToken, updateBonus);
+router.put("/bonus/status/:id", verifyToken, updateBonusStatus);
 router.delete("/bonus/:id", verifyToken, deleteBonus);
 router.delete("/gaji-setting/:id", deleteGajiSetting);
 
+// ===============================
+// 🧾 ROUTE: Slip Gaji (Kasir & Capster)
+// ===============================
+router.get("/slip", verifyToken, getSlipGaji);
 
 export default router;

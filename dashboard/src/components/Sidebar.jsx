@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, memo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -18,15 +18,13 @@ import {
   FileText,
   Percent,
   X,
+  Receipt,
 } from "lucide-react";
 
-// Ikon ChevronTriple
-const ChevronTriple = ({
-  direction = "right",
-  size = 26,
-  primary = "#0e57b5",
-  secondary = "#94a3b8",
-}) => {
+// ======================
+// 🔹 Ikon ChevronTriple
+// ======================
+const ChevronTriple = memo(({ direction = "right", size = 26 }) => {
   const rotate = direction === "left" ? "rotate(180deg)" : "rotate(0deg)";
   return (
     <svg
@@ -38,12 +36,100 @@ const ChevronTriple = ({
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <polyline points="3 3 12 12 3 21" stroke={secondary} strokeWidth="2" />
-      <polyline points="9 3 18 12 9 21" stroke={primary} strokeWidth="2" />
-      <polyline points="15 3 24 12 15 21" stroke={secondary} strokeWidth="2" />
+      <polyline points="3 3 12 12 3 21" stroke="#94a3b8" strokeWidth="2" />
+      <polyline points="9 3 18 12 9 21" stroke="#0e57b5" strokeWidth="2" />
+      <polyline points="15 3 24 12 15 21" stroke="#94a3b8" strokeWidth="2" />
     </svg>
   );
-};
+});
+
+// ======================
+// 🔹 Komponen MenuGroup (dibuat memo agar tidak re-render berulang)
+// ======================
+const MenuGroup = memo(
+  ({
+    group,
+    role,
+    isCollapsed,
+    openGroups,
+    toggleGroup,
+    location,
+    onClose,
+  }) => {
+    const visibleItems = group.items.filter((i) => i.roles.includes(role));
+    if (visibleItems.length === 0) return null;
+
+    return (
+      <div
+        className={`${
+          isCollapsed ? "w-full flex flex-col items-center" : "mb-3"
+        }`}
+      >
+        {!isCollapsed && (
+          <button
+            onClick={() => toggleGroup(group.title)}
+            className="w-full flex items-center justify-between text-gray-400 text-[12px] uppercase font-semibold px-4 mb-1 tracking-wide hover:text-[#0e57b5] transition"
+          >
+            <span>{group.title}</span>
+            <ChevronDown
+              size={14}
+              className={`transition-transform ${
+                openGroups.includes(group.title)
+                  ? "rotate-180 text-[#0e57b5]"
+                  : ""
+              }`}
+            />
+          </button>
+        )}
+
+        <div
+          className={`overflow-hidden transition-[max-height] duration-200 ease-in-out ${
+            openGroups.includes(group.title)
+              ? "max-h-[400px]"
+              : isCollapsed
+              ? "max-h-none"
+              : "max-h-0"
+          }`}
+        >
+          <div className={`${isCollapsed ? "space-y-5" : "space-y-1"}`}>
+            {visibleItems.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                location.pathname === item.path ||
+                location.pathname.startsWith(item.path + "/");
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => onClose && onClose()}
+                  className={`group flex items-center gap-3 ${
+                    isCollapsed ? "justify-center" : "px-4"
+                  } py-2.5 rounded-lg transition-colors duration-150 ${
+                    isActive
+                      ? "text-blue-600 font-semibold"
+                      : "text-gray-600 hover:text-blue-600"
+                  }`}
+                  title={isCollapsed ? item.label : ""}
+                >
+                  <Icon
+                    size={20}
+                    strokeWidth={1.6}
+                    className="transition-transform group-hover:scale-110"
+                  />
+                  {!isCollapsed && (
+                    <span className="text-[14px] font-medium">
+                      {item.label}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+);
 
 export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
   const location = useLocation();
@@ -55,14 +141,18 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
   const isAutoExpanding = useRef(false);
   const role = localStorage.getItem("role");
 
+  // 🧠 Responsive handler
   useEffect(() => {
     const isMobile = window.innerWidth < 1024;
     if (isMobile && isOpen) {
       setIsCollapsed(false);
-      onCollapseChange && onCollapseChange(false);
+      onCollapseChange?.(false);
     }
   }, [isOpen]);
 
+  // ======================
+  // 🔹 Menu Groups
+  // ======================
   const menuGroups = [
     {
       title: "Menu Utama",
@@ -84,7 +174,7 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
       title: "Data Master",
       items: [
         {
-          path: role === "kasir" ? `/produk/kasir` : "/produk",
+          path: role === "kasir" ? "/produk/kasir" : "/produk",
           label: "Produk",
           icon: Package,
           roles: ["admin", "kasir"],
@@ -101,18 +191,8 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
           icon: Tag,
           roles: ["admin"],
         },
-        {
-          path: "/store",
-          label: "Cabang",
-          icon: Store,
-          roles: ["admin"],
-        },
-        {
-          path: "/users",
-          label: "Pengguna",
-          icon: Users,
-          roles: ["admin"],
-        },
+        { path: "/store", label: "Cabang", icon: Store, roles: ["admin"] },
+        { path: "/users", label: "Pengguna", icon: Users, roles: ["admin"] },
       ],
     },
     {
@@ -146,6 +226,12 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
           label: "Gaji & Bonus",
           icon: Banknote,
           roles: ["admin"],
+        },
+        {
+          path: "/slip-gaji",
+          label: "Slip Gaji",
+          icon: Receipt,
+          roles: ["kasir", "capster"],
         },
       ],
     },
@@ -191,6 +277,7 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
     },
   ];
 
+  // 🧭 Expand grup aktif sesuai route
   useEffect(() => {
     isAutoExpanding.current = true;
     const activeGroups = [];
@@ -221,14 +308,12 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
     const newState = !isCollapsed;
     setIsCollapsed(newState);
     localStorage.setItem("sidebarCollapsed", JSON.stringify(newState));
-    if (typeof onCollapseChange === "function") {
-      onCollapseChange(newState);
-    }
+    onCollapseChange?.(newState);
   };
 
   return (
     <>
-      {/* Overlay hitam transparan di mobile */}
+      {/* Overlay mobile */}
       {isOpen && (
         <div
           onClick={onClose}
@@ -236,11 +321,14 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
         />
       )}
 
+      {/* SIDEBAR */}
       <aside
-        className={`fixed top-0 left-0 h-screen text-[#334155] flex flex-col transition-all duration-300 z-[50]
-      ${isOpen ? "translate-x-0" : "-translate-x-full"}
-      ${isCollapsed ? "w-20" : "w-64"}
-      lg:translate-x-0 bg-[#f8fafc]`}
+        style={{ willChange: "transform, width" }}
+        className={`fixed top-0 left-0 h-screen flex flex-col z-[50]
+        transition-[width,transform] duration-200 ease-in-out
+        ${isOpen ? "translate-x-0" : "-translate-x-full"}
+        ${isCollapsed ? "w-20" : "w-64"}
+        lg:translate-x-0 bg-[#f8fafc] text-[#334155]`}
       >
         {/* HEADER */}
         <div className="flex items-center justify-between px-4 py-4 relative flex-shrink-0">
@@ -268,7 +356,7 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
             </button>
           )}
 
-          {/* ↔ Tombol Collapse (Desktop) */}
+          {/* Tombol Collapse */}
           <button
             onClick={toggleCollapse}
             className="hidden lg:flex items-center justify-center w-9 h-9 mx-auto text-gray-500 hover:text-blue-600 transition-all"
@@ -280,112 +368,33 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
 
         {/* BODY */}
         <div
-          className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
+          className={`flex-1 flex flex-col overflow-hidden ${
             isCollapsed ? "justify-start items-center" : "justify-between"
           }`}
         >
-          {/* === MENU LIST === */}
+          {/* MENU LIST */}
           <nav
-            className={`w-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-all duration-300 ${
+            className={`w-full overflow-y-auto scrollbar-thin hover:scrollbar-thumb-gray-400 ${
               isCollapsed
                 ? "flex flex-col items-center gap-5 pt-5 px-0"
                 : "px-3 pb-4"
             }`}
-            style={{
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
-            }}
           >
-            <style>{`nav::-webkit-scrollbar { width: 0px; height: 0px;}`}</style>
-
-            {menuGroups.map(
-              (group, idx) =>
-                group.items.filter((i) => i.roles.includes(role)).length >
-                  0 && (
-                  <div
-                    key={idx}
-                    className={`${
-                      isCollapsed ? "w-full flex flex-col items-center" : "mb-3"
-                    }`}
-                  >
-                    {!isCollapsed && (
-                      <button
-                        onClick={() => toggleGroup(group.title)}
-                        className="w-full flex items-center justify-between text-gray-400 text-[12px] uppercase font-semibold px-4 mb-1 tracking-wide hover:text-[#0e57b5] transition"
-                      >
-                        <span>{group.title}</span>
-                        <ChevronDown
-                          size={14}
-                          className={`transition-transform ${
-                            openGroups.includes(group.title)
-                              ? "rotate-180 text-[#0e57b5]"
-                              : ""
-                          }`}
-                        />
-                      </button>
-                    )}
-
-                    <div
-                      className={`overflow-hidden ${
-                        isAutoExpanding.current
-                          ? ""
-                          : "transition-all duration-300"
-                      } ${
-                        openGroups.includes(group.title)
-                          ? "max-h-[400px]"
-                          : isCollapsed
-                          ? "max-h-none"
-                          : "max-h-0"
-                      }`}
-                    >
-                      <div
-                        className={`space-y-1 ${
-                          isCollapsed ? "space-y-5" : "space-y-1"
-                        }`}
-                      >
-                        {group.items
-                          .filter((i) => i.roles.includes(role))
-                          .map((item) => {
-                            const Icon = item.icon;
-                            const isActive =
-                              location.pathname === item.path ||
-                              location.pathname.startsWith(item.path + "/");
-
-                            return (
-                              <Link
-                                key={item.path}
-                                to={item.path}
-                                onClick={() => onClose && onClose()}
-                                className={`group flex items-center gap-3 ${
-                                  isCollapsed ? "justify-center" : "px-4"
-                                } py-2.5 rounded-lg transition-all ${
-                                  isActive
-                                    ? "text-blue-600 font-semibold"
-                                    : "text-gray-600 hover:text-blue-600"
-                                }`}
-                                title={isCollapsed ? item.label : ""}
-                              >
-                                <Icon
-                                  size={20}
-                                  strokeWidth={1.6}
-                                  className="transition-transform group-hover:scale-110"
-                                />
-                                {!isCollapsed && (
-                                  <span className="text-[14px] font-medium">
-                                    {item.label}
-                                  </span>
-                                )}
-                              </Link>
-                            );
-                          })}
-                      </div>
-                    </div>
-                  </div>
-                )
-            )}
+            {menuGroups.map((group, idx) => (
+              <MenuGroup
+                key={idx}
+                group={group}
+                role={role}
+                isCollapsed={isCollapsed}
+                openGroups={openGroups}
+                toggleGroup={toggleGroup}
+                location={location}
+                onClose={onClose}
+              />
+            ))}
           </nav>
 
-          {/* === LOGOUT === */}
+          {/* LOGOUT */}
           <div
             className={`flex-shrink-0 p-3 w-full ${
               isCollapsed ? "mt-auto" : ""

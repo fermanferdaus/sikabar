@@ -3,17 +3,19 @@ import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import useFetchKomisi from "../../hooks/useFetchKomisi";
 import TableData from "../../components/TableData";
-import { Calendar } from "lucide-react";
 import { formatTanggalJam } from "../../utils/dateFormatter";
 
 export default function Komisi() {
   const navigate = useNavigate();
   const role = localStorage.getItem("role");
-  // 🔹 Filter hanya untuk capster
+
+  // 🔹 Filter periode
   const [filterType, setFilterType] = useState("Bulanan");
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+
+  // 🔹 Ambil data dari API
   const { komisi, komisiDetail, loading, error } = useFetchKomisi(
     null,
     filterType,
@@ -25,8 +27,10 @@ export default function Komisi() {
   return (
     <MainLayout current="komisi">
       {(searchTerm) => {
+        /* =========================================================
+           👤 TAMPILAN UNTUK CAPSTER
+        ========================================================= */
         if (role === "capster") {
-          // === Tampilan untuk CAPSTER ===
           const filteredRiwayat = useMemo(() => {
             if (!data?.riwayat) return [];
             const date = new Date(selectedDate);
@@ -57,8 +61,8 @@ export default function Komisi() {
           return (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
               {/* === Header === */}
-              <div className="border-b border-gray-100 pb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                <div>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4">
+                <div className="text-left">
                   <h1 className="text-xl font-semibold text-slate-800">
                     Komisi Saya
                   </h1>
@@ -70,6 +74,7 @@ export default function Komisi() {
 
               {/* === Filter === */}
               <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
+                {/* Filter tipe */}
                 <div className="flex items-center gap-2">
                   <label className="text-gray-600 font-medium text-sm">
                     Tipe:
@@ -84,25 +89,32 @@ export default function Komisi() {
                   </select>
                 </div>
 
+                {/* Input tanggal adaptif */}
                 <div className="flex items-center gap-2">
                   <label className="text-gray-600 font-medium text-sm">
-                    Tanggal:
+                    {filterType === "Harian" ? "Tanggal:" : "Bulan:"}
                   </label>
-                  <div className="flex items-center gap-2">
-                    <Calendar size={16} className="text-gray-500" />
+                  {filterType === "Harian" ? (
                     <input
                       type="date"
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
                       className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
-                  </div>
+                  ) : (
+                    <input
+                      type="month"
+                      value={selectedDate.slice(0, 7)}
+                      onChange={(e) => setSelectedDate(e.target.value + "-01")}
+                      className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    />
+                  )}
                 </div>
               </div>
 
               {/* === Konten === */}
               {loading ? (
-                <p className="text-gray-500 italic">Memuat data komisi...</p>
+                <p className="text-gray-500">Memuat data komisi...</p>
               ) : error ? (
                 <p className="text-red-500">{error}</p>
               ) : (
@@ -116,19 +128,22 @@ export default function Komisi() {
               )}
             </div>
           );
-        } else {
-          // === Tampilan untuk ADMIN ===
-          const filtered = data.filter(
-            (k) =>
-              k.nama_capster
-                ?.toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-              k.nama_store?.toLowerCase().includes(searchTerm.toLowerCase())
-          );
+        }
 
-          return (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
-              <div className="border-b border-gray-100 pb-4">
+        /* =========================================================
+           👑 TAMPILAN UNTUK ADMIN
+        ========================================================= */
+        const filtered = data.filter(
+          (k) =>
+            k.nama_capster?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            k.nama_store?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
+            {/* === Header === */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4">
+              <div className="text-left">
                 <h1 className="text-xl font-semibold text-slate-800">
                   Komisi Capster
                 </h1>
@@ -136,42 +151,80 @@ export default function Komisi() {
                   Rekap total komisi seluruh capster per cabang.
                 </p>
               </div>
-
-              {loading ? (
-                <p className="text-gray-500 italic">Memuat data...</p>
-              ) : error ? (
-                <p className="text-red-500">{error}</p>
-              ) : filtered.length === 0 ? (
-                <p className="text-gray-500 italic">
-                  Tidak ada data ditemukan.
-                </p>
-              ) : (
-                <KomisiAdmin data={filtered} navigate={navigate} />
-              )}
             </div>
-          );
-        }
+
+            {/* === Filter === */}
+            <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
+              {/* Filter tipe */}
+              <div className="flex items-center gap-2">
+                <label className="text-gray-600 font-medium text-sm">
+                  Tipe:
+                </label>
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="Harian">Harian</option>
+                  <option value="Bulanan">Bulanan</option>
+                </select>
+              </div>
+
+              {/* Input tanggal adaptif */}
+              <div className="flex items-center gap-2">
+                <label className="text-gray-600 font-medium text-sm">
+                  {filterType === "Harian" ? "Tanggal:" : "Bulan:"}
+                </label>
+                {filterType === "Harian" ? (
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                ) : (
+                  <input
+                    type="month"
+                    value={selectedDate.slice(0, 7)}
+                    onChange={(e) => setSelectedDate(e.target.value + "-01")}
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* === Konten === */}
+            {loading ? (
+              <p className="text-gray-500 italic">Memuat data...</p>
+            ) : error ? (
+              <p className="text-red-500">{error}</p>
+            ) : filtered.length === 0 ? (
+              <p className="text-gray-500 italic">Tidak ada data ditemukan.</p>
+            ) : (
+              <KomisiAdmin data={filtered} navigate={navigate} />
+            )}
+          </div>
+        );
       }}
     </MainLayout>
   );
 }
 
 /* ===============================
-   🔹 KOMPONEN CAPSTER (Summary + Table)
+   🔹 KOMPONEN CAPSTER
 =============================== */
 function SummaryCards({ totalKotor, totalBersih }) {
   return (
     <div className="grid sm:grid-cols-2 gap-6 mb-2">
-      <div className="p-5 bg-white shadow-sm rounded-xl text-center shadow-sm transition hover:-translate-y-1 hover:shadow-md duration-300">
-        <p className="text-gray-600">Pendapatan Kotor</p>
-        <h2 className="text-3xl font-bold text-blue-700 mt-1">
+      <div className="p-5 bg-white shadow-sm rounded-xl text-center transition hover:-translate-y-1 hover:shadow-md duration-300">
+        <p className="text-gray-500">Pendapatan Kotor</p>
+        <h2 className="text-3xl font-bold text-blue-600 mt-1">
           Rp {totalKotor.toLocaleString("id-ID")}
         </h2>
       </div>
-
-      <div className="p-5 bg-white shadow-sm rounded-xl text-center shadow-sm transition hover:-translate-y-1 hover:shadow-md duration-300">
-        <p className="text-gray-600">Pendapatan Bersih (Komisi)</p>
-        <h2 className="text-3xl font-bold text-green-700 mt-1">
+      <div className="p-5 bg-white shadow-sm rounded-xl text-center transition hover:-translate-y-1 hover:shadow-md duration-300">
+        <p className="text-gray-500">Pendapatan Bersih (Komisi)</p>
+        <h2 className="text-3xl font-bold text-green-600 mt-1">
           Rp {totalBersih.toLocaleString("id-ID")}
         </h2>
       </div>
@@ -193,7 +246,7 @@ function RiwayatTable({ riwayat }) {
     { key: "service", label: "Layanan" },
     { key: "harga", label: "Harga" },
     { key: "persentase", label: "Persentase Komisi (%)" },
-    { key: "komisi", label: "Komisi" },
+    { key: "komisi", label: "Komisi (Rp)" },
   ];
 
   const data = riwayat.map((r, i) => ({
@@ -221,7 +274,7 @@ function RiwayatTable({ riwayat }) {
 }
 
 /* ===============================
-   🔹 KOMPONEN ADMIN (Tabel Rekap)
+   🔹 KOMPONEN ADMIN
 =============================== */
 function KomisiAdmin({ data, navigate }) {
   const columns = [

@@ -6,6 +6,13 @@ body {
   background-color: #f8fafc;
   color: #1e293b;
 }
+/* Fix warna oklch agar html2canvas tidak crash */
+:root {
+  color-scheme: light;
+}
+* {
+  --tw-text-opacity: 1 !important;
+}
 
 /* === GLOBAL SCROLLBAR STYLE === */
 

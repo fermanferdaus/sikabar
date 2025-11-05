@@ -1,71 +1,113 @@
 import db from "../config/db.js";
 
-export const getStores = (req, res) => {
-  db.query("SELECT * FROM store ORDER BY id_store DESC", (err, result) => {
-    if (err) return res.status(500).json({ message: "DB Error" });
-    res.json(result);
-  });
+/* ============================================================
+   🏪 GET Semua Store
+   ============================================================ */
+export const getStores = async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM store ORDER BY id_store DESC");
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ getStores:", err.message);
+    res.status(500).json({ message: "Gagal mengambil data store" });
+  }
 };
 
-export const getStoreById = (req, res) => {
-  db.query(
-    "SELECT * FROM store WHERE id_store=?",
-    [req.params.id],
-    (err, result) => {
-      if (err) return res.status(500).json({ message: "DB Error" });
-      if (result.length === 0)
-        return res.status(404).json({ message: "Store tidak ditemukan" });
-      res.json(result[0]);
-    }
-  );
+/* ============================================================
+   🔍 GET Store by ID
+   ============================================================ */
+export const getStoreById = async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT * FROM store WHERE id_store = ?", [
+      req.params.id,
+    ]);
+
+    if (!rows.length)
+      return res.status(404).json({ message: "Store tidak ditemukan" });
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("❌ getStoreById:", err.message);
+    res.status(500).json({ message: "Gagal mengambil data store" });
+  }
 };
 
-export const createStore = (req, res) => {
-  const { nama_store, alamat_store } = req.body;
+/* ============================================================
+   🟡 CREATE Store
+   ============================================================ */
+export const createStore = async (req, res) => {
+  try {
+    const { nama_store, alamat_store } = req.body;
 
-  // 🔍 Cek apakah nama store sudah ada
-  db.query(
-    "SELECT * FROM store WHERE nama_store = ?",
-    [nama_store],
-    (err, result) => {
-      if (err)
-        return res.status(500).json({ message: "Gagal memeriksa store" });
+    if (!nama_store)
+      return res.status(400).json({ message: "Nama store wajib diisi" });
 
-      if (result.length > 0) {
-        // 🚫 Store sudah ada
-        return res.status(400).json({ message: "Nama store sudah terdaftar!" });
-      }
+    // 🔍 Cek duplikasi
+    const [exist] = await db.query(
+      "SELECT id_store FROM store WHERE nama_store = ?",
+      [nama_store]
+    );
 
-      // ✅ Kalau belum ada → lanjut insert
-      db.query(
-        "INSERT INTO store (nama_store, alamat_store) VALUES (?, ?)",
-        [nama_store, alamat_store],
-        (err, result) => {
-          if (err)
-            return res.status(500).json({ message: "Gagal menambah store" });
+    if (exist.length)
+      return res.status(400).json({ message: "Nama store sudah terdaftar!" });
 
-          res.json({ message: "Store ditambahkan", id: result.insertId });
-        }
-      );
-    }
-  );
+    // ✅ Insert data baru
+    const [result] = await db.query(
+      "INSERT INTO store (nama_store, alamat_store) VALUES (?, ?)",
+      [nama_store, alamat_store || "-"]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Store berhasil ditambahkan",
+      id_store: result.insertId,
+    });
+  } catch (err) {
+    console.error("❌ createStore:", err.message);
+    res.status(500).json({ message: "Gagal menambah store" });
+  }
 };
 
-export const updateStore = (req, res) => {
-  const { nama_store, alamat_store } = req.body;
-  db.query(
-    "UPDATE store SET nama_store=?, alamat_store=? WHERE id_store=?",
-    [nama_store, alamat_store, req.params.id],
-    (err) => {
-      if (err) return res.status(500).json({ message: "Gagal update store" });
-      res.json({ message: "Store diperbarui" });
-    }
-  );
+/* ============================================================
+   ✏️ UPDATE Store
+   ============================================================ */
+export const updateStore = async (req, res) => {
+  try {
+    const { nama_store, alamat_store } = req.body;
+
+    if (!nama_store)
+      return res.status(400).json({ message: "Nama store wajib diisi" });
+
+    const [result] = await db.query(
+      "UPDATE store SET nama_store = ?, alamat_store = ? WHERE id_store = ?",
+      [nama_store, alamat_store || "-", req.params.id]
+    );
+
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Store tidak ditemukan" });
+
+    res.json({ success: true, message: "Store berhasil diperbarui" });
+  } catch (err) {
+    console.error("❌ updateStore:", err.message);
+    res.status(500).json({ message: "Gagal memperbarui store" });
+  }
 };
 
-export const deleteStore = (req, res) => {
-  db.query("DELETE FROM store WHERE id_store=?", [req.params.id], (err) => {
-    if (err) return res.status(500).json({ message: "Gagal hapus store" });
-    res.json({ message: "Store dihapus" });
-  });
+/* ============================================================
+   🗑️ DELETE Store
+   ============================================================ */
+export const deleteStore = async (req, res) => {
+  try {
+    const [result] = await db.query("DELETE FROM store WHERE id_store = ?", [
+      req.params.id,
+    ]);
+
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Store tidak ditemukan" });
+
+    res.json({ success: true, message: "Store berhasil dihapus" });
+  } catch (err) {
+    console.error("❌ deleteStore:", err.message);
+    res.status(500).json({ message: "Gagal menghapus store" });
+  }
 };

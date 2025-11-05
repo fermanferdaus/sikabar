@@ -165,6 +165,17 @@ export default function DashboardKasir() {
                 icon={<ArrowDownCircle size={32} />}
               />
               <CardStat
+                gradient="from-amber-400 to-orange-500"
+                title="Bonus Kasir Bulan Ini"
+                subtitle={judulBonus || "-"}
+                value={`Rp ${Number(bonusKasir || 0).toLocaleString("id-ID")}`}
+                icon={<Gift size={32} />}
+              />
+            </div>
+
+            {/* === BARIS 4: Bonus & Pendapatan Bersih === */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <CardStat
                 gradient="from-violet-500 to-indigo-500"
                 title="Gaji Kasir Bulan Ini"
                 subtitle="Total penghasilan bersih"
@@ -172,17 +183,6 @@ export default function DashboardKasir() {
                   "id-ID"
                 )}`}
                 icon={<User size={32} />}
-              />
-            </div>
-
-            {/* === BARIS 4: Bonus & Pendapatan Bersih === */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <CardStat
-                gradient="from-amber-400 to-orange-500"
-                title="Bonus Kasir Bulan Ini"
-                subtitle={judulBonus || "-"}
-                value={`Rp ${Number(bonusKasir || 0).toLocaleString("id-ID")}`}
-                icon={<Gift size={32} />}
               />
               <CardStat
                 gradient="from-emerald-400 to-green-500"

@@ -51,6 +51,7 @@ import LaporanPemasukan from "./pages/laporan/LaporanPemasukan";
 import LaporanPengeluaran from "./pages/laporan/LaporanPengeluran";
 import LaporanPemasukanKasir from "./pages/laporan/LaporanPemasukanKasir";
 import LaporanPengeluaranKasir from "./pages/laporan/LaporanPengeluaranKasir";
+import SlipGaji from "./pages/gaji/SlipGaji";
 
 export default function App() {
   return (
@@ -400,6 +401,15 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <BonusEdit />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/slip-gaji"
+          element={
+            <ProtectedRoute allowedRoles={["kasir", "capster"]}>
+              <SlipGaji />
             </ProtectedRoute>
           }
         />
