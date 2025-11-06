@@ -3,9 +3,6 @@ import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
 
-/* ============================================================
-   🧾 CETAK STRUK THERMAL (AUTO PRINT + SIMPAN PDF)
-   ============================================================ */
 export const printStruk = async (req, res) => {
   try {
     const { id } = req.params;
@@ -14,10 +11,9 @@ export const printStruk = async (req, res) => {
       "Rp" +
       Number(val || 0).toLocaleString("id-ID", { minimumFractionDigits: 0 });
 
-    /* =======================================================
-       🧩 Ambil data header transaksi
-       ======================================================= */
-    const sqlHeader = `
+    // ================= HEADER =================
+    const [headerRows] = await db.query(
+      `
       SELECT 
         t.id_transaksi, t.subtotal, t.jumlah_bayar, t.kembalian,
         t.metode_bayar, t.tipe_transaksi, t.created_at,
@@ -29,94 +25,118 @@ export const printStruk = async (req, res) => {
       JOIN users u ON t.id_user = u.id_user
       LEFT JOIN struk st ON st.id_transaksi = t.id_transaksi
       WHERE t.id_transaksi = ?;
-    `;
+    `,
+      [id]
+    );
 
-    const [headerRows] = await db.query(sqlHeader, [id]);
     if (!headerRows.length)
       return res.status(404).send("❌ Data transaksi tidak ditemukan");
 
     const trx = headerRows[0];
-    const generateShortStruk = () => {
-      const now = new Date();
-      const tanggal = now.toISOString().slice(2, 10).replace(/-/g, "");
-      const rand = Math.floor(10 + Math.random() * 90);
-      return `STRK-${tanggal.slice(2)}${rand}`;
-    };
-    const nomorStruk = trx.nomor_struk || generateShortStruk();
+    const nomorStruk =
+      trx.nomor_struk ||
+      `STRK-${new Date()
+        .toISOString()
+        .slice(2, 10)
+        .replace(/-/g, "")}${Math.floor(10 + Math.random() * 90)}`;
 
-    /* =======================================================
-       🧾 Ambil data detail produk + service
-       ======================================================= */
-    const sqlDetail = `
-      SELECT p.nama_produk AS nama, tpd.jumlah, tpd.harga_jual AS harga, tpd.total_penjualan AS total
-      FROM transaksi_produk_detail tpd
-      JOIN produk p ON p.id_produk = tpd.id_produk
-      WHERE tpd.id_transaksi = ?
-      UNION ALL
-      SELECT pr.service AS nama, 1 AS jumlah, tsd.harga AS harga, tsd.harga AS total
-      FROM transaksi_service_detail tsd
-      JOIN pricelist pr ON pr.id_pricelist = tsd.id_pricelist
-      WHERE tsd.id_transaksi = ?;
-    `;
-    const [items] = await db.query(sqlDetail, [id, id]);
+    // ================= DETAIL PRODUK =================
+    const [produkRows] = await db.query(
+      `
+        SELECT 
+          p.nama_produk AS nama,
+          tpd.jumlah,
+          CASE 
+            WHEN tpd.harga_jual IS NULL OR tpd.harga_jual = 0 THEN p.harga_jual
+            ELSE tpd.harga_jual
+          END AS harga,
+          CASE 
+            WHEN tpd.total_penjualan IS NULL OR tpd.total_penjualan = 0 
+            THEN (tpd.jumlah * 
+              CASE 
+                WHEN tpd.harga_jual IS NULL OR tpd.harga_jual = 0 THEN p.harga_jual
+                ELSE tpd.harga_jual
+              END)
+            ELSE tpd.total_penjualan
+          END AS total
+        FROM transaksi_produk_detail tpd
+        JOIN produk p ON p.id_produk = tpd.id_produk
+        WHERE tpd.id_transaksi = ?;
+      `,
+      [id]
+    );
 
-    /* =======================================================
-       📁 Generate & Simpan PDF untuk arsip
-       ======================================================= */
+    const [serviceRows] = await db.query(
+      `
+        SELECT 
+          pr.service AS nama,
+          1 AS jumlah,
+          COALESCE(tsd.harga, 0) AS harga,
+          COALESCE(tsd.harga, 0) AS total
+        FROM transaksi_service_detail tsd
+        JOIN pricelist pr ON pr.id_pricelist = tsd.id_pricelist
+        WHERE tsd.id_transaksi = ?;
+      `,
+      [id]
+    );
+
+    const items = [...produkRows, ...serviceRows];
+
+    // ================= PDF =================
     const uploadDir = path.join("uploads", "struk");
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
     const filePath = path.join(uploadDir, `${nomorStruk}.pdf`);
 
-    const doc = new PDFDocument({ margin: 40 });
-    const stream = fs.createWriteStream(filePath);
-    doc.pipe(stream);
+    await new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 40 });
+      const stream = fs.createWriteStream(filePath);
+      doc.pipe(stream);
 
-    const logoPath = path.join("public", "Logo.png");
-    if (fs.existsSync(logoPath)) doc.image(logoPath, 40, 30, { width: 60 });
-    doc.fontSize(16).text(trx.nama_store, 120, 30);
-    doc.fontSize(10).text(trx.alamat_store, 120, 50);
-    doc.moveDown(2);
-    doc.fontSize(10).text(`Nomor Struk : ${nomorStruk}`);
-    doc.text(
-      `Tanggal      : ${new Date(trx.created_at).toLocaleString("id-ID")}`
-    );
-    doc.text(`Kasir        : ${trx.kasir} (${trx.role})`);
-    doc.text(`Metode Bayar : ${trx.metode_bayar?.toUpperCase()}`);
-    doc.text(`Jenis Transaksi : ${trx.tipe_transaksi.toUpperCase()}`);
-    doc.moveDown();
-    doc.fontSize(11).text("Rincian Transaksi:", { underline: true });
-    doc.moveDown(0.5);
-
-    items.forEach((i) => {
+      const logoPath = path.join("public", "Logo.png");
+      if (fs.existsSync(logoPath)) doc.image(logoPath, 40, 30, { width: 60 });
+      doc.fontSize(16).text(trx.nama_store, 120, 30);
+      doc.fontSize(10).text(trx.alamat_store, 120, 50);
+      doc.moveDown(2);
+      doc.fontSize(10).text(`Nomor Struk : ${nomorStruk}`);
       doc.text(
-        `${i.nama.padEnd(25, " ")} (${i.jumlah}x) ....... ${rupiah(i.total)}`
+        `Tanggal      : ${new Date(trx.created_at).toLocaleString("id-ID")}`
       );
+      doc.text(`Kasir        : ${trx.kasir} (${trx.role})`);
+      doc.text(`Metode Bayar : ${trx.metode_bayar?.toUpperCase()}`);
+      doc.text(`Jenis Transaksi : ${trx.tipe_transaksi.toUpperCase()}`);
+      doc.moveDown();
+      doc.fontSize(11).text("Rincian Transaksi:", { underline: true });
+      doc.moveDown(0.5);
+
+      items.forEach((i) => {
+        doc.text(
+          `${i.nama.padEnd(25, " ")} (${i.jumlah}x) ....... ${rupiah(i.total)}`
+        );
+      });
+
+      doc.moveDown();
+      doc.text(`Subtotal : ${rupiah(trx.subtotal)}`);
+      doc.text(`Bayar    : ${rupiah(trx.jumlah_bayar)}`);
+      doc.text(`Kembali  : ${rupiah(trx.kembalian)}`);
+      doc.moveDown(2);
+      doc.text("Terima kasih telah berkunjung 🙏", { align: "center" });
+      doc.end();
+
+      stream.on("finish", resolve);
+      stream.on("error", reject);
     });
 
-    doc.moveDown();
-    doc.text(`Subtotal : ${rupiah(trx.subtotal)}`);
-    doc.text(`Bayar    : ${rupiah(trx.jumlah_bayar)}`);
-    doc.text(`Kembali  : ${rupiah(trx.kembalian)}`);
-    doc.moveDown(2);
-    doc.text("Terima kasih telah berkunjung 🙏", { align: "center" });
-    doc.end();
+    // Simpan ke tabel struk
+    await db.query(
+      `
+      INSERT INTO struk (id_transaksi, nomor_struk, file_path)
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE file_path = VALUES(file_path)
+    `,
+      [id, nomorStruk, `/uploads/struk/${nomorStruk}.pdf`]
+    );
 
-    // === Simpan ke tabel struk ===
-    stream.on("finish", () => {
-      db.query(
-        `INSERT INTO struk (id_transaksi, nomor_struk, file_path)
-           VALUES (?, ?, ?)
-           ON DUPLICATE KEY UPDATE file_path = VALUES(file_path)`,
-        [id, nomorStruk, `/uploads/struk/${nomorStruk}.pdf`],
-        (err3) => {
-          if (err3) console.error("❌ Gagal simpan struk:", err3.message);
-        }
-      );
-    });
-
-    /* =======================================================
-         🧾 Versi HTML untuk print thermal (52 mm)
-         ======================================================= */
+    // ================= HTML (Thermal Print) =================
     const html = `
         <!DOCTYPE html>
         <html lang="id">
@@ -225,14 +245,18 @@ export const printStruk = async (req, res) => {
         <div class="line"></div>
         <div class="center">
             <p style="margin-top:10px;">Terima kasih telah berkunjung 😊</p>
+            <p style="margin-top:10px; color:white;">Terima kasih telah berkunjung</p>
         </div>
 
         </body>
         </html>
         `;
+
+    // ✅ kirim respons HTML setelah PDF selesai disimpan
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(html);
   } catch (err) {
-    console.error("❌ printStruk Error:", err.message);
+    console.error("❌ printStruk Error:", err);
     res.status(500).send("Gagal mencetak struk");
   }
 };
