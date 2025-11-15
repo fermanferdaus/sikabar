@@ -8,14 +8,18 @@ export default function useFetchUsers() {
   const API_URL = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem("token");
 
-  // 🔹 Ambil semua user
+  // ============================================================
+  //  GET USERS
+  // ============================================================
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (!res.ok) throw new Error("Gagal memuat data pengguna");
+
       const result = await res.json();
       setData(result);
     } catch (err) {
@@ -25,7 +29,9 @@ export default function useFetchUsers() {
     }
   };
 
-  // 🔹 Tambah user
+  // ============================================================
+  //  ADD USER
+  // ============================================================
   const addUser = async (body) => {
     const res = await fetch(`${API_URL}/users`, {
       method: "POST",
@@ -35,11 +41,18 @@ export default function useFetchUsers() {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error("Gagal menambahkan pengguna");
+
+    const result = await res.json();
+    if (!res.ok)
+      throw new Error(result.message || "Gagal menambahkan pengguna");
+
     await fetchUsers();
+    return result;
   };
 
-  // 🔹 Update user
+  // ============================================================
+  //  UPDATE USER
+  // ============================================================
   const updateUser = async (id, body) => {
     const res = await fetch(`${API_URL}/users/${id}`, {
       method: "PUT",
@@ -49,23 +62,62 @@ export default function useFetchUsers() {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error("Gagal memperbarui pengguna");
+
+    const result = await res.json();
+    if (!res.ok)
+      throw new Error(result.message || "Gagal memperbarui pengguna");
+
     await fetchUsers();
+    return result;
   };
 
-  // 🔹 Hapus user
+  // ============================================================
+  //  DELETE USER
+  // ============================================================
   const deleteUser = async (id) => {
     const res = await fetch(`${API_URL}/users/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error("Gagal menghapus pengguna");
+
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || "Gagal menghapus pengguna");
+
     await fetchUsers();
+    return result;
+  };
+
+  // ============================================================
+  //  CHECK USERNAME (SUPPORT EXCLUDE)
+  // ============================================================
+  const checkUsername = async (username, exclude = null) => {
+    let url = `${API_URL}/users/check-username/${username}`;
+
+    // Tambahkan exclude ID jika diberikan (untuk EDIT)
+    if (exclude) url += `?exclude=${exclude}`;
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await res.json();
+    return {
+      exists: data.exists,
+      message: data.message || null,
+    };
   };
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  return { data, loading, error, addUser, updateUser, deleteUser };
+  return {
+    data,
+    loading,
+    error,
+    addUser,
+    updateUser,
+    deleteUser,
+    checkUsername,
+  };
 }

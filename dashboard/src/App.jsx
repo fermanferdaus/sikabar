@@ -34,6 +34,9 @@ import UsersEdit from "./pages/users/UsersEdit";
 import CapsterKasir from "./pages/capster/CapsterKasir";
 import CapsterAddKasir from "./pages/capster/CapsterAddKasir";
 import CapsterEditKasir from "./pages/capster/CapsterEditKasir";
+import Kasir from "./pages/kasir/Kasir";
+import KasirAdd from "./pages/kasir/KasirAdd";
+import KasirEdit from "./pages/kasir/KasirEdit";
 import Gaji from "./pages/gaji/Gaji";
 import GajiAdd from "./pages/gaji/GajiAdd";
 import GajiEdit from "./pages/gaji/GajiEdit";
@@ -51,7 +54,18 @@ import LaporanPemasukan from "./pages/laporan/LaporanPemasukan";
 import LaporanPengeluaran from "./pages/laporan/LaporanPengeluran";
 import LaporanPemasukanKasir from "./pages/laporan/LaporanPemasukanKasir";
 import LaporanPengeluaranKasir from "./pages/laporan/LaporanPengeluaranKasir";
-import SlipGaji from "./pages/gaji/SlipGaji";
+import SlipGaji from "./pages/slip_gaji/SlipGaji";
+import SlipGajiAdmin from "./pages/slip_gaji/SlipGajiAdmin";
+import SlipGajiAdminDetail from "./pages/slip_gaji/SlipGajiAdminDetail";
+import Kasbon from "./pages/kasbon/Kasbon";
+import Potongan from "./pages/potongan/Potongan";
+import KasbonAdd from "./pages/kasbon/KasbonAdd";
+import KasbonEdit from "./pages/kasbon/KasbonEdit";
+import PotonganAdd from "./pages/potongan/PotonganAdd";
+import PotonganEdit from "./pages/potongan/PotonganEdit";
+import LaporanProduk from "./pages/laporan/LaporanProduk";
+import LaporanPenjualanProduk from "./pages/laporan/LaporanPenjualanProduk";
+import LaporanStokProduk from "./pages/laporan/LaporanStokProduk";
 
 export default function App() {
   return (
@@ -132,6 +146,34 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["kasir"]}>
               <CapsterEditKasir />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Kasir - Admin */}
+        <Route
+          path="/kasir"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Kasir />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/kasir/add"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <KasirAdd />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/kasir/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <KasirEdit />
             </ProtectedRoute>
           }
         />
@@ -406,6 +448,78 @@ export default function App() {
         />
 
         <Route
+          path="/kasbon"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Kasbon />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/kasbon/add"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <KasbonAdd />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/kasbon/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <KasbonEdit />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/potongan"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Potongan />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/potongan/add"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <PotonganAdd />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/potongan/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <PotonganEdit />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/slip-admin"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <SlipGajiAdmin />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/slip-admin/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <SlipGajiAdminDetail />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/slip-gaji"
           element={
             <ProtectedRoute allowedRoles={["kasir", "capster"]}>
@@ -479,6 +593,33 @@ export default function App() {
         />
 
         {/* Laporan */}
+        <Route
+          path="/laporan/produk"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <LaporanProduk />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/laporan/penjualan-produk"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <LaporanPenjualanProduk />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/laporan/stok-produk"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <LaporanStokProduk />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/laporan/pemasukan"
           element={

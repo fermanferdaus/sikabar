@@ -9,7 +9,7 @@ export default function useFetchBonus() {
   const token = localStorage.getItem("token");
 
   /* =======================================================
-     🔹 Ambil Semua Bonus
+     🔹 GET Semua Bonus
   ======================================================= */
   const fetchBonus = async () => {
     try {
@@ -30,16 +30,18 @@ export default function useFetchBonus() {
   };
 
   /* =======================================================
-     🔹 Ambil 1 Bonus berdasarkan ID
+     🔹 GET Bonus by ID
   ======================================================= */
   const getBonusById = async (id_bonus) => {
     try {
-      const res = await fetch(`${API_URL}/bonus/${id_bonus}`, {
+      const res = await fetch(`${API_URL}/gaji/bonus/${id_bonus}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (!res.ok) throw new Error("Gagal mengambil data bonus");
+
       const result = await res.json();
-      return result;
+      return result; // { success: true, data: {...} }
     } catch (err) {
       console.error("❌ Gagal ambil detail bonus:", err);
       return null;
@@ -47,7 +49,7 @@ export default function useFetchBonus() {
   };
 
   /* =======================================================
-     💾 Tambah Bonus Baru
+     💾 Tambah Bonus (POST)
   ======================================================= */
   const saveBonus = async (payload) => {
     try {
@@ -59,8 +61,11 @@ export default function useFetchBonus() {
         },
         body: JSON.stringify(payload),
       });
+
       const result = await res.json();
+
       if (!res.ok) throw new Error(result.message || "Gagal menyimpan bonus");
+
       await fetchBonus();
       return { success: true, message: result.message };
     } catch (err) {
@@ -69,7 +74,7 @@ export default function useFetchBonus() {
   };
 
   /* =======================================================
-     ✏️ Update Bonus
+     ✏️ UPDATE Bonus (PUT)
   ======================================================= */
   const updateBonus = async (id_bonus, payload) => {
     try {
@@ -81,19 +86,21 @@ export default function useFetchBonus() {
         },
         body: JSON.stringify(payload),
       });
+
       const result = await res.json();
       if (!res.ok) throw new Error(result.message || "Gagal memperbarui bonus");
+
       await fetchBonus();
       return { success: true, message: result.message };
     } catch (err) {
-      console.error("❌ Gagal update bonus:", err);
+      console.error("❌ updateBonus Error:", err);
       return { success: false, message: err.message };
     }
   };
 
   /* =======================================================
-   🔄 Update Status Bonus
-======================================================= */
+     🔄 UPDATE Status Bonus
+  ======================================================= */
   const updateBonusStatus = async (id_bonus, status) => {
     try {
       const res = await fetch(`${API_URL}/gaji/bonus/status/${id_bonus}`, {
@@ -104,8 +111,10 @@ export default function useFetchBonus() {
         },
         body: JSON.stringify({ status }),
       });
+
       const result = await res.json();
       if (!res.ok) throw new Error(result.message || "Gagal update status");
+
       await fetchBonus();
       return { success: true, message: result.message };
     } catch (err) {
@@ -115,7 +124,7 @@ export default function useFetchBonus() {
   };
 
   /* =======================================================
-     🗑️ Hapus Bonus
+     🗑 DELETE Bonus
   ======================================================= */
   const deleteBonus = async (id_bonus) => {
     try {
@@ -124,7 +133,7 @@ export default function useFetchBonus() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Coba parse JSON dengan aman
+      // baca text dahulu supaya tidak error ketika JSON tidak valid
       const text = await res.text();
       let data;
       try {
@@ -135,21 +144,16 @@ export default function useFetchBonus() {
 
       if (!res.ok) throw new Error(data.message || "Gagal menghapus bonus");
 
-      // Refresh data otomatis
       await fetchBonus();
-
-      return {
-        success: true,
-        message: data.message || "Bonus berhasil dihapus",
-      };
+      return { success: true, message: data.message };
     } catch (err) {
-      return {
-        success: false,
-        message: err.message || "Gagal menghapus bonus",
-      };
+      return { success: false, message: err.message };
     }
   };
 
+  /* =======================================================
+     🚀 Auto-load data di mount
+  ======================================================= */
   useEffect(() => {
     fetchBonus();
   }, []);
@@ -158,6 +162,7 @@ export default function useFetchBonus() {
     data,
     loading,
     error,
+
     refresh: fetchBonus,
     saveBonus,
     updateBonus,

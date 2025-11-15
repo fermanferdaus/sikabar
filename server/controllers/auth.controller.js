@@ -27,7 +27,9 @@ export const login = async (req, res) => {
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ message: "Password salah" });
 
-    // 🔹 Ambil id_capster kalau role = capster
+    // =======================================================
+    // 🔹 Ambil id_capster kalau role capster
+    // =======================================================
     let id_capster = user.id_capster;
     if (user.role === "capster" && !id_capster) {
       const [rows] = await db.query(
@@ -37,19 +39,36 @@ export const login = async (req, res) => {
       if (rows.length > 0) id_capster = rows[0].id_capster;
     }
 
-    // 🔑 Buat token JWT
+    // =======================================================
+    // 🔹 Ambil id_kasir kalau role kasir
+    // =======================================================
+    let id_kasir = user.id_kasir;
+    if (user.role === "kasir" && !id_kasir) {
+      const [rows] = await db.query(
+        "SELECT id_kasir FROM kasir WHERE id_user = ?",
+        [user.id_user]
+      );
+      if (rows.length > 0) id_kasir = rows[0].id_kasir;
+    }
+
+    // =======================================================
+    // 🔑 Buat token JWT lengkap
+    // =======================================================
     const token = jwt.sign(
       {
         id_user: user.id_user,
         id_store: user.id_store,
         id_capster,
+        id_kasir,
         role: user.role,
       },
       process.env.JWT_SECRET,
       { expiresIn: "8h" }
     );
 
-    // ✅ Respons sukses
+    // =======================================================
+    // ✅ RESPON LOGIN
+    // =======================================================
     res.status(200).json({
       message: "Login berhasil",
       token,
@@ -58,6 +77,7 @@ export const login = async (req, res) => {
         id_user: user.id_user,
         id_store: user.id_store,
         id_capster,
+        id_kasir,
         nama_user: user.nama_user,
       },
     });

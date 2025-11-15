@@ -284,3 +284,262 @@ export const getLaporanPengeluaranKasir = async (req, res) => {
     });
   }
 };
+
+// ======================================================
+// 🟦 LAPORAN DATA PRODUK
+// ======================================================
+export const getLaporanProduk = async (req, res) => {
+  try {
+    const { store, filter, tanggal, bulan, startDate, endDate } = req.query;
+
+    let where = [];
+    const params = [];
+
+    // Filter cabang
+    if (store && store !== "Semua") {
+      where.push("sp.id_store = ?");
+      params.push(store);
+    }
+
+    // filter tanggal
+    if (filter === "hari" && tanggal) {
+      where.push("DATE(p.created_at) = ?");
+      params.push(tanggal);
+    }
+
+    if (filter === "bulan" && bulan) {
+      where.push("DATE_FORMAT(p.created_at, '%Y-%m') = ?");
+      params.push(bulan);
+    }
+
+    if (filter === "periode" && startDate && endDate) {
+      where.push("DATE(p.created_at) BETWEEN ? AND ?");
+      params.push(startDate, endDate);
+    }
+
+    const sql = `
+      SELECT 
+        sp.id_store,
+        s.nama_store,
+        p.id_produk,
+        p.nama_produk,
+        p.harga_awal,
+        p.harga_jual,
+        sp.jumlah_stok,
+        p.created_at
+      FROM stok_produk sp
+      JOIN produk p ON p.id_produk = sp.id_produk
+      JOIN store s ON s.id_store = sp.id_store
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY sp.id_store ASC, p.nama_produk ASC
+    `;
+
+    const [rows] = await db.query(sql, params);
+
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.log("ERR LAPORAN PRODUK:", err);
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil laporan produk",
+      error: err.message,
+    });
+  }
+};
+
+export const getLaporanPenjualanProduk = async (req, res) => {
+  try {
+    const { store, filter, tanggal, bulan, startDate, endDate } = req.query;
+
+    let where = ["t.tipe_transaksi IN ('produk', 'campuran')"];
+    const params = [];
+
+    if (store && store !== "Semua") {
+      where.push("t.id_store = ?");
+      params.push(store);
+    }
+
+    if (filter === "hari" && tanggal) {
+      where.push("DATE(t.created_at) = ?");
+      params.push(tanggal);
+    }
+
+    if (filter === "bulan" && bulan) {
+      where.push("DATE_FORMAT(t.created_at, '%Y-%m') = ?");
+      params.push(bulan);
+    }
+
+    if (filter === "periode" && startDate && endDate) {
+      where.push("DATE(t.created_at) BETWEEN ? AND ?");
+      params.push(startDate, endDate);
+    }
+
+    const sql = `
+      SELECT 
+        s.nama_store AS store,
+        st.nomor_struk,
+        DATE(t.created_at) AS tanggal,
+        p.nama_produk,
+        tpd.jumlah,
+        tpd.harga_jual AS harga_satuan,
+        (tpd.jumlah * tpd.harga_jual) AS total
+      FROM transaksi t
+      JOIN store s ON s.id_store = t.id_store
+      JOIN struk st ON st.id_transaksi = t.id_transaksi
+      JOIN transaksi_produk_detail tpd ON tpd.id_transaksi = t.id_transaksi
+      JOIN produk p ON p.id_produk = tpd.id_produk
+      WHERE ${where.join(" AND ")}
+      ORDER BY t.created_at DESC
+    `;
+
+    const [rows] = await db.query(sql, params);
+
+    const formatted = rows.map((r) => ({
+      store: r.store,
+      nomor_struk: r.nomor_struk,
+      tanggal: r.tanggal,
+      nama_produk: r.nama_produk,
+      jumlah: r.jumlah,
+      harga_satuan: Number(r.harga_satuan),
+      total: Number(r.total),
+    }));
+
+    res.json({ success: true, data: formatted });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil laporan penjualan produk.",
+      error: err.message,
+    });
+  }
+};
+
+export const getLaporanStokProduk = async (req, res) => {
+  try {
+    const { store, filter, tanggal, bulan, startDate, endDate } = req.query;
+
+    let stokWhere = ["1=1"];
+    let transWhere = ["1=1"];
+    const stokParams = [];
+    const transParams = [];
+
+    // ===============================
+    // Filter Store
+    // ===============================
+    if (store && store !== "Semua") {
+      stokWhere.push("sp.id_store = ?");
+      stokParams.push(store);
+
+      transWhere.push("t.id_store = ?");
+      transParams.push(store);
+    }
+
+    // ===============================
+    // Filter Harian
+    // ===============================
+    if (filter === "hari" && tanggal) {
+      stokWhere.push("DATE(sp.updated_at) = ?");
+      stokParams.push(tanggal);
+
+      transWhere.push("DATE(t.created_at) = ?");
+      transParams.push(tanggal);
+    }
+
+    // ===============================
+    // Filter Bulanan
+    // ===============================
+    if (filter === "bulan" && bulan) {
+      stokWhere.push("DATE_FORMAT(sp.updated_at, '%Y-%m') = ?");
+      stokParams.push(bulan);
+
+      transWhere.push("DATE_FORMAT(t.created_at, '%Y-%m') = ?");
+      transParams.push(bulan);
+    }
+
+    // ===============================
+    // Filter Periode
+    // ===============================
+    if (filter === "periode" && startDate && endDate) {
+      stokWhere.push("DATE(sp.updated_at) BETWEEN ? AND ?");
+      stokParams.push(startDate, endDate);
+
+      transWhere.push("DATE(t.created_at) BETWEEN ? AND ?");
+      transParams.push(startDate, endDate);
+    }
+
+    // ======================================================
+    // (1) Ambil stok dari stok_produk (jumlah_stok = stok awal)
+    // ======================================================
+    const sqlStok = `
+      SELECT
+        sp.id_store,
+        s.nama_store AS store,
+        p.id_produk,
+        p.nama_produk,
+        sp.jumlah_stok AS stok_awal,      -- stok masuk / stok awal
+        DATE(sp.updated_at) AS tanggal
+      FROM stok_produk sp
+      JOIN produk p ON p.id_produk = sp.id_produk
+      JOIN store s ON s.id_store = sp.id_store
+      WHERE ${stokWhere.join(" AND ")}
+      ORDER BY sp.id_store ASC, p.nama_produk ASC
+    `;
+
+    const [stokRows] = await db.query(sqlStok, stokParams);
+
+    if (!stokRows.length)
+      return res.json({ success: true, data: [] });
+
+    // ======================================================
+    // (2) Hitung TERJUAL berdasarkan transaksi
+    // ======================================================
+    const sqlTerjual = `
+      SELECT
+        t.id_store,
+        tpd.id_produk,
+        SUM(tpd.jumlah) AS terjual
+      FROM transaksi t
+      JOIN transaksi_produk_detail tpd ON tpd.id_transaksi = t.id_transaksi
+      WHERE ${transWhere.join(" AND ")}
+      GROUP BY t.id_store, tpd.id_produk
+    `;
+
+    const [jualRows] = await db.query(sqlTerjual, transParams);
+
+    const mapTerjual = {};
+    jualRows.forEach((r) => {
+      mapTerjual[`${r.id_store}_${r.id_produk}`] = r.terjual;
+    });
+
+    // ======================================================
+    // (3) Gabungkan stok_awal + terjual → sisa_produk
+    // ======================================================
+    const finalData = stokRows.map((row) => {
+      const key = `${row.id_store}_${row.id_produk}`;
+      const terjual = mapTerjual[key] || 0;
+
+      const stok_awal = row.stok_awal;
+      const sisa_produk = Math.max(stok_awal - terjual, 0); // rumus resmi
+
+      return {
+        store: row.store,
+        tanggal: row.tanggal,
+        id_produk: row.id_produk,
+        nama_produk: row.nama_produk,
+        produk_tersedia: stok_awal,  // stok awal (jumlah_stok)
+        terjual,
+        sisa_produk,
+      };
+    });
+
+    res.json({ success: true, data: finalData });
+  } catch (err) {
+    console.error("❌ getLaporanStokProduk Error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil laporan stok produk",
+      error: err.message,
+    });
+  }
+};
+

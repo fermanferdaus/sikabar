@@ -44,13 +44,23 @@ export default function useFetchKeuangan({
             const mapped = jsonGrafik.data.map((r) => {
               let tanggalLabel = r.tanggal;
               try {
-                if (r.tanggal?.includes("T")) {
-                  const [y, m, d] = r.tanggal.split("T")[0].split("-");
-                  const bulanNama = new Date(`${y}-${m}-01`).toLocaleString(
-                    "id-ID",
-                    { month: "short" }
-                  );
-                  tanggalLabel = `${d} ${bulanNama}`;
+                if (r.tanggal) {
+                  const [y, m, d] = r.tanggal.split("-");
+                  const bulanIndo = [
+                    "Jan",
+                    "Feb",
+                    "Mar",
+                    "Apr",
+                    "Mei",
+                    "Jun",
+                    "Jul",
+                    "Agu",
+                    "Sep",
+                    "Okt",
+                    "Nov",
+                    "Des",
+                  ];
+                  tanggalLabel = `${d} ${bulanIndo[Number(m) - 1]}`;
                 }
               } catch {
                 tanggalLabel = r.tanggal;

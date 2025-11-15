@@ -17,13 +17,6 @@ import {
 const formatRupiah = (angka) =>
   "Rp" + Number(angka || 0).toLocaleString("id-ID");
 
-const generateNomorStruk = () => {
-  const now = new Date();
-  const tanggal = now.toISOString().slice(2, 10).replace(/-/g, "");
-  const rand = Math.floor(100 + Math.random() * 900);
-  return `STRK${tanggal}${rand}`;
-};
-
 /* =====================================================
    🔹 KOMPONEN UTAMA
 ===================================================== */
@@ -33,7 +26,7 @@ export default function TransaksiAdd() {
   const [items, setItems] = useState([]);
   const [subtotal, setSubtotal] = useState(0);
   const [jumlahBayar, setJumlahBayar] = useState(0);
-  const [noStruk, setNoStruk] = useState(generateNomorStruk());
+  const [noStruk, setNoStruk] = useState("");
   const [loading, setLoading] = useState(false);
   const [popup, setPopup] = useState({
     visible: false,
@@ -57,6 +50,25 @@ export default function TransaksiAdd() {
     );
     setSubtotal(total);
   }, [items]);
+
+  // 🔹 Ambil nomor struk dari backend
+  useEffect(() => {
+    const fetchStruk = async () => {
+      try {
+        const res = await fetch(`${API_URL}/struk/generate`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setNoStruk(data.nomor_struk);
+      } catch {
+        const now = new Date();
+        const tanggal = now.toISOString().slice(2, 10).replace(/-/g, "");
+        const rand = Math.floor(100 + Math.random() * 900);
+        setNoStruk(`STRK${tanggal}${rand}`);
+      }
+    };
+    fetchStruk();
+  }, []);
 
   const addItem = (item) => {
     setItems((prev) => {
@@ -130,16 +142,23 @@ export default function TransaksiAdd() {
 
       const result = await res.json();
       if (res.ok) {
+        const nomorFinal = result.nomor_struk || noStruk; // fallback jika backend tidak kirim
         setPopup({
           visible: true,
           type: "success",
-          message: `Transaksi berhasil disimpan! Nomor Struk: ${noStruk}`,
+          message: `Transaksi berhasil disimpan! Nomor Struk: ${nomorFinal}`,
         });
         window.open(`${API_URL}/struk/print/${result.id}`, "_blank");
+
         setItems([]);
         setSubtotal(0);
         setJumlahBayar(0);
-        setNoStruk(generateNomorStruk());
+        const resNum = await fetch(`${API_URL}/struk/generate`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const newNum = await resNum.json();
+        setNoStruk(newNum.nomor_struk);
+
         setTipeTransaksi(null);
       } else {
         setPopup({

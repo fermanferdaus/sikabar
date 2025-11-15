@@ -245,7 +245,6 @@ function RiwayatTable({ riwayat }) {
     { key: "tanggal", label: "Tanggal" },
     { key: "service", label: "Layanan" },
     { key: "harga", label: "Harga" },
-    { key: "persentase", label: "Persentase Komisi (%)" },
     { key: "komisi", label: "Komisi (Rp)" },
   ];
 
@@ -256,11 +255,6 @@ function RiwayatTable({ riwayat }) {
     harga: (
       <div className="text-left">
         Rp {(r.harga ?? 0).toLocaleString("id-ID")}
-      </div>
-    ),
-    persentase: (
-      <div className="text-left text-blue-600 font-medium">
-        {r.persentase_capster ? `${r.persentase_capster}%` : "-"}
       </div>
     ),
     komisi: (

@@ -36,6 +36,12 @@ export default function Login() {
       // Redirect sesuai role
       if (data.role === "admin") navigate("/dashboard");
       else if (data.role === "kasir") {
+        localStorage.setItem("id_kasir", data.user.id_kasir);
+        localStorage.setItem("id_store", data.user.id_store || "");
+        localStorage.setItem(
+          "nama_user",
+          data.user.nama_kasir || data.user.nama_user || ""
+        );
         navigate("/dashboard/kasir");
         window.location.reload();
       } else if (data.role === "capster") {

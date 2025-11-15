@@ -7,12 +7,12 @@ export default function GajiAdd() {
   const navigate = useNavigate();
   const { saveGaji } = useFetchGajiSetting();
 
-  const [roleType, setRoleType] = useState("capster"); // default capster
+  const [roleType, setRoleType] = useState("capster");
   const [capsters, setCapsters] = useState([]);
   const [kasirs, setKasirs] = useState([]);
   const [form, setForm] = useState({
     id_capster: "",
-    id_user: "",
+    id_kasir: "",
     gaji_pokok: "",
     gajiFormatted: "",
     periode: "Bulanan",
@@ -26,7 +26,7 @@ export default function GajiAdd() {
   const token = localStorage.getItem("token");
 
   /* ========================================================
-     🔹 Ambil data Capster & Kasir
+     🔹 Ambil data Capster & Kasir (langsung dari /kasir)
   ======================================================== */
   useEffect(() => {
     const fetchData = async () => {
@@ -37,16 +37,16 @@ export default function GajiAdd() {
           fetch(`${API_URL}/capster`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch(`${API_URL}/users`, {
+          fetch(`${API_URL}/kasir`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
 
         const capData = await resCap.json();
-        const userData = await resKasir.json();
+        const kasirData = await resKasir.json();
 
         setCapsters(capData || []);
-        setKasirs(userData.filter((u) => u.role === "kasir"));
+        setKasirs(kasirData || []);
       } catch (err) {
         console.error("❌ Gagal ambil data capster/kasir:", err);
         setErrorMsg("Gagal memuat data capster & kasir.");
@@ -59,7 +59,7 @@ export default function GajiAdd() {
   }, []);
 
   /* ========================================================
-     💰 Format angka ke Rupiah (auto format)
+     💰 Format Rupiah
   ======================================================== */
   const formatRupiah = (value) => {
     const number = value.replace(/\D/g, "");
@@ -84,7 +84,7 @@ export default function GajiAdd() {
     if (
       !form.gaji_pokok ||
       (roleType === "capster" && !form.id_capster) ||
-      (roleType === "kasir" && !form.id_user)
+      (roleType === "kasir" && !form.id_kasir)
     ) {
       setErrorMsg("Semua kolom wajib diisi!");
       return;
@@ -95,7 +95,7 @@ export default function GajiAdd() {
 
     const payload = {
       id_capster: roleType === "capster" ? form.id_capster : null,
-      id_user: roleType === "kasir" ? form.id_user : null,
+      id_kasir: roleType === "kasir" ? form.id_kasir : null,
       gaji_pokok: form.gaji_pokok,
       periode: form.periode,
     };
@@ -113,16 +113,16 @@ export default function GajiAdd() {
     } else {
       setErrorMsg(res.message || "Nama ini sudah memiliki data gaji pokok.");
     }
+
     setLoadingSubmit(false);
   };
 
   /* ========================================================
-     🎨 RENDER
+     🎨 UI
   ======================================================== */
   return (
     <MainLayout current="gaji">
       <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 transition-all duration-300">
-        {/* === Header === */}
         <div className="border-b border-gray-100 pb-5 mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">
             Tambah Gaji Pokok
@@ -132,7 +132,6 @@ export default function GajiAdd() {
           </p>
         </div>
 
-        {/* === Alert Error === */}
         {errorMsg && (
           <div className="mb-6 px-4 py-3 rounded-lg bg-red-50 text-red-700 border border-red-200 text-sm font-medium">
             {errorMsg}
@@ -145,11 +144,11 @@ export default function GajiAdd() {
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Baris 1: Role & Nama */}
+            {/* Baris 1 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Pilih Jabatan */}
+              {/* Pilih Role */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1">
                   Pilih Jabatan
                 </label>
                 <select
@@ -158,13 +157,13 @@ export default function GajiAdd() {
                     setRoleType(e.target.value);
                     setForm({
                       id_capster: "",
-                      id_user: "",
+                      id_kasir: "",
                       gaji_pokok: "",
                       gajiFormatted: "",
                       periode: "Bulanan",
                     });
                   }}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="capster">Capster</option>
                   <option value="kasir">Kasir</option>
@@ -174,7 +173,7 @@ export default function GajiAdd() {
               {/* Pilih Nama */}
               {roleType === "capster" ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1">
                     Pilih Capster
                   </label>
                   <select
@@ -182,7 +181,7 @@ export default function GajiAdd() {
                     onChange={(e) =>
                       setForm({ ...form, id_capster: e.target.value })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500"
                     required
                   >
                     <option value="">-- Pilih Capster --</option>
@@ -195,21 +194,21 @@ export default function GajiAdd() {
                 </div>
               ) : (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1">
                     Pilih Kasir
                   </label>
                   <select
-                    value={form.id_user}
+                    value={form.id_kasir}
                     onChange={(e) =>
-                      setForm({ ...form, id_user: e.target.value })
+                      setForm({ ...form, id_kasir: e.target.value })
                     }
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500"
                     required
                   >
                     <option value="">-- Pilih Kasir --</option>
                     {kasirs.map((k) => (
-                      <option key={k.id_user} value={k.id_user}>
-                        {k.nama_user} — {k.username}
+                      <option key={k.id_kasir} value={k.id_kasir}>
+                        {k.nama_kasir} — {k.nama_store}
                       </option>
                     ))}
                   </select>
@@ -217,11 +216,10 @@ export default function GajiAdd() {
               )}
             </div>
 
-            {/* Baris 2: Nominal & Periode */}
+            {/* Baris 2 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Nominal Gaji Pokok */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1">
                   Nominal Gaji Pokok
                 </label>
                 <input
@@ -230,14 +228,13 @@ export default function GajiAdd() {
                   value={form.gajiFormatted || ""}
                   onChange={handleGajiChange}
                   placeholder="Masukkan nominal gaji"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
 
-              {/* Periode */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1">
                   Periode
                 </label>
                 <select
@@ -245,21 +242,19 @@ export default function GajiAdd() {
                   onChange={(e) =>
                     setForm({ ...form, periode: e.target.value })
                   }
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="Bulanan">Bulanan</option>
-                  {/* <option value="Mingguan">Mingguan</option> */}
                 </select>
               </div>
             </div>
 
-            {/* Tombol Aksi */}
+            {/* Tombol */}
             <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
               <button
                 type="button"
                 onClick={() => navigate("/gaji")}
-                className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
-                disabled={loadingSubmit}
+                className="px-6 py-2.5 rounded-lg border border-gray-300 hover:bg-gray-50"
               >
                 Batal
               </button>
@@ -267,7 +262,7 @@ export default function GajiAdd() {
               <button
                 type="submit"
                 disabled={loadingSubmit}
-                className={`px-6 py-2.5 rounded-lg font-medium text-white transition ${
+                className={`px-6 py-2.5 rounded-lg text-white ${
                   loadingSubmit
                     ? "bg-gray-300 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"

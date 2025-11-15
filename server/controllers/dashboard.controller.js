@@ -7,47 +7,110 @@ import dayjs from "dayjs";
 export const getCapsterDashboard = async (req, res) => {
   try {
     const { id_capster } = req.params;
-    if (!id_capster)
-      return res
-        .status(400)
-        .json({ success: false, message: "ID capster tidak ditemukan" });
+    if (!id_capster) {
+      return res.status(400).json({
+        success: false,
+        message: "ID capster tidak ditemukan",
+      });
+    }
 
     const bulanSekarang = dayjs().format("YYYY-MM");
 
-    const sql = `
-      SELECT 
-        IFNULL(SUM(tsd.komisi_capster), 0) AS pendapatan_bersih,
-        IFNULL((SELECT gaji_pokok FROM gaji_setting WHERE id_capster = ? LIMIT 1), 0) AS gaji_pokok,
-        IFNULL((SELECT SUM(b.jumlah) FROM bonus b WHERE b.id_capster = ? AND b.periode = ?), 0) AS bonus_bulanan,
-        IFNULL((SELECT b.judul_bonus FROM bonus b WHERE b.id_capster = ? AND b.periode = ? LIMIT 1), '-') AS judul_bonus
+    // ============================================================
+    // 1️⃣ KOMISI CAPSTER
+    // ============================================================
+    const [komisiRows] = await db.query(
+      `
+      SELECT SUM(tsd.komisi_capster) AS komisi
       FROM transaksi_service_detail tsd
-      WHERE tsd.id_capster = ? 
+      WHERE tsd.id_capster = ?
       AND DATE_FORMAT(tsd.created_at, '%Y-%m') = ?
-    `;
+      `,
+      [id_capster, bulanSekarang]
+    );
 
-    const [rows] = await db.query(sql, [
-      id_capster, // gaji_pokok
-      id_capster, // bonus SUM
-      bulanSekarang,
-      id_capster, // judul_bonus
-      bulanSekarang,
-      id_capster, // transaksi_service_detail
-      bulanSekarang,
-    ]);
+    const pendapatan_bersih = Number(komisiRows[0]?.komisi || 0);
 
-    const row = rows[0];
-    const pendapatan_bersih = Number(row.pendapatan_bersih) || 0;
-    const gaji_pokok = Number(row.gaji_pokok) || 0;
-    const bonus_bulanan = Number(row.bonus_bulanan) || 0;
-    const total_pendapatan = pendapatan_bersih + gaji_pokok + bonus_bulanan;
+    // ============================================================
+    // 2️⃣ GAJI POKOK
+    // ============================================================
+    const [gajiRows] = await db.query(
+      `SELECT gaji_pokok FROM gaji_setting WHERE id_capster = ? LIMIT 1`,
+      [id_capster]
+    );
 
+    const gaji_pokok = Number(gajiRows[0]?.gaji_pokok || 0);
+
+    // ============================================================
+    // 3️⃣ BONUS
+    // ============================================================
+    const [bonusRows] = await db.query(
+      `
+      SELECT 
+        SUM(jumlah) AS total_bonus,
+        (SELECT judul_bonus FROM bonus WHERE id_capster = ? AND periode = ? LIMIT 1) AS judul
+      FROM bonus 
+      WHERE id_capster = ? AND periode = ?
+      `,
+      [id_capster, bulanSekarang, id_capster, bulanSekarang]
+    );
+
+    const bonus_bulanan = Number(bonusRows[0]?.total_bonus || 0);
+    const judul_bonus = bonusRows[0]?.judul || "-";
+
+    // ============================================================
+    // 4️⃣ POTONGAN BULAN INI (umum + kasbon)
+    // ============================================================
+    const [potonganRows] = await db.query(
+      `
+      SELECT SUM(jumlah_potongan) AS total_potongan
+      FROM potongan_kasbon
+      WHERE (
+          id_capster = ? 
+          OR id_kasbon IN (
+               SELECT id_kasbon FROM kasbon WHERE id_capster = ?
+          )
+      )
+      AND DATE_FORMAT(tanggal_potong, '%Y-%m') = ?
+      `,
+      [id_capster, id_capster, bulanSekarang]
+    );
+
+    const potongan_bulan_ini = Number(potonganRows[0]?.total_potongan || 0);
+
+    // ============================================================
+    // 5️⃣ KASBON (Sisa Kasbon Aktif)
+    // ============================================================
+    const [kasbonRows] = await db.query(
+      `
+      SELECT SUM(sisa_kasbon) AS sisa
+      FROM kasbon
+      WHERE id_capster = ?
+      AND status = 'aktif'
+      `,
+      [id_capster]
+    );
+
+    const kasbon_aktif = Number(kasbonRows[0]?.sisa || 0);
+
+    // ============================================================
+    // 6️⃣ TOTAL PENDAPATAN
+    // ============================================================
+    const total_pendapatan =
+      pendapatan_bersih + gaji_pokok + bonus_bulanan - potongan_bulan_ini;
+
+    // ============================================================
+    // 🔚 RESPONSE
+    // ============================================================
     res.json({
       success: true,
       periode: bulanSekarang,
       pendapatan_bersih,
       gaji_pokok,
       bonus_bulanan,
-      judul_bonus: row.judul_bonus || "-",
+      judul_bonus,
+      potongan_bulan_ini,
+      kasbon_aktif,
       total_pendapatan,
     });
   } catch (err) {
@@ -94,47 +157,111 @@ export const getCapsterChartData = async (req, res) => {
 export const getKasirDashboard = async (req, res) => {
   try {
     const { id_kasir } = req.params;
-    if (!id_kasir)
-      return res
-        .status(400)
-        .json({ success: false, message: "ID kasir tidak ditemukan" });
+
+    // ===============================
+    // 🟢 Pakai id_kasir langsung (bukan id_user)
+    // ===============================
+    if (!id_kasir) {
+      return res.json({
+        success: false,
+        message: "ID kasir tidak valid",
+      });
+    }
 
     const bulanSekarang = dayjs().format("YYYY-MM");
 
-    const sql = `
-      SELECT
-        COALESCE((SELECT gaji_pokok FROM gaji_setting WHERE id_user = ? LIMIT 1), 0) AS gaji_pokok,
-        COALESCE((SELECT SUM(jumlah) FROM bonus WHERE id_user = ? AND periode = ?), 0) AS bonus_kasir,
-        COALESCE((SELECT judul_bonus FROM bonus WHERE id_user = ? AND periode = ? LIMIT 1), '-') AS judul_bonus
-    `;
+    // ===============================
+    // 🟢 GAJI
+    // ===============================
+    const [gajiRows] = await db.query(
+      `SELECT COALESCE(gaji_pokok,0) AS gaji_pokok
+       FROM gaji_setting
+       WHERE id_kasir = ?
+       LIMIT 1`,
+      [id_kasir]
+    );
 
-    const [rows] = await db.query(sql, [
-      id_kasir,
-      id_kasir,
-      bulanSekarang,
-      id_kasir,
-      bulanSekarang,
-    ]);
+    const gajiPokok = Number(gajiRows[0]?.gaji_pokok || 0);
 
-    const row = rows[0];
-    const gaji = Number(row.gaji_pokok) || 0;
-    const bonus = Number(row.bonus_kasir) || 0;
-    const total_pendapatan = gaji + bonus;
+    // ===============================
+    // 🟢 BONUS
+    // ===============================
+    const [bonusRows] = await db.query(
+      `SELECT 
+          COALESCE(SUM(jumlah),0) AS total_bonus,
+          COALESCE(MAX(judul_bonus),'-') AS judul_bonus
+       FROM bonus
+       WHERE id_kasir = ?
+       AND periode = ?`,
+      [id_kasir, bulanSekarang]
+    );
 
+    const bonusKasir = Number(bonusRows[0]?.total_bonus || 0);
+    const judulBonus = bonusRows[0]?.judul_bonus || "-";
+
+    // ===============================
+    // 🟢 POTONGAN (SAMA SEPERTI SLIP GAJI)
+    // ===============================
+    const [potonganRows] = await db.query(
+      `
+      SELECT pk.jumlah_potongan
+      FROM potongan_kasbon pk
+      LEFT JOIN kasbon k ON k.id_kasbon = pk.id_kasbon
+      WHERE 
+          (pk.id_kasir = ? OR k.id_kasir = ?)
+          AND (
+            DATE_FORMAT(pk.tanggal_potong, '%Y-%m') = ?
+            OR pk.periode = ?
+          )
+      `,
+      [id_kasir, id_kasir, bulanSekarang, bulanSekarang]
+    );
+
+    const potongan = potonganRows.reduce(
+      (a, b) => a + Number(b.jumlah_potongan || 0),
+      0
+    );
+
+    // ===============================
+    // 🟢 KASBON AKTIF
+    // ===============================
+    const [kasbonRows] = await db.query(
+      `SELECT COALESCE(SUM(sisa_kasbon),0) AS kasbon_aktif
+       FROM kasbon
+       WHERE id_kasir = ?
+       AND (status = 'aktif' OR status IS NULL OR status = '')`,
+      [id_kasir]
+    );
+
+    const kasbonAktif = Number(kasbonRows[0]?.kasbon_aktif || 0);
+
+    // ===============================
+    // 🟢 TOTAL
+    // ===============================
+    const totalPendapatan = gajiPokok + bonusKasir;
+    const pendapatanBersihKasir = gajiPokok + bonusKasir - potongan;
+
+    // ===============================
+    // 🟢 RESPONSE
+    // ===============================
     res.json({
       success: true,
       periode: bulanSekarang,
-      gaji_pokok: gaji,
-      bonus_kasir: bonus,
-      pendapatan_kasir: gaji,
-      total_pendapatan,
-      judul_bonus: row.judul_bonus || "-",
+      gaji_pokok: gajiPokok,
+      bonus_kasir: bonusKasir,
+      judul_bonus: judulBonus,
+      total_potongan: potongan,
+      kasbon_aktif: kasbonAktif,
+      total_pendapatan: totalPendapatan,
+      pendapatan_bersih_kasir: pendapatanBersihKasir,
     });
+
   } catch (err) {
-    console.error("❌ DB Error getKasirDashboard:", err);
+    console.error("❌ ERROR getKasirDashboard:", err);
     res.status(500).json({
       success: false,
       message: "Gagal mengambil data dashboard kasir",
+      error: err.message,
     });
   }
 };

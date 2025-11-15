@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import TableData from "../../components/TableData";
-import { RefreshCcw } from "lucide-react";
 
 export default function Produk() {
   const [stores, setStores] = useState([]);

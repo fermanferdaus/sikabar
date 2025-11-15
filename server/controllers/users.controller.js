@@ -50,11 +50,9 @@ export const createUser = async (req, res) => {
   try {
     const { nama_user, username, password, role, id_store } = req.body;
 
-    if (!username || !password || !role) {
+    if (!username || !password || !role)
       return res.status(400).json({ message: "Data tidak lengkap" });
-    }
 
-    // 🔍 Cek username duplikat
     const [exist] = await db.query(
       "SELECT id_user FROM users WHERE username = ?",
       [username]
@@ -62,36 +60,93 @@ export const createUser = async (req, res) => {
     if (exist.length)
       return res.status(400).json({ message: "Username sudah digunakan!" });
 
-    const hashed = await bcrypt.hash(password, 10);
+    let id_capster = null;
+    let id_kasir = null;
 
-    // 🆕 Tambah ke tabel users
+    // Role capster
+    if (role === "capster") {
+      const [cekCapster] = await db.query(
+        "SELECT id_capster, id_user FROM capster WHERE nama_capster = ? AND id_store = ?",
+        [nama_user, id_store]
+      );
+
+      if (!cekCapster.length)
+        return res
+          .status(404)
+          .json({ message: "Nama capster tidak ditemukan pada store ini" });
+
+      if (cekCapster[0].id_user)
+        return res
+          .status(400)
+          .json({ message: "Capster ini sudah memiliki akun pengguna" });
+
+      id_capster = cekCapster[0].id_capster;
+    }
+
+    // Role kasir
+    if (role === "kasir") {
+      const [cekKasir] = await db.query(
+        "SELECT id_kasir, id_user FROM kasir WHERE nama_kasir = ? AND id_store = ?",
+        [nama_user, id_store]
+      );
+
+      if (!cekKasir.length)
+        return res
+          .status(404)
+          .json({ message: "Nama kasir tidak ditemukan pada store ini" });
+
+      if (cekKasir[0].id_user)
+        return res
+          .status(400)
+          .json({ message: "Kasir ini sudah memiliki akun pengguna" });
+
+      id_kasir = cekKasir[0].id_kasir;
+    }
+
+    // Insert user
+    const hashed = await bcrypt.hash(password, 10);
     const [userResult] = await db.query(
-      "INSERT INTO users (nama_user, username, password, role, id_store) VALUES (?,?,?,?,?)",
-      [nama_user, username, hashed, role, id_store || null]
+      "INSERT INTO users (nama_user, username, password, role, id_store, id_capster, id_kasir) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [
+        nama_user,
+        username,
+        hashed,
+        role,
+        id_store || null,
+        id_capster,
+        id_kasir,
+      ]
     );
 
     const id_user = userResult.insertId;
-    let id_capster = null;
 
-    // 🧍 Jika role = capster → otomatis tambah ke tabel capster
+    // Update relasi kasir/capster
     if (role === "capster") {
-      const [capsterResult] = await db.query(
-        "INSERT INTO capster (nama_capster, id_store, id_user) VALUES (?, ?, ?)",
-        [nama_user, id_store, id_user]
-      );
-      id_capster = capsterResult.insertId;
-
-      // Update id_capster di users
-      await db.query("UPDATE users SET id_capster = ? WHERE id_user = ?", [
-        id_capster,
+      await db.query("UPDATE capster SET id_user = ? WHERE id_capster = ?", [
         id_user,
+        id_capster,
+      ]);
+    }
+
+    if (role === "kasir") {
+      await db.query("UPDATE kasir SET id_user = ? WHERE id_kasir = ?", [
+        id_user,
+        id_kasir,
       ]);
     }
 
     res.status(201).json({
       success: true,
       message: "User berhasil ditambahkan",
-      user: { id_user, nama_user, username, role, id_store, id_capster },
+      user: {
+        id_user,
+        nama_user,
+        username,
+        role,
+        id_store,
+        id_capster,
+        id_kasir,
+      },
     });
   } catch (err) {
     console.error("❌ createUser:", err.message);
@@ -104,54 +159,123 @@ export const createUser = async (req, res) => {
    ============================================================ */
 export const updateUser = async (req, res) => {
   try {
-    const { nama_user, username, password, role, id_store, id_capster } =
-      req.body;
+    const id_user = req.params.id;
+    let { nama_user, username, password, role, id_store } = req.body;
 
-    // 🔐 Jika ada password baru → hash ulang
-    let sql, params;
-    if (password) {
-      const hashed = await bcrypt.hash(password, 10);
-      sql = `
-        UPDATE users 
-        SET nama_user = ?, username = ?, password = ?, role = ?, id_store = ?, id_capster = ?
-        WHERE id_user = ?
-      `;
-      params = [
+    // GET USER LAMA
+    const [oldUserRows] = await db.query(
+      "SELECT * FROM users WHERE id_user = ?",
+      [id_user]
+    );
+    if (!oldUserRows.length)
+      return res.status(404).json({ message: "User tidak ditemukan" });
+
+    const oldUser = oldUserRows[0];
+
+    // Cek username duplikat
+    const [exist] = await db.query(
+      "SELECT id_user FROM users WHERE username = ? AND id_user != ?",
+      [username, id_user]
+    );
+    if (exist.length)
+      return res.status(400).json({ message: "Username sudah digunakan!" });
+
+    // SIMPAN RELASI LAMA (default)
+    let finalCapster = oldUser.id_capster;
+    let finalKasir = oldUser.id_kasir;
+
+    // ===========================================
+    // ROLE = CAPSTER → VALIDASI NAMA
+    // ===========================================
+    if (role === "capster") {
+      const [cek] = await db.query(
+        "SELECT id_capster, id_user FROM capster WHERE nama_capster = ? AND id_store = ?",
+        [nama_user, id_store]
+      );
+
+      if (!cek.length)
+        return res.status(404).json({ message: "Nama capster tidak ditemukan!" });
+
+      if (cek[0].id_user && cek[0].id_user != id_user)
+        return res
+          .status(400)
+          .json({ message: "Capster ini sudah memiliki akun!" });
+
+      finalCapster = cek[0].id_capster;
+      finalKasir = null;
+
+      await db.query("UPDATE capster SET id_user = ? WHERE id_capster = ?", [
+        id_user,
+        finalCapster,
+      ]);
+    }
+
+    // ===========================================
+    // ROLE = KASIR → VALIDASI NAMA
+    // ===========================================
+    if (role === "kasir") {
+      const [cek] = await db.query(
+        "SELECT id_kasir, id_user FROM kasir WHERE nama_kasir = ? AND id_store = ?",
+        [nama_user, id_store]
+      );
+
+      if (!cek.length)
+        return res.status(404).json({ message: "Nama kasir tidak ditemukan!" });
+
+      if (cek[0].id_user && cek[0].id_user != id_user)
+        return res
+          .status(400)
+          .json({ message: "Kasir ini sudah memiliki akun!" });
+
+      finalKasir = cek[0].id_kasir;
+      finalCapster = null;
+
+      await db.query("UPDATE kasir SET id_user = ? WHERE id_kasir = ?", [
+        id_user,
+        finalKasir,
+      ]);
+    }
+
+    // ===========================================
+    // ROLE = ADMIN → hapus relasi
+    // ===========================================
+    if (role === "admin") {
+      id_store = null;
+      finalCapster = null;
+      finalKasir = null;
+    }
+
+    // PASSWORD
+    let hashed = oldUser.password;
+    if (password) hashed = await bcrypt.hash(password, 10);
+
+    // ===========================================
+    // UPDATE USERS
+    // ===========================================
+    await db.query(
+      `UPDATE users SET
+        nama_user=?, username=?, password=?, role=?, id_store=?,
+        id_capster=?, id_kasir=?
+       WHERE id_user = ?`,
+      [
         nama_user,
         username,
         hashed,
         role,
         id_store || null,
-        id_capster || null,
-        req.params.id,
-      ];
-    } else {
-      sql = `
-        UPDATE users 
-        SET nama_user = ?, username = ?, role = ?, id_store = ?, id_capster = ?
-        WHERE id_user = ?
-      `;
-      params = [
-        nama_user,
-        username,
-        role,
-        id_store || null,
-        id_capster || null,
-        req.params.id,
-      ];
-    }
-
-    const [result] = await db.query(sql, params);
-
-    if (result.affectedRows === 0)
-      return res.status(404).json({ message: "User tidak ditemukan" });
+        finalCapster,
+        finalKasir,
+        id_user,
+      ]
+    );
 
     res.json({ success: true, message: "User berhasil diperbarui" });
   } catch (err) {
     console.error("❌ updateUser:", err.message);
-    res.status(500).json({ message: "Gagal memperbarui user" });
+    res.status(500).json({ message: "Terjadi kesalahan server" });
   }
 };
+
 
 /* ============================================================
    🔴 DELETE User (Admin Only)
@@ -169,5 +293,60 @@ export const deleteUser = async (req, res) => {
   } catch (err) {
     console.error("❌ deleteUser:", err.message);
     res.status(500).json({ message: "Gagal menghapus user" });
+  }
+};
+
+// 🔍 Cari berdasarkan nama (capster / kasir)
+export const searchUserByName = async (req, res) => {
+  try {
+    const nama = req.params.nama;
+
+    const [capsterRows] = await db.query(
+      `SELECT 'capster' AS role, c.id_capster, NULL AS id_kasir,
+              c.nama_capster AS nama, c.id_store, s.nama_store
+       FROM capster c
+       LEFT JOIN store s ON c.id_store = s.id_store
+       WHERE LOWER(c.nama_capster) LIKE LOWER(?)
+       LIMIT 1`,
+      [`%${nama}%`]
+    );
+
+    if (capsterRows.length) return res.json(capsterRows[0]);
+
+    const [kasirRows] = await db.query(
+      `SELECT 'kasir' AS role, NULL AS id_capster, k.id_kasir,
+              k.nama_kasir AS nama, k.id_store, s.nama_store
+       FROM kasir k
+       LEFT JOIN store s ON k.id_store = s.id_store
+       WHERE LOWER(k.nama_kasir) LIKE LOWER(?)
+       LIMIT 1`,
+      [`%${nama}%`]
+    );
+
+    if (kasirRows.length) return res.json(kasirRows[0]);
+
+    res.status(404).json({ message: "Data tidak ditemukan" });
+  } catch (err) {
+    res.status(500).json({ message: "Gagal mencari data pengguna" });
+  }
+};
+
+export const checkUsername = async (req, res) => {
+  try {
+    const { username } = req.params;
+    const exclude = req.query.exclude || null;
+
+    let sql = `SELECT id_user FROM users WHERE username = ?`;
+    let params = [username];
+
+    if (exclude) {
+      sql += ` AND id_user <> ?`;
+      params.push(exclude);
+    }
+
+    const [rows] = await db.query(sql, params);
+    res.json({ exists: rows.length > 0 });
+  } catch (err) {
+    res.status(500).json({ message: "Gagal mengecek username" });
   }
 };

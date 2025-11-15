@@ -76,7 +76,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-7 space-y-8 transition-all duration-300">
             {/* === TITLE === */}
             <h1 className="text-2xl font-semibold text-slate-800">
-              Dashboard Admin
+              Dashboard Owner
             </h1>
 
             {/* === BARIS 1: Statistik Umum === */}

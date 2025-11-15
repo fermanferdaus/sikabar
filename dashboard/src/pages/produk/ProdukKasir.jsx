@@ -5,13 +5,13 @@ import useProdukAPI from "../../hooks/useProdukAPI";
 import TableData from "../../components/TableData";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import ConfirmModal from "../../components/ConfirmModal";
+import { formatKodeProduk } from "../../utils/formatProduk"; // ✅ GLOBAL FORMATTER
 
 export default function ProdukKasir() {
   const navigate = useNavigate();
   const { getProdukByStore, deleteStokProduk } = useProdukAPI();
 
   const id_store = localStorage.getItem("id_store");
-  const nama_user = localStorage.getItem("nama_user");
 
   const [produk, setProduk] = useState([]);
   const [storeName, setStoreName] = useState("");
@@ -22,13 +22,13 @@ export default function ProdukKasir() {
   const [selectedProduk, setSelectedProduk] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // 🟡 Tambahan filter
+  // Filter
   const [filterType, setFilterType] = useState("Bulanan");
   const [tanggal, setTanggal] = useState(
     new Date().toISOString().split("T")[0]
   );
 
-  // 🔔 Tampilkan notifikasi sukses setelah tambah/edit produk
+  // Notif sukses tambah/edit
   useEffect(() => {
     const savedMessage = localStorage.getItem("produkMessage");
     if (savedMessage) {
@@ -39,7 +39,7 @@ export default function ProdukKasir() {
     }
   }, []);
 
-  // 🔁 Ambil data stok produk
+  // Load produk
   const loadProduk = async () => {
     setLoading(true);
     try {
@@ -60,21 +60,21 @@ export default function ProdukKasir() {
     } else {
       loadProduk();
     }
-  }, [id_store, filterType, tanggal]); // 🔹 Refresh otomatis saat filter berubah
+  }, [id_store, filterType, tanggal]);
 
-  // ➕ Tambah produk baru
+  // Tambah produk
   const handleAddProduk = () => {
     navigate(`/produk/kasir/add`, { state: { fromStore: id_store } });
   };
 
-  // ✏️ Edit produk
+  // Edit
   const handleEdit = (id_produk) => {
     navigate(`/produk/kasir/edit/${id_produk}`, {
       state: { fromStore: id_store },
     });
   };
 
-  // 🗑️ Hapus produk
+  // Hapus modal
   const openDeleteModal = (produk) => {
     setSelectedProduk(produk);
     setShowModal(true);
@@ -89,7 +89,7 @@ export default function ProdukKasir() {
       setSelectedProduk(null);
       setNotif({
         type: "success",
-        text: `Produk "${selectedProduk.nama_produk}" berhasil dihapus dari toko.`,
+        text: `Produk "${selectedProduk.nama_produk}" berhasil dihapus.`,
       });
       await loadProduk();
       setTimeout(() => setNotif(null), 4000);
@@ -104,7 +104,7 @@ export default function ProdukKasir() {
     }
   };
 
-  // 🔁 Reload otomatis setelah tambah/edit
+  // Reload otomatis
   useEffect(() => {
     const handleReload = (event) => {
       if (event.key === "reloadProduk" && event.newValue === "true") {
@@ -130,6 +130,7 @@ export default function ProdukKasir() {
 
         const columns = [
           { key: "no", label: "#" },
+          { key: "kode_produk", label: "Kode" }, // 🔥 ADA KODE PRODUK
           { key: "nama_produk", label: "Nama Produk" },
           { key: "harga_awal", label: "Harga Awal" },
           { key: "harga_jual", label: "Harga Jual" },
@@ -141,29 +142,37 @@ export default function ProdukKasir() {
 
         const data = filteredProduk.map((p, i) => ({
           no: i + 1,
+
+          kode_produk: (
+            <span className="font-semibold text-slate-700">
+              {formatKodeProduk(p.id_produk)}
+            </span>
+          ),
+
           nama_produk: p.nama_produk,
           harga_awal: `Rp ${Number(p.harga_awal).toLocaleString("id-ID")}`,
           harga_jual: `Rp ${Number(p.harga_jual).toLocaleString("id-ID")}`,
           stok_awal: p.stok_awal,
           stok_sekarang: p.stok_sekarang,
+
           total_laba: (
             <span className="text-green-600 font-semibold">
               Rp {Number(p.total_laba || 0).toLocaleString("id-ID")}
             </span>
           ),
+
           aksi: (
             <div className="flex items-center justify-left gap-2">
               <button
                 onClick={() => handleEdit(p.id_produk)}
                 className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
-                title="Edit"
               >
                 <Pencil size={16} />
               </button>
+
               <button
                 onClick={() => openDeleteModal(p)}
                 className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
-                title="Hapus"
               >
                 <Trash2 size={16} />
               </button>
@@ -184,15 +193,13 @@ export default function ProdukKasir() {
                 </p>
               </div>
 
-              <div className="order-1 sm:order-2 flex justify-start sm:justify-end gap-2 w-full sm:w-auto">
-                <button
-                  onClick={handleAddProduk}
-                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <Plus size={16} />
-                  Tambah Produk
-                </button>
-              </div>
+              <button
+                onClick={handleAddProduk}
+                className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
+              >
+                <Plus size={16} />
+                Tambah Produk
+              </button>
             </div>
 
             {/* === Filter Bar === */}
@@ -204,7 +211,7 @@ export default function ProdukKasir() {
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                 >
                   <option value="Harian">Harian</option>
                   <option value="Bulanan">Bulanan</option>
@@ -215,25 +222,38 @@ export default function ProdukKasir() {
                 <label className="text-gray-600 font-medium text-sm">
                   {filterType === "Harian" ? "Tanggal:" : "Bulan:"}
                 </label>
+
                 {filterType === "Harian" ? (
                   <input
                     type="date"
                     value={tanggal}
                     onChange={(e) => setTanggal(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                   />
                 ) : (
                   <input
                     type="month"
                     value={tanggal.slice(0, 7)}
                     onChange={(e) => setTanggal(e.target.value + "-01")}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                   />
                 )}
               </div>
             </div>
 
-            {/* 🔔 Notifikasi */}
+            {/* === Summary Total Laba === */}
+            {filteredProduk.length > 0 && (
+              <div className="grid sm:grid-cols-1 gap-6 mt-2">
+                <div className="p-5 bg-white shadow-sm rounded-xl text-center border border-gray-100">
+                  <p className="text-gray-500">Total Laba Produk</p>
+                  <h2 className="text-3xl font-bold text-emerald-600 mt-1">
+                    Rp {totalLaba.toLocaleString("id-ID")}
+                  </h2>
+                </div>
+              </div>
+            )}
+
+            {/* === Notifikasi === */}
             {notif && (
               <div
                 className={`px-4 py-3 rounded-lg text-sm font-medium border ${
@@ -246,7 +266,7 @@ export default function ProdukKasir() {
               </div>
             )}
 
-            {/* === Tabel Produk === */}
+            {/* === Tabel === */}
             {loading ? (
               <p className="text-gray-500">Memuat data...</p>
             ) : error ? (
@@ -254,21 +274,11 @@ export default function ProdukKasir() {
             ) : filteredProduk.length === 0 ? (
               <p className="text-gray-500">Produk tidak ditemukan.</p>
             ) : (
-              <>
-                <TableData
-                  columns={columns}
-                  data={data}
-                  searchTerm={searchTerm}
-                />
-                <div className="flex justify-end mt-4 text-sm font-semibold text-gray-700 border-t border-gray-200 pt-3">
-                  <span>
-                    Total Laba:&nbsp;
-                    <span className="text-green-600">
-                      Rp {totalLaba.toLocaleString("id-ID")}
-                    </span>
-                  </span>
-                </div>
-              </>
+              <TableData
+                columns={columns}
+                data={data}
+                searchTerm={searchTerm}
+              />
             )}
 
             <ConfirmModal
@@ -278,7 +288,7 @@ export default function ProdukKasir() {
               loading={deleting}
               message={
                 selectedProduk
-                  ? `Apakah Anda yakin ingin menghapus produk "${selectedProduk.nama_produk}" dari toko Anda?`
+                  ? `Apakah Anda yakin ingin menghapus produk "${selectedProduk.nama_produk}"?`
                   : "Apakah Anda yakin ingin menghapus data ini?"
               }
             />

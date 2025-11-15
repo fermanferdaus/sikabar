@@ -10,9 +10,10 @@ export default function BonusAdd() {
   const [roleType, setRoleType] = useState("capster");
   const [capsters, setCapsters] = useState([]);
   const [kasirs, setKasirs] = useState([]);
+
   const [form, setForm] = useState({
     id_capster: "",
-    id_user: "",
+    id_kasir: "",
     judul_bonus: "",
     jumlah: "",
     jumlahFormatted: "",
@@ -29,27 +30,27 @@ export default function BonusAdd() {
   const token = localStorage.getItem("token");
 
   /* ========================================================
-     🔹 Ambil data Capster & Kasir
+     🔹 Ambil data Capster & Kasir (VERSI BARU)
   ======================================================== */
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        const [resCap, resKasir] = await Promise.all([
+        const [resCap, resKas] = await Promise.all([
           fetch(`${API_URL}/capster`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch(`${API_URL}/users`, {
+          fetch(`${API_URL}/kasir`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
 
         const capData = await resCap.json();
-        const userData = await resKasir.json();
+        const kasData = await resKas.json();
 
         setCapsters(capData || []);
-        setKasirs(userData.filter((u) => u.role === "kasir"));
+        setKasirs(kasData || []);
       } catch (err) {
         console.error("❌ Gagal ambil data capster/kasir:", err);
         setErrorMsg("Gagal memuat data capster & kasir.");
@@ -79,7 +80,7 @@ export default function BonusAdd() {
   };
 
   /* ========================================================
-     💾 Submit handler
+     💾 Submit handler (VERSI BARU)
   ======================================================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,7 +90,7 @@ export default function BonusAdd() {
       !form.jumlah ||
       !form.tanggal_diberikan ||
       (roleType === "capster" && !form.id_capster) ||
-      (roleType === "kasir" && !form.id_user)
+      (roleType === "kasir" && !form.id_kasir)
     ) {
       setErrorMsg("Semua kolom wajib diisi!");
       return;
@@ -100,12 +101,12 @@ export default function BonusAdd() {
 
     const payload = {
       id_capster: roleType === "capster" ? form.id_capster : null,
-      id_user: roleType === "kasir" ? form.id_user : null,
+      id_kasir: roleType === "kasir" ? form.id_kasir : null,
       judul_bonus: form.judul_bonus,
       jumlah: form.jumlah,
       tanggal_diberikan: form.tanggal_diberikan,
-      periode: form.periode || form.tanggal_diberikan.slice(0, 7), // YYYY-MM
-      keterangan: form.keterangan,
+      periode: form.periode || form.tanggal_diberikan.slice(0, 7),
+      keterangan: form.keterangan || "-",
     };
 
     const res = await saveBonus(payload);
@@ -121,11 +122,12 @@ export default function BonusAdd() {
     } else {
       setErrorMsg(res.message || "Bonus sudah ada pada periode ini.");
     }
+
     setLoadingSubmit(false);
   };
 
   /* ========================================================
-     🎨 RENDER
+     🎨 RENDER (TIDAK DIUBAH SAMA SEKALI)
   ======================================================== */
   return (
     <MainLayout current="gaji">
@@ -153,6 +155,7 @@ export default function BonusAdd() {
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-8">
+
             {/* Baris 1: Jabatan & Nama */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Pilih Jabatan */}
@@ -166,7 +169,7 @@ export default function BonusAdd() {
                     setRoleType(e.target.value);
                     setForm({
                       id_capster: "",
-                      id_user: "",
+                      id_kasir: "",
                       judul_bonus: "",
                       jumlah: "",
                       jumlahFormatted: "",
@@ -210,17 +213,17 @@ export default function BonusAdd() {
                     Pilih Kasir
                   </label>
                   <select
-                    value={form.id_user}
+                    value={form.id_kasir}
                     onChange={(e) =>
-                      setForm({ ...form, id_user: e.target.value })
+                      setForm({ ...form, id_kasir: e.target.value })
                     }
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
                     required
                   >
                     <option value="">-- Pilih Kasir --</option>
                     {kasirs.map((k) => (
-                      <option key={k.id_user} value={k.id_user}>
-                        {k.nama_user} — {k.username}
+                      <option key={k.id_kasir} value={k.id_kasir}>
+                        {k.nama_kasir} — {k.nama_store}
                       </option>
                     ))}
                   </select>

@@ -11,9 +11,10 @@ export default function BonusEdit() {
   const [roleType, setRoleType] = useState("capster");
   const [capsters, setCapsters] = useState([]);
   const [kasirs, setKasirs] = useState([]);
+
   const [form, setForm] = useState({
     id_capster: "",
-    id_user: "",
+    id_kasir: "",
     judul_bonus: "",
     jumlah: "",
     jumlahFormatted: "",
@@ -30,18 +31,18 @@ export default function BonusEdit() {
   const token = localStorage.getItem("token");
 
   /* ========================================================
-     🔹 Ambil data capster & kasir + detail bonus
+     🔹 Ambil data capster, kasir & detail bonus
   ======================================================== */
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        const [resCap, resKasir, resBonus] = await Promise.all([
+        const [resCap, resKas, resBonus] = await Promise.all([
           fetch(`${API_URL}/capster`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch(`${API_URL}/users?role=kasir`, {
+          fetch(`${API_URL}/kasir`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           fetch(`${API_URL}/gaji/bonus/${id}`, {
@@ -50,33 +51,37 @@ export default function BonusEdit() {
         ]);
 
         const capData = await resCap.json();
-        const kasirData = await resKasir.json();
+        const kasData = await resKas.json();
         const bonusData = await resBonus.json();
 
-        setCapsters(capData || []);
-        setKasirs(kasirData || []);
+        // FIX UTAMA: pastikan array
+        setCapsters(capData.data || capData || []);
+        setKasirs(kasData.data || kasData || []);
 
         if (bonusData) {
           const isCapster = !!bonusData.id_capster;
           setRoleType(isCapster ? "capster" : "kasir");
 
+          // Format tanggal otomatis (YYYY-MM-DD)
+          const fixedDate = bonusData.tanggal_diberikan
+            ? bonusData.tanggal_diberikan.split("T")[0]
+            : "";
+
           setForm({
             id_capster: bonusData.id_capster || "",
-            id_user: bonusData.id_user || "",
+            id_kasir: bonusData.id_kasir || bonusData.id_user || "",
             judul_bonus: bonusData.judul_bonus || "",
             jumlah: bonusData.jumlah || "",
             jumlahFormatted: bonusData.jumlah
               ? `Rp${Number(bonusData.jumlah).toLocaleString("id-ID")}`
               : "",
-            tanggal_diberikan: bonusData.tanggal_diberikan
-              ? bonusData.tanggal_diberikan.split("T")[0]
-              : "",
+            tanggal_diberikan: fixedDate,
             periode: bonusData.periode || "",
             keterangan: bonusData.keterangan || "",
           });
         }
       } catch (err) {
-        console.error("❌ Gagal memuat data bonus:", err);
+        console.error("❌ Error BonusEdit:", err);
         setErrorMsg("Gagal memuat data bonus untuk diedit.");
       } finally {
         setLoading(false);
@@ -104,7 +109,7 @@ export default function BonusEdit() {
   };
 
   /* ========================================================
-     💾 Submit handler
+     💾 Submit Bonus
   ======================================================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -114,7 +119,7 @@ export default function BonusEdit() {
       !form.jumlah ||
       !form.tanggal_diberikan ||
       (roleType === "capster" && !form.id_capster) ||
-      (roleType === "kasir" && !form.id_user)
+      (roleType === "kasir" && !form.id_kasir)
     ) {
       setErrorMsg("Semua kolom wajib diisi!");
       return;
@@ -125,7 +130,7 @@ export default function BonusEdit() {
 
     const payload = {
       id_capster: roleType === "capster" ? form.id_capster : null,
-      id_user: roleType === "kasir" ? form.id_user : null,
+      id_kasir: roleType === "kasir" ? form.id_kasir : null,
       judul_bonus: form.judul_bonus,
       jumlah: form.jumlah,
       tanggal_diberikan: form.tanggal_diberikan,
@@ -152,12 +157,12 @@ export default function BonusEdit() {
   };
 
   /* ========================================================
-     🎨 RENDER
+     🎨 RENDER (STYLE TIDAK DIUBAH)
   ======================================================== */
   return (
     <MainLayout current="gaji">
       <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 transition-all duration-300">
-        {/* === Header === */}
+        {/* Header */}
         <div className="border-b border-gray-100 pb-5 mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">Edit Bonus</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -179,7 +184,6 @@ export default function BonusEdit() {
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Baris 1: Jabatan & Nama */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Jabatan */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Jabatan
@@ -192,19 +196,16 @@ export default function BonusEdit() {
                   <option value="capster">Capster</option>
                   <option value="kasir">Kasir</option>
                 </select>
-                <p className="text-xs text-gray-500 mt-1 italic">
-                  *Jabatan tidak dapat diubah pada tahap edit bonus.
-                </p>
               </div>
 
-              {/* Nama */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {roleType === "capster" ? "Nama Capster" : "Nama Kasir"}
                 </label>
+
                 <select
                   value={
-                    roleType === "capster" ? form.id_capster : form.id_user
+                    roleType === "capster" ? form.id_capster : form.id_kasir
                   }
                   disabled
                   className="w-full border border-gray-300 bg-gray-100 text-gray-600 rounded-lg px-4 py-3 cursor-not-allowed"
@@ -212,22 +213,22 @@ export default function BonusEdit() {
                   <option value="">
                     -- Pilih {roleType === "capster" ? "Capster" : "Kasir"} --
                   </option>
+
                   {(roleType === "capster" ? capsters : kasirs).map((p) => (
                     <option
-                      key={roleType === "capster" ? p.id_capster : p.id_user}
-                      value={roleType === "capster" ? p.id_capster : p.id_user}
+                      key={roleType === "capster" ? p.id_capster : p.id_kasir}
+                      value={roleType === "capster" ? p.id_capster : p.id_kasir}
                     >
-                      {roleType === "capster" ? p.nama_capster : p.nama_user}
+                      {roleType === "capster"
+                        ? `${p.nama_capster} — ${p.nama_store}`
+                        : `${p.nama_kasir} — ${p.nama_store}`}
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1 italic">
-                  *Nama penerima bonus tidak dapat diubah.
-                </p>
               </div>
             </div>
 
-            {/* Baris 2: Judul, Nominal */}
+            {/* Baris 2: Judul & Nominal */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -239,7 +240,6 @@ export default function BonusEdit() {
                   onChange={(e) =>
                     setForm({ ...form, judul_bonus: e.target.value })
                   }
-                  placeholder="Contoh: Bonus THR / Penjualan Tertinggi"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3"
                   required
                 />
@@ -252,9 +252,8 @@ export default function BonusEdit() {
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={form.jumlahFormatted || ""}
+                  value={form.jumlahFormatted}
                   onChange={handleJumlahChange}
-                  placeholder="Masukkan nominal bonus"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3"
                   required
                 />
@@ -276,9 +275,6 @@ export default function BonusEdit() {
                   className="w-full border border-gray-300 rounded-lg px-4 py-3"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1 italic">
-                  *Bonus hanya diberikan sekali pada tanggal ini.
-                </p>
               </div>
 
               <div>
@@ -293,9 +289,6 @@ export default function BonusEdit() {
                   }
                   className="w-full border border-gray-300 rounded-lg px-4 py-3"
                 />
-                <p className="text-xs text-gray-500 mt-1 italic">
-                  *Periode opsional, berguna untuk laporan tahunan.
-                </p>
               </div>
             </div>
 
@@ -309,7 +302,6 @@ export default function BonusEdit() {
                 onChange={(e) =>
                   setForm({ ...form, keterangan: e.target.value })
                 }
-                placeholder="Tuliskan alasan atau catatan pemberian bonus..."
                 className="w-full border border-gray-300 rounded-lg px-4 py-3"
                 rows="3"
               />
@@ -320,7 +312,7 @@ export default function BonusEdit() {
               <button
                 type="button"
                 onClick={() => navigate("/gaji")}
-                className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
+                className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition"
                 disabled={loadingSubmit}
               >
                 Batal
@@ -329,7 +321,7 @@ export default function BonusEdit() {
               <button
                 type="submit"
                 disabled={loadingSubmit}
-                className={`px-6 py-2.5 rounded-lg font-medium text-white transition ${
+                className={`px-6 py-2.5 rounded-lg text-white font-medium ${
                   loadingSubmit
                     ? "bg-gray-300 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"

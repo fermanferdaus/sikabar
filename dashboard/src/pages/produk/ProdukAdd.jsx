@@ -2,77 +2,124 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import useProdukAPI from "../../hooks/useProdukAPI";
-import formatRupiah from "../../utils/formatRupiah"; // ⬅️ pastikan path-nya sesuai
+import formatRupiah from "../../utils/formatRupiah";
 
 export default function ProdukAdd() {
-  const { addProduk, addStokProduk } = useProdukAPI();
-  const [errorMsg, setErrorMsg] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { getAllProduk, addProduk, addStokProduk } = useProdukAPI();
 
   const [formData, setFormData] = useState({
     nama_produk: "",
     harga_awal: "",
     harga_jual: "",
     stok_awal: "",
+    id_produk_existing: null,
   });
+
+  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [searching, setSearching] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
   const fromStore = location.state?.fromStore || null;
 
-  // 🔹 Fungsi bantu untuk parsing angka dari input rupiah
-  const parseRupiah = (val) => Number(String(val).replace(/[^\d]/g, "")) || 0;
+  const parseRupiah = (v) => Number(String(v).replace(/[^\d]/g, "")) || 0;
+
+  const handleNamaChange = async (e) => {
+    const nama = e.target.value;
+
+    setFormData({
+      ...formData,
+      nama_produk: nama,
+      id_produk_existing: null,
+      harga_awal: "",
+      harga_jual: "",
+    });
+
+    setSuggestions([]);
+    if (nama.length < 2) return;
+
+    try {
+      setSearching(true);
+      const all = await getAllProduk();
+
+      const filtered = all.filter((p) =>
+        p.nama_produk.toLowerCase().includes(nama.toLowerCase())
+      );
+
+      const unique = filtered.reduce(
+        (acc, item) => {
+          const key = item.nama_produk.toLowerCase();
+          if (!acc.map[key]) {
+            acc.map[key] = true;
+            acc.list.push(item);
+          }
+          return acc;
+        },
+        { map: {}, list: [] }
+      ).list;
+
+      setSuggestions(unique);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleSelectProduk = (p) => {
+    setFormData({
+      ...formData,
+      nama_produk: p.nama_produk,
+      harga_awal: formatRupiah(String(p.harga_awal)),
+      harga_jual: formatRupiah(String(p.harga_jual)),
+      id_produk_existing: p.id_produk,
+    });
+    setSuggestions([]);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!formData.nama_produk || !formData.harga_awal || !formData.harga_jual) {
-      setErrorMsg("Semua field wajib diisi!");
-      return;
-    }
+    const hAwal = parseRupiah(formData.harga_awal);
+    const hJual = parseRupiah(formData.harga_jual);
 
-    const hargaAwalNum = parseRupiah(formData.harga_awal);
-    const hargaJualNum = parseRupiah(formData.harga_jual);
-
-    if (hargaJualNum < hargaAwalNum) {
-      setErrorMsg("Harga jual tidak boleh lebih kecil dari harga awal!");
-      return;
-    }
+    if (!formData.nama_produk) return setErrorMsg("Nama produk wajib diisi!");
+    if (!hAwal || !hJual) return setErrorMsg("Harga wajib diisi!");
+    if (hJual < hAwal)
+      return setErrorMsg("Harga jual tidak boleh lebih kecil dari harga awal!");
 
     setLoading(true);
+
     try {
-      const role = localStorage.getItem("role");
-      const idStore = localStorage.getItem("id_store");
+      let finalId = formData.id_produk_existing;
 
-      if (role === "admin") {
-        const produkBaru = await addProduk({
+      if (!finalId) {
+        const newProduct = await addProduk({
           nama_produk: formData.nama_produk,
-          harga_awal: hargaAwalNum,
-          harga_jual: hargaJualNum,
+          harga_awal: hAwal,
+          harga_jual: hJual,
         });
+        finalId = newProduct.id;
+      }
 
-        if (fromStore && formData.stok_awal) {
-          await addStokProduk({
-            id_produk: produkBaru.id,
-            id_store: fromStore,
-            jumlah_stok: Number(formData.stok_awal),
-          });
-        }
+      if (fromStore && formData.stok_awal) {
+        await addStokProduk({
+          id_produk: finalId,
+          id_store: fromStore,
+          jumlah_stok: Number(formData.stok_awal),
+        });
       }
 
       localStorage.setItem(
         "produkMessage",
         JSON.stringify({
           type: "success",
-          text: `Produk "${formData.nama_produk}" berhasil ditambahkan!`,
+          text: `Produk "${formData.nama_produk}" berhasil disimpan`,
         })
       );
 
-      navigate(fromStore ? `/produk/stok/${fromStore}` : -1);
-    } catch (error) {
-      console.error("❌ Error submit:", error);
-      setErrorMsg(error.message || "Terjadi kesalahan saat menambah produk");
+      navigate(fromStore ? `/produk/stok/${fromStore}` : "/produk");
     } finally {
       setLoading(false);
     }
@@ -80,66 +127,80 @@ export default function ProdukAdd() {
 
   return (
     <MainLayout current="produk">
-      <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 transition-all duration-300">
-        {/* === Header === */}
+      <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 relative">
         <div className="border-b border-gray-100 pb-5 mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">
             Tambah Produk
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Lengkapi data produk baru untuk ditambahkan ke sistem.
-          </p>
+          <p className="text-sm text-gray-500">Lengkapi data produk baru.</p>
         </div>
 
-        {/* 🔴 Alert Error */}
         {errorMsg && (
-          <div className="mb-6 px-4 py-3 rounded-lg bg-red-50 text-red-700 border border-red-200 text-sm font-medium">
+          <div className="mb-6 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
             {errorMsg}
           </div>
         )}
 
-        {/* === Form === */}
-        <form onSubmit={handleSubmit} className="space-y-8 text-left">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {/* Nama Produk */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nama Produk
-              </label>
-              <input
-                type="text"
-                value={formData.nama_produk}
-                onChange={(e) =>
-                  setFormData({ ...formData, nama_produk: e.target.value })
-                }
-                required
-                placeholder="Masukkan nama produk"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* === AUTO SEARCH === */}
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nama Produk
+            </label>
 
-            {/* Stok Awal */}
-            {fromStore && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Stok Awal
-                </label>
-                <input
-                  type="number"
-                  value={formData.stok_awal}
-                  onChange={(e) =>
-                    setFormData({ ...formData, stok_awal: e.target.value })
-                  }
-                  placeholder="Masukkan stok awal"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-                />
-              </div>
+            <input
+              type="text"
+              value={formData.nama_produk}
+              onChange={handleNamaChange}
+              placeholder="Masukkan nama atau ketik untuk mencari..."
+              required
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 
+              focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+            />
+
+            {searching && (
+              <p className="text-xs text-blue-500 mt-1">Mencari...</p>
+            )}
+
+            {suggestions.length > 0 && (
+              <ul className="absolute w-full bg-white border rounded-lg shadow-lg mt-1 z-20 max-h-48 overflow-auto">
+                {suggestions.map((p) => (
+                  <li
+                    key={p.id_produk}
+                    onClick={() => handleSelectProduk(p)}
+                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-sm"
+                  >
+                    <div className="font-medium">{p.nama_produk}</div>
+                    <div className="text-xs text-gray-500">
+                      Harga: Rp {Number(p.harga_jual).toLocaleString("id-ID")}
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
 
-          {/* Harga Awal & Harga Jual */}
+          {/* === STOK (jika add via store) === */}
+          {fromStore && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Stok Awal
+              </label>
+              <input
+                type="number"
+                value={formData.stok_awal}
+                onChange={(e) =>
+                  setFormData({ ...formData, stok_awal: e.target.value })
+                }
+                placeholder="Masukkan stok awal"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 
+                focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+              />
+            </div>
+          )}
+
+          {/* === HARGA === */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {/* Harga Awal */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Harga Awal
@@ -147,20 +208,21 @@ export default function ProdukAdd() {
               <input
                 type="text"
                 value={formData.harga_awal}
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/[^\d]/g, "");
+                onChange={(e) =>
                   setFormData({
                     ...formData,
-                    harga_awal: formatRupiah(raw),
-                  });
-                }}
-                placeholder="Masukkan harga awal"
+                    harga_awal: formatRupiah(
+                      e.target.value.replace(/[^\d]/g, "")
+                    ),
+                  })
+                }
+                placeholder="Contoh: 30000"
                 required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 
+                focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
               />
             </div>
 
-            {/* Harga Jual */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Harga Jual
@@ -168,26 +230,29 @@ export default function ProdukAdd() {
               <input
                 type="text"
                 value={formData.harga_jual}
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/[^\d]/g, "");
+                onChange={(e) =>
                   setFormData({
                     ...formData,
-                    harga_jual: formatRupiah(raw),
-                  });
-                }}
-                placeholder="Masukkan harga jual"
+                    harga_jual: formatRupiah(
+                      e.target.value.replace(/[^\d]/g, "")
+                    ),
+                  })
+                }
+                placeholder="Contoh: 40000"
                 required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 
+                focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
               />
             </div>
           </div>
 
-          {/* Tombol Aksi */}
+          {/* === BUTTON === */}
           <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
+              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 
+              hover:bg-gray-50 transition font-medium"
             >
               Batal
             </button>
@@ -195,10 +260,8 @@ export default function ProdukAdd() {
             <button
               type="submit"
               disabled={loading}
-              className={`px-6 py-2.5 rounded-lg font-medium text-white transition ${
-                loading
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700"
+              className={`px-6 py-2.5 rounded-lg text-white ${
+                loading ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
               {loading ? "Menyimpan..." : "Simpan Produk"}

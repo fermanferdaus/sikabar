@@ -63,7 +63,7 @@ export default function ProdukEditKasir() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/produk/kasir/update`, {
+      const res = await fetch(`${API_URL}/produk/${id_produk}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

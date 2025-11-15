@@ -1,7 +1,28 @@
 import db from "../config/db.js";
-import PDFDocument from "pdfkit";
-import fs from "fs";
-import path from "path";
+
+export const generateNomorStruk = async (req, res) => {
+  try {
+    // Ambil jumlah transaksi hari ini
+    const [rows] = await db.query(`
+      SELECT COUNT(*) AS total 
+      FROM struk 
+      WHERE DATE(created_at) = CURDATE()
+    `);
+
+    const countToday = rows[0]?.total || 0;
+    const now = new Date();
+    const tanggal = now.toISOString().slice(2, 10).replace(/-/g, "");
+
+    // Format: STRK + tanggal + nomor urut 3 digit (001, 002, dst)
+    const nomorUrut = String(countToday + 1).padStart(3, "0");
+    const nomor = `STRK${tanggal}${nomorUrut}`;
+
+    res.json({ nomor_struk: nomor });
+  } catch (err) {
+    console.error("❌ generateNomorStruk Error:", err);
+    res.status(500).json({ message: "Gagal membuat nomor struk" });
+  }
+};
 
 export const printStruk = async (req, res) => {
   try {
@@ -33,12 +54,7 @@ export const printStruk = async (req, res) => {
       return res.status(404).send("❌ Data transaksi tidak ditemukan");
 
     const trx = headerRows[0];
-    const nomorStruk =
-      trx.nomor_struk ||
-      `STRK-${new Date()
-        .toISOString()
-        .slice(2, 10)
-        .replace(/-/g, "")}${Math.floor(10 + Math.random() * 90)}`;
+    const nomorStruk = trx.nomor_struk;
 
     // ================= DETAIL PRODUK =================
     const [produkRows] = await db.query(
@@ -81,60 +97,6 @@ export const printStruk = async (req, res) => {
     );
 
     const items = [...produkRows, ...serviceRows];
-
-    // ================= PDF =================
-    const uploadDir = path.join("uploads", "struk");
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-    const filePath = path.join(uploadDir, `${nomorStruk}.pdf`);
-
-    await new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 40 });
-      const stream = fs.createWriteStream(filePath);
-      doc.pipe(stream);
-
-      const logoPath = path.join("public", "Logo.png");
-      if (fs.existsSync(logoPath)) doc.image(logoPath, 40, 30, { width: 60 });
-      doc.fontSize(16).text(trx.nama_store, 120, 30);
-      doc.fontSize(10).text(trx.alamat_store, 120, 50);
-      doc.moveDown(2);
-      doc.fontSize(10).text(`Nomor Struk : ${nomorStruk}`);
-      doc.text(
-        `Tanggal      : ${new Date(trx.created_at).toLocaleString("id-ID")}`
-      );
-      doc.text(`Kasir        : ${trx.kasir} (${trx.role})`);
-      doc.text(`Metode Bayar : ${trx.metode_bayar?.toUpperCase()}`);
-      doc.text(`Jenis Transaksi : ${trx.tipe_transaksi.toUpperCase()}`);
-      doc.moveDown();
-      doc.fontSize(11).text("Rincian Transaksi:", { underline: true });
-      doc.moveDown(0.5);
-
-      items.forEach((i) => {
-        doc.text(
-          `${i.nama.padEnd(25, " ")} (${i.jumlah}x) ....... ${rupiah(i.total)}`
-        );
-      });
-
-      doc.moveDown();
-      doc.text(`Subtotal : ${rupiah(trx.subtotal)}`);
-      doc.text(`Bayar    : ${rupiah(trx.jumlah_bayar)}`);
-      doc.text(`Kembali  : ${rupiah(trx.kembalian)}`);
-      doc.moveDown(2);
-      doc.text("Terima kasih telah berkunjung 🙏", { align: "center" });
-      doc.end();
-
-      stream.on("finish", resolve);
-      stream.on("error", reject);
-    });
-
-    // Simpan ke tabel struk
-    await db.query(
-      `
-      INSERT INTO struk (id_transaksi, nomor_struk, file_path)
-      VALUES (?, ?, ?)
-      ON DUPLICATE KEY UPDATE file_path = VALUES(file_path)
-    `,
-      [id, nomorStruk, `/uploads/struk/${nomorStruk}.pdf`]
-    );
 
     // ================= HTML (Thermal Print) =================
     const html = `

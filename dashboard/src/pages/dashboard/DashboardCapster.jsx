@@ -1,9 +1,16 @@
 import MainLayout from "../../layouts/MainLayout";
-import { Wallet, Gift, DollarSign, TrendingUp } from "lucide-react";
+import {
+  Wallet,
+  Gift,
+  DollarSign,
+  TrendingUp,
+  Scissors,
+  AlertCircle,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatPeriode } from "../../utils/dateFormatter";
-import CardStat from "../../components/CardStat"; // 🔹 Pindahkan ke file terpisah
+import CardStat from "../../components/CardStat";
 
 export default function CapsterDashboard() {
   const navigate = useNavigate();
@@ -31,6 +38,8 @@ export default function CapsterDashboard() {
             gaji_pokok: 0,
             bonus_bulanan: 0,
             total_pendapatan: 0,
+            potongan_bulan_ini: 0,
+            kasbon_aktif: 0,
             judul_bonus: "-",
             periode: "-",
           });
@@ -66,9 +75,9 @@ export default function CapsterDashboard() {
           <p className="text-sm text-gray-500 mt-1">Periode: {periodeLabel}</p>
         </div>
 
-        {/* === Card Pendapatan (2 Baris × 2 Kolom) === */}
+        {/* === Card Grid === */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-          {/* Urutan warna disusun harmonis dari biru → ungu → oranye → hijau */}
+          {/* 1. Komisi */}
           <CardStat
             title="Komisi"
             icon={<TrendingUp size={32} />}
@@ -79,16 +88,7 @@ export default function CapsterDashboard() {
             subtitle={periodeLabel}
           />
 
-          <CardStat
-            title="Gaji Pokok"
-            icon={<Wallet size={32} />}
-            value={`Rp ${Number(data?.gaji_pokok || 0).toLocaleString(
-              "id-ID"
-            )}`}
-            gradient="from-indigo-500 to-violet-500"
-            subtitle={periodeLabel}
-          />
-
+          {/* 2. Bonus */}
           <CardStat
             title="Bonus"
             icon={<Gift size={32} />}
@@ -96,22 +96,43 @@ export default function CapsterDashboard() {
               "id-ID"
             )}`}
             gradient="from-amber-400 to-orange-500"
-            subtitle={
-              data?.judul_bonus && data.judul_bonus !== ""
-                ? data.judul_bonus
-                : "-"
-            }
+            subtitle={data?.judul_bonus || "-"}
           />
 
+          {/* 3. Potongan */}
           <CardStat
-            title="Total Pendapatan"
-            icon={<DollarSign size={32} />}
-            value={`Rp ${Number(data?.total_pendapatan || 0).toLocaleString(
+            title="Potongan"
+            icon={<Scissors size={32} />}
+            value={`Rp ${Number(data?.potongan_bulan_ini || 0).toLocaleString(
               "id-ID"
             )}`}
-            gradient="from-emerald-400 to-green-500"
-            subtitle={periodeLabel}
+            gradient="from-rose-400 to-red-500"
+            subtitle="Total potongan bulan ini"
           />
+
+          {/* 4. Kasbon */}
+          <CardStat
+            title="Kasbon"
+            icon={<AlertCircle size={32} />}
+            value={`Rp ${Number(data?.kasbon_aktif || 0).toLocaleString(
+              "id-ID"
+            )}`}
+            gradient="from-fuchsia-500 to-purple-600"
+            subtitle="Sisa kasbon berjalan"
+          />
+
+          {/* 5. Total Pendapatan → FULL WIDTH */}
+          <div className="col-span-1 sm:col-span-2">
+            <CardStat
+              title="Total Pendapatan"
+              icon={<DollarSign size={32} />}
+              value={`Rp ${Number(data?.total_pendapatan || 0).toLocaleString(
+                "id-ID"
+              )}`}
+              gradient="from-emerald-400 to-green-500"
+              subtitle={periodeLabel}
+            />
+          </div>
         </div>
       </div>
     </MainLayout>

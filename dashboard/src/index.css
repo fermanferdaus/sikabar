@@ -14,6 +14,13 @@ body {
   --tw-text-opacity: 1 !important;
 }
 
+@media (min-width: 900px) {
+  .force-3-cols {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+
 /* === GLOBAL SCROLLBAR STYLE === */
 
 /* Scrollbar utama (semua elemen scrollable) */

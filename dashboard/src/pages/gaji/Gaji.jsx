@@ -283,11 +283,11 @@ export default function Gaji() {
                             await updateBonusStatus(b.id_bonus, newStatus);
                           }}
                           className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium text-sm shadow-sm transition-all duration-200
-    ${
-      b.status === "belum_diberikan"
-        ? "bg-blue-600 hover:bg-blue-700 text-white"
-        : "bg-green-600 hover:bg-green-700 text-white"
-    }`}
+                          ${
+                            b.status === "belum_diberikan"
+                              ? "bg-blue-600 hover:bg-blue-700 text-white"
+                              : "bg-green-600 hover:bg-green-700 text-white"
+                          }`}
                           title={
                             b.status === "belum_diberikan"
                               ? "Tandai sebagai sudah diberikan"

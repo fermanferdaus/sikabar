@@ -10,7 +10,8 @@ import {
   updateBonus,
   updateGajiSetting,
   updateBonusStatus,
-  getSlipGaji, // ⬅️ tambahkan ini
+  getSlipGaji,
+  getAllPegawaiGaji
 } from "../controllers/gajiSetting.controller.js";
 import { verifyToken } from "../middlewares/auth.middleware.js";
 
@@ -38,5 +39,6 @@ router.delete("/gaji-setting/:id", deleteGajiSetting);
 // 🧾 ROUTE: Slip Gaji (Kasir & Capster)
 // ===============================
 router.get("/slip", verifyToken, getSlipGaji);
+router.get("/pegawai-all", verifyToken, getAllPegawaiGaji);
 
 export default router;

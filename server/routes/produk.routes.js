@@ -72,7 +72,7 @@ router.get("/:id", verifyToken, getProdukById);
 router.post("/", verifyToken, isAdmin, createProduk);
 
 // 🔹 Update produk (admin only)
-router.put("/:id", verifyToken, isAdmin, updateProduk);
+router.put("/:id", verifyToken, updateProduk);
 
 // 🔹 Hapus produk (admin only)
 router.delete("/:id", verifyToken, isAdmin, deleteProduk);

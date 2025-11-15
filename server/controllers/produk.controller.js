@@ -87,14 +87,49 @@ export const createProduk = async (req, res) => {
 // 🟠 Update Produk
 export const updateProduk = async (req, res) => {
   try {
-    const { nama_produk, harga_awal, harga_jual } = req.body;
+    const { nama_produk, harga_awal, harga_jual, jumlah_stok, id_store } =
+      req.body;
+    const { role, id_store: userStore } = req.user;
+    const id_produk = req.params.id;
+
+    // 🔹 Jika kasir, pastikan produk itu milik tokonya
+    if (role === "kasir") {
+      const [cek] = await db.query(
+        "SELECT * FROM stok_produk WHERE id_produk=? AND id_store=?",
+        [id_produk, userStore]
+      );
+      if (!cek.length)
+        return res
+          .status(403)
+          .json({
+            message: "Kasir hanya boleh ubah produk di tokonya sendiri.",
+          });
+    }
+
+    // 🔹 Update data produk
     await db.query(
       "UPDATE produk SET nama_produk=?, harga_awal=?, harga_jual=? WHERE id_produk=?",
-      [nama_produk, harga_awal, harga_jual, req.params.id]
+      [nama_produk, harga_awal, harga_jual, id_produk]
     );
-    res.json({ message: "Produk diperbarui" });
-  } catch {
-    res.status(500).json({ message: "Gagal update produk" });
+
+    // 🔹 Update juga stok jika dikirim
+    if (jumlah_stok != null) {
+      const targetStore = role === "kasir" ? userStore : id_store;
+      await db.query(
+        `INSERT INTO stok_produk (id_store, id_produk, jumlah_stok, stok_akhir)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE 
+         jumlah_stok = VALUES(jumlah_stok),
+         stok_akhir = VALUES(stok_akhir),
+         updated_at = NOW()`,
+        [targetStore, id_produk, jumlah_stok, jumlah_stok]
+      );
+    }
+
+    res.json({ message: "Produk dan stok berhasil diperbarui" });
+  } catch (err) {
+    console.error("updateProduk Error:", err);
+    res.status(500).json({ message: "Gagal memperbarui produk" });
   }
 };
 
@@ -122,12 +157,14 @@ export const getStokPerStore = async (req, res) => {
 
     const sql = `
       SELECT 
-        st.id_store, st.nama_store,
-        IFNULL(COUNT(DISTINCT sp.id_produk), 0) AS total_produk,
-        IFNULL(SUM(sp.stok_akhir), 0) AS total_stok
+        st.id_store,
+        st.nama_store,
+        COALESCE(COUNT(DISTINCT sp.id_produk), 0) AS total_produk,
+        COALESCE(SUM(sp.stok_akhir), 0) AS total_stok
       FROM store st
-      LEFT JOIN stok_produk sp ON st.id_store = sp.id_store
-      ${dateFilter}
+      LEFT JOIN stok_produk sp 
+        ON st.id_store = sp.id_store
+        ${dateFilter ? dateFilter.replace("WHERE", "AND") : ""}
       GROUP BY st.id_store, st.nama_store
       ORDER BY st.nama_store ASC
     `;
@@ -153,16 +190,24 @@ export const deleteStokProduk = async (req, res) => {
         .status(403)
         .json({ message: "Kasir tidak boleh hapus produk di store lain" });
 
-    const [result] = await db.query(
-      "DELETE FROM stok_produk WHERE id_store=? AND id_produk=?",
+    // 🔹 Cek stok
+    const [cek] = await db.query(
+      "SELECT stok_akhir FROM stok_produk WHERE id_store=? AND id_produk=?",
       [id_store, id_produk]
     );
 
-    if (!result.affectedRows)
-      return res.status(404).json({ message: "Stok produk tidak ditemukan" });
+    if (!cek.length)
+      return res.status(404).json({ message: "Data stok tidak ditemukan" });
 
-    res.json({ message: "Stok produk berhasil dihapus dari toko ini" });
-  } catch {
+    // 🔹 Hapus langsung barisnya tanpa reset dulu
+    await db.query("DELETE FROM stok_produk WHERE id_store=? AND id_produk=?", [
+      id_store,
+      id_produk,
+    ]);
+
+    res.json({ message: "Data stok produk berhasil dihapus permanen" });
+  } catch (err) {
+    console.error("❌ deleteStokProduk Error:", err);
     res.status(500).json({ message: "Gagal menghapus stok produk" });
   }
 };
@@ -172,63 +217,72 @@ export const getProdukByStore = async (req, res) => {
   try {
     const { id_store } = req.params;
     const { filterType, tanggal } = req.query;
+
     let dateCondition = "";
-    if (filterType === "Harian" && tanggal)
+
+    // Filter Harian
+    if (filterType === "Harian" && tanggal) {
       dateCondition = `AND DATE(t.created_at) = '${tanggal}'`;
-    else if (filterType === "Bulanan" && tanggal) {
+
+    // Filter Bulanan
+    } else if (filterType === "Bulanan" && tanggal) {
       const bulan = tanggal.slice(0, 7);
       dateCondition = `AND DATE_FORMAT(t.created_at, '%Y-%m') = '${bulan}'`;
     }
 
     const sql = `
       SELECT 
-        p.id_produk, p.nama_produk, p.harga_awal, p.harga_jual,
-        COALESCE(sp.stok_akhir, 0) AS stok_akhir_sistem,
+        p.id_produk,
+        p.nama_produk,
+        p.harga_awal,
+        p.harga_jual,
+        sp.jumlah_stok AS stok_awal,
+        s.nama_store,
+
+        -- TERJUAL (periode)
         COALESCE((
           SELECT SUM(tp.jumlah)
           FROM transaksi_produk_detail tp
           JOIN transaksi t ON t.id_transaksi = tp.id_transaksi
-          WHERE tp.id_produk = p.id_produk AND t.id_store = ?
+          WHERE tp.id_produk = p.id_produk
+          AND t.id_store = sp.id_store
           ${dateCondition}
-        ), 0) AS terjual_periode,
-        (COALESCE(sp.stok_akhir, 0) + COALESCE((
-          SELECT SUM(tp.jumlah)
-          FROM transaksi_produk_detail tp
-          JOIN transaksi t ON t.id_transaksi = tp.id_transaksi
-          WHERE tp.id_produk = p.id_produk AND t.id_store = ?
-          ${dateCondition}
-        ), 0)) AS stok_awal,
-        (COALESCE(sp.stok_akhir, 0) - COALESCE((
-          SELECT SUM(tp.jumlah)
-          FROM transaksi_produk_detail tp
-          JOIN transaksi t ON t.id_transaksi = tp.id_transaksi
-          WHERE tp.id_produk = p.id_produk AND t.id_store = ?
-          ${dateCondition}
-        ), 0)) AS stok_sekarang,
+        ), 0) AS terjual,
+
+        -- LABA (periode)
         COALESCE((
           SELECT SUM(tp.laba_rugi)
           FROM transaksi_produk_detail tp
           JOIN transaksi t ON t.id_transaksi = tp.id_transaksi
-          WHERE tp.id_produk = p.id_produk AND t.id_store = ?
+          WHERE tp.id_produk = p.id_produk
+          AND t.id_store = sp.id_store
           ${dateCondition}
         ), 0) AS total_laba,
-        s.nama_store
-      FROM produk p
-      LEFT JOIN stok_produk sp ON sp.id_produk = p.id_produk AND sp.id_store = ?
-      LEFT JOIN store s ON s.id_store = ?
+
+        -- STOK SEKARANG
+        (sp.jumlah_stok -
+          COALESCE((
+            SELECT SUM(tp.jumlah)
+            FROM transaksi_produk_detail tp
+            JOIN transaksi t ON t.id_transaksi = tp.id_transaksi
+            WHERE tp.id_produk = p.id_produk
+            AND t.id_store = sp.id_store
+            ${dateCondition}
+          ), 0)
+        ) AS stok_sekarang
+
+      FROM stok_produk sp
+      JOIN produk p ON p.id_produk = sp.id_produk
+      JOIN store s ON s.id_store = sp.id_store
+      WHERE sp.id_store = ?
       ORDER BY p.nama_produk ASC
     `;
-    const [rows] = await db.query(sql, [
-      id_store,
-      id_store,
-      id_store,
-      id_store,
-      id_store,
-      id_store,
-      id_store,
-    ]);
+
+    const [rows] = await db.query(sql, [id_store]);
     res.json(rows);
-  } catch {
+
+  } catch (err) {
+    console.error("❌ getProdukByStore Error:", err);
     res.status(500).json({ message: "Gagal mengambil data stok" });
   }
 };
@@ -300,41 +354,46 @@ export const getStokByStoreAndProduk = async (req, res) => {
   }
 };
 
-// 🟠 Update stok produk di store tertentu
+// 🟠 Update stok produk di store tertentu (FINAL FIX v2)
 export const updateStokProduk = async (req, res) => {
   try {
     const { id_store, id_produk, jumlah_stok } = req.body;
+
     if (!id_store || !id_produk || jumlah_stok == null)
       return res.status(400).json({ message: "Data stok tidak lengkap" });
 
-    const [rows] = await db.query(
-      "SELECT jumlah_stok, stok_akhir FROM stok_produk WHERE id_store=? AND id_produk=?",
-      [id_store, id_produk]
-    );
-    const stokLama = rows[0] || { jumlah_stok: 0, stok_akhir: 0 };
-    const selisih = jumlah_stok - stokLama.jumlah_stok;
-    let stokAkhirBaru = stokLama.stok_akhir + selisih;
-    if (stokAkhirBaru < 0) stokAkhirBaru = 0;
+    // Total TERJUAL REAL
+    const [jual] = await db.query(`
+      SELECT COALESCE(SUM(tp.jumlah), 0) AS total_terjual
+      FROM transaksi_produk_detail tp
+      JOIN transaksi t ON t.id_transaksi = tp.id_transaksi
+      WHERE tp.id_produk=? AND t.id_store=?
+    `, [id_produk, id_store]);
 
-    await db.query(
-      `
+    const totalTerjual = Number(jual[0].total_terjual || 0);
+
+    // Stok akhir dihitung ulang
+    const stokAwalBaru = Number(jumlah_stok);
+    const stokAkhirBaru = Math.max(stokAwalBaru - totalTerjual, 0);
+
+    await db.query(`
       INSERT INTO stok_produk (id_store, id_produk, jumlah_stok, stok_akhir)
       VALUES (?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE 
+      ON DUPLICATE KEY UPDATE
         jumlah_stok = VALUES(jumlah_stok),
         stok_akhir = VALUES(stok_akhir),
         updated_at = NOW()
-    `,
-      [id_store, id_produk, jumlah_stok, stokAkhirBaru]
-    );
+    `, [id_store, id_produk, stokAwalBaru, stokAkhirBaru]);
 
     res.json({
-      message: "Stok berhasil diperbarui dengan penyesuaian proporsional",
-      stok_awal_lama: stokLama.jumlah_stok,
-      stok_awal_baru: jumlah_stok,
-      stok_akhir_baru: stokAkhirBaru,
+      message: "Stok berhasil diperbarui",
+      stok_awal_baru: stokAwalBaru,
+      stok_terjual: totalTerjual,
+      stok_akhir_baru: stokAkhirBaru
     });
-  } catch {
+
+  } catch (err) {
+    console.error("❌ updateStokProduk Error:", err);
     res.status(500).json({ message: "Gagal memperbarui stok" });
   }
 };

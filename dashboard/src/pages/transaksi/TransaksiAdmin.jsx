@@ -98,21 +98,6 @@ export default function TransaksiAdmin() {
                   Ringkasan transaksi dan pendapatan setiap cabang.
                 </p>
               </div>
-              <div className="order-1 sm:order-2 flex justify-start sm:justify-end w-full sm:w-auto">
-                <button
-                  onClick={refresh}
-                  disabled={loading}
-                  className={`flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200 ${
-                    loading ? "cursor-wait opacity-90" : ""
-                  }`}
-                >
-                  <RefreshCcw
-                    size={18}
-                    className={loading ? "animate-spin" : ""}
-                  />
-                  {loading ? "Memuat..." : "Refresh"}
-                </button>
-              </div>
             </div>
 
             {/* === Filter Bar === */}

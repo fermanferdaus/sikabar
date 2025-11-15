@@ -181,30 +181,36 @@ export const createTransaksi = async (req, res) => {
     jumlah_bayar,
   } = req.body;
 
+  // 🧩 Validasi dasar
   if (
     !id_store ||
     !id_user ||
     !nomor_struk ||
     !tipe_transaksi ||
     !items?.length
-  )
+  ) {
     return res.status(400).json({ message: "Data transaksi tidak lengkap" });
+  }
 
+  // 🧮 Hitung subtotal & kembalian
   let subtotal = 0;
   items.forEach((i) => (subtotal += i.total || i.harga * (i.jumlah || 1)));
   const kembalian = jumlah_bayar - subtotal;
 
   const conn = await db.getConnection();
+
   try {
     await conn.beginTransaction();
 
-    // Simpan transaksi utama
+    // =============================================================
+    // 🔹 1. Simpan transaksi utama
+    // =============================================================
     const [transaksi] = await conn.query(
       `
       INSERT INTO transaksi 
       (id_store, id_user, tipe_transaksi, metode_bayar, subtotal, jumlah_bayar, kembalian)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `,
+      `,
       [
         id_store,
         id_user,
@@ -218,65 +224,100 @@ export const createTransaksi = async (req, res) => {
 
     const id_transaksi = transaksi.insertId;
 
-    // Simpan struk
-    const file_path = `/uploads/struk/${nomor_struk}.pdf`;
+    // =============================================================
+    // 🔹 2. Simpan nomor struk
+    // =============================================================
     await conn.query(
-      `INSERT INTO struk (id_transaksi, nomor_struk, file_path) VALUES (?, ?, ?)`,
-      [id_transaksi, nomor_struk, file_path]
+      `INSERT INTO struk (id_transaksi, nomor_struk) VALUES (?, ?)`,
+      [id_transaksi, nomor_struk]
     );
 
-    // Simpan detail produk
-    const produkValues = items
-      .filter((i) => i.tipe === "produk")
-      .map((i) => {
-        const jumlah = Number(i.jumlah) || 0;
-        const hargaAwal = Number(i.harga_awal) || 0;
-        const hargaJual = Number(i.harga_jual) || 0;
-        const totalPenjualan = jumlah * hargaJual;
-        const totalModal = jumlah * hargaAwal;
+    // =============================================================
+    // 🔹 3. Simpan detail produk (ambil harga_awal otomatis dari tabel produk)
+    // =============================================================
+    const produkItems = items.filter((i) => i.tipe === "produk");
+
+    if (produkItems.length > 0) {
+      // 🧠 Gabungkan produk dengan id_produk sama
+      const produkMerged = Object.values(
+        produkItems.reduce((acc, item) => {
+          if (!acc[item.id_produk]) acc[item.id_produk] = { ...item };
+          else acc[item.id_produk].jumlah += item.jumlah;
+          return acc;
+        }, {})
+      );
+
+      const produkValues = [];
+
+      for (const item of produkMerged) {
+        const [produkRow] = await conn.query(
+          "SELECT harga_awal, harga_jual FROM produk WHERE id_produk = ?",
+          [item.id_produk]
+        );
+
+        const harga_awal = produkRow[0]?.harga_awal || 0;
+        const harga_jual = item.harga || produkRow[0]?.harga_jual || 0;
+        const jumlah = Number(item.jumlah) || 0;
+
+        const totalPenjualan = jumlah * harga_jual;
+        const totalModal = jumlah * harga_awal;
         const labaRugi = totalPenjualan - totalModal;
-        return [
+
+        produkValues.push([
           id_transaksi,
-          i.id_produk,
+          item.id_produk,
           jumlah,
-          hargaAwal,
-          hargaJual,
+          harga_awal,
+          harga_jual,
           totalPenjualan,
           totalModal,
           labaRugi,
-        ];
-      });
+        ]);
+      }
 
-    if (produkValues.length)
+      // ✅ Simpan detail produk
       await conn.query(
         `
-        INSERT INTO transaksi_produk_detail 
-        (id_transaksi, id_produk, jumlah, harga_awal, harga_jual, total_penjualan, total_modal, laba_rugi)
-        VALUES ?`,
+          INSERT INTO transaksi_produk_detail 
+          (id_transaksi, id_produk, jumlah, harga_awal, harga_jual, total_penjualan, total_modal, laba_rugi)
+          VALUES ?
+        `,
         [produkValues]
       );
 
-    // Kurangi stok
-    for (const [_, id_produk, jumlah] of produkValues)
-      await conn.query(
-        `
-        UPDATE stok_produk 
-        SET stok_akhir = GREATEST(stok_akhir - ?, 0), updated_at = NOW()
-        WHERE id_produk = ? AND id_store = ?`,
-        [jumlah, id_produk, id_store]
-      );
+      // ✅ Kurangi stok hanya sekali per produk
+      for (const item of produkMerged) {
+        await conn.query(
+          `
+          UPDATE stok_produk 
+          SET 
+            stok_akhir = GREATEST(stok_akhir - ?, 0),
+            updated_at = NOW()
+          WHERE id_produk = ? AND id_store = ?
+          LIMIT 1
+        `,
+          [item.jumlah, item.id_produk, id_store]
+        );
+      }
+    }
 
-    // Simpan detail service
+    // =============================================================
+    // 🔹 4. Simpan detail service (dengan komisi capster)
+    // =============================================================
     const serviceItems = items.filter((i) => i.tipe === "service");
-    if (serviceItems.length) {
+
+    if (serviceItems.length > 0) {
       const capsterIds = [...new Set(serviceItems.map((i) => i.id_capster))];
+
       const [rows] = await conn.query(
         `SELECT id_capster, persentase_capster FROM komisi_setting WHERE id_capster IN (?)`,
         [capsterIds]
       );
+
       const komisiMap = Object.fromEntries(
         rows.map((r) => [r.id_capster, parseFloat(r.persentase_capster)])
       );
+
       const serviceValues = serviceItems.map((srv) => {
         const persentase = komisiMap[srv.id_capster] || 0;
         const komisiNominal = (srv.harga * persentase) / 100;
@@ -289,16 +330,22 @@ export const createTransaksi = async (req, res) => {
           komisiNominal,
         ];
       });
+
       await conn.query(
         `
         INSERT INTO transaksi_service_detail 
         (id_transaksi, id_pricelist, id_capster, harga, persentase_capster, komisi_capster)
-        VALUES ?`,
+        VALUES ?
+        `,
         [serviceValues]
       );
     }
 
+    // =============================================================
+    // 🔹 5. Commit transaksi
+    // =============================================================
     await conn.commit();
+
     res.json({
       message: "Transaksi berhasil disimpan",
       id: id_transaksi,
@@ -307,8 +354,9 @@ export const createTransaksi = async (req, res) => {
       jumlah_bayar,
       kembalian,
     });
-  } catch {
+  } catch (err) {
     await conn.rollback();
+    console.error("❌ Gagal menyimpan transaksi:", err);
     res.status(500).json({ message: "Gagal menyimpan transaksi" });
   } finally {
     conn.release();

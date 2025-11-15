@@ -17,6 +17,9 @@ import pengeluaranRoutes from "./routes/pengeluaran.routes.js";
 import keuanganRoutes from "./routes/keuangan.routes.js";
 import strukRoutes from "./routes/struk.routes.js";
 import laporanRoutes from "./routes/laporan.routes.js";
+import kasbonRoutes from "./routes/kasbon.routes.js";
+import potonganRoutes from "./routes/potongan.routes.js";
+import kasirRoutes from "./routes/kasir.routes.js";
 
 dotenv.config();
 const app = express();
@@ -40,6 +43,9 @@ app.use("/api/laporan", laporanRoutes);
 app.use("/uploads", express.static("uploads"));
 app.use("/api", keuanganRoutes);
 app.use("/api/struk", strukRoutes);
+app.use("/api/kasbon", kasbonRoutes);
+app.use("/api/potongan", potonganRoutes);
+app.use("/api/kasir", kasirRoutes);
 app.use(express.static("public"));
 
 // === Server ===

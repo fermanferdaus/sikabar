@@ -10,6 +10,7 @@ import {
   Wallet,
   Banknote,
   Users,
+  User,
   LogOut,
   Clock,
   Settings,
@@ -19,6 +20,8 @@ import {
   Percent,
   X,
   Receipt,
+  ClipboardMinus,
+  DollarSign,
 } from "lucide-react";
 
 // ======================
@@ -203,30 +206,36 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
       ],
     },
     {
-      title: "Data Master",
-      items: [
-        {
-          path: role === "kasir" ? "/produk/kasir" : "/produk",
-          label: "Produk",
-          icon: Package,
-          roles: ["admin", "kasir"],
-        },
-        {
-          path: role === "kasir" ? "/capster/kasir" : "/capster",
-          label: "Capster",
-          icon: Scissors,
-          roles: ["admin", "kasir"],
-        },
-        {
-          path: "/pricelist",
-          label: "Daftar Harga",
-          icon: Tag,
-          roles: ["admin"],
-        },
-        { path: "/store", label: "Cabang", icon: Store, roles: ["admin"] },
-        { path: "/users", label: "Pengguna", icon: Users, roles: ["admin"] },
-      ],
+  title: "Data Master",
+  items: [
+    {
+      path: role === "kasir" ? "/produk/kasir" : "/produk",
+      label: "Produk",
+      icon: Package,
+      roles: ["admin", "kasir"],
     },
+    {
+      path: role === "kasir" ? "/capster/kasir" : "/capster",
+      label: "Capster",
+      icon: Scissors,
+      roles: ["admin", "kasir"],
+    },
+    {
+      path: "/kasir",
+      label: "Kasir",
+      icon: User,
+      roles: ["admin"]
+    },
+    {
+      path: "/pricelist",
+      label: "Daftar Harga",
+      icon: Tag,
+      roles: ["admin"],
+    },
+    { path: "/store", label: "Cabang", icon: Store, roles: ["admin"] },
+    { path: "/users", label: "Pengguna", icon: Users, roles: ["admin"] },
+  ],
+},
     {
       title: "Transaksi & Riwayat",
       items: [
@@ -260,6 +269,24 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
           roles: ["admin"],
         },
         {
+          path: "/kasbon",
+          label: "Kasbon Pegawai",
+          icon: DollarSign,
+          roles: ["admin"],
+        },
+        {
+          path: "/potongan",
+          label: "Potongan Pegawai",
+          icon: ClipboardMinus,
+          roles: ["admin"],
+        },
+        {
+          path: "/slip-admin",
+          label: "Slip Gaji Pegawai",
+          icon: Receipt,
+          roles: ["admin"],
+        },
+        {
           path: "/slip-gaji",
           label: "Slip Gaji",
           icon: Receipt,
@@ -287,6 +314,24 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
     {
       title: "Laporan",
       items: [
+        {
+          path:"/laporan/produk",
+          label: "Laporan Data Produk",
+          icon: FileText,
+          roles: ["admin"],
+        },
+        {
+          path:"/laporan/penjualan-produk",
+          label: "Laporan Penjualan Produk",
+          icon: FileText,
+          roles: ["admin"],
+        },
+        {
+          path:"/laporan/stok-produk",
+          label: "Laporan Stok Produk",
+          icon: FileText,
+          roles: ["admin"],
+        },
         {
           path:
             role === "admin"
