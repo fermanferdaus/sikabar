@@ -20,6 +20,7 @@ import laporanRoutes from "./routes/laporan.routes.js";
 import kasbonRoutes from "./routes/kasbon.routes.js";
 import potonganRoutes from "./routes/potongan.routes.js";
 import kasirRoutes from "./routes/kasir.routes.js";
+import profilRoutes from "./routes/profil.routes.js";
 
 dotenv.config();
 const app = express();
@@ -40,12 +41,13 @@ app.use("/api/gaji", gajiSettingRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/pengeluaran", pengeluaranRoutes);
 app.use("/api/laporan", laporanRoutes);
-app.use("/uploads", express.static("uploads"));
-app.use("/api", keuanganRoutes);
 app.use("/api/struk", strukRoutes);
 app.use("/api/kasbon", kasbonRoutes);
 app.use("/api/potongan", potonganRoutes);
 app.use("/api/kasir", kasirRoutes);
+app.use("/api/profil", profilRoutes);
+app.use("/api", keuanganRoutes);
+app.use("/uploads", express.static("uploads"));
 app.use(express.static("public"));
 
 // === Server ===

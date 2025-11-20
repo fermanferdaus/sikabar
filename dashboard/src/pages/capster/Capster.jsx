@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import ConfirmModal from "../../components/ConfirmModal";
+import { formatCapsterID } from "../../utils/formatID";
 
 export default function Capster() {
   const { capsters, loading, error } = useFetchCapster();
@@ -69,6 +70,7 @@ export default function Capster() {
         // 🔹 Kolom tabel
         const columns = [
           { key: "no", label: "#" },
+          { key: "id_capster", label : "ID Caspter"}, 
           { key: "nama_capster", label: "Nama Capster" },
           { key: "nama_store", label: "Cabang" },
           { key: "status", label: "Status" },
@@ -79,6 +81,11 @@ export default function Capster() {
         // 🔹 Data tabel
         const data = filtered.map((c, i) => ({
           no: i + 1,
+          id_capster: (
+            <span className="font-semibold text-slate-700">
+              {formatCapsterID(c.id_capster)}
+            </span>
+          ),
           nama_capster: c.nama_capster,
           nama_store: c.nama_store,
           status: (

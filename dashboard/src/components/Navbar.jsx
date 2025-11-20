@@ -147,7 +147,7 @@ export default function Navbar({
                     {storedName}
                   </p>
                   <p className="text-xs text-gray-500 capitalize">
-                    {storedRole}
+                    {storedRole === "admin" ? "owner" : storedRole}
                   </p>
                 </div>
 
@@ -181,7 +181,7 @@ export default function Navbar({
                     {storedName}
                   </h2>
                   <p className="text-sm text-gray-500 mb-3 capitalize">
-                    {storedRole}
+                    {storedRole === "admin" ? "owner" : storedRole}
                   </p>
                   <button
                     onClick={handleLogout}

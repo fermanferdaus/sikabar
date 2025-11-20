@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import useProfil from "../../hooks/useProfil";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -8,6 +9,9 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL;
+
+  const { profil } = useProfil();
+  const logoSrc = profil?.logo_url ;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -68,7 +72,7 @@ export default function Login() {
         {/* Logo / Title */}
         <div className="text-center mb-8">
           <img
-            src="/Logo.png"
+            src={logoSrc}
             alt="Logo"
             className="mx-auto w-25 h-25 mb-3 drop-shadow-sm"
           />

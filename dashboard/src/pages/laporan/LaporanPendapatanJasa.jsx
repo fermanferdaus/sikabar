@@ -4,44 +4,43 @@ import TableData from "../../components/TableData";
 import { FileText, Store, Calendar } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import formatRupiah from "../../utils/formatRupiah";
-import { formatPeriode } from "../../utils/dateFormatter";
-import { formatKodeProduk } from "../../utils/formatProduk";
 import useFetchStore from "../../hooks/useFetchStore";
+import { formatTanggal, formatPeriode } from "../../utils/dateFormatter";
+import formatRupiah from "../../utils/formatRupiah";
 import useProfil from "../../hooks/useProfil";
 
-export default function LaporanProduk() {
+export default function LaporanPendapatanJasa() {
   const [data, setData] = useState([]);
   const [selectedStore, setSelectedStore] = useState("Semua");
   const [filterType, setFilterType] = useState("Harian");
+
   const [tanggal, setTanggal] = useState(
     new Date().toISOString().split("T")[0]
   );
   const [bulan, setBulan] = useState(new Date().toISOString().slice(0, 7));
   const [periodeMulai, setPeriodeMulai] = useState("");
   const [periodeAkhir, setPeriodeAkhir] = useState("");
+
   const [loading, setLoading] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL;
+  const { data: storeData, loading: loadingStore } = useFetchStore();
   const { profil } = useProfil();
   const logoSrc = profil?.logo_url || "/Logo1.png";
 
-  // 🔥 PERBAIKAN SATU-SATUNYA DI SINI 🔥
-  const { data: storeData, loading: loadingStore } = useFetchStore();
-
-  // ======================================================
-  // FETCH DATA
-  // ======================================================
+  // =============================
+  // FETCH DATA LAPORAN
+  // =============================
   const fetchData = async () => {
     try {
       setLoading(true);
-
-      let url = `${API_URL}/laporan/produk?`;
+      let url = `${API_URL}/laporan/pendapatan-jasa?`;
 
       if (selectedStore !== "Semua") url += `store=${selectedStore}&`;
+
       if (filterType === "Harian") url += `filter=hari&tanggal=${tanggal}`;
       else if (filterType === "Bulanan") url += `filter=bulan&bulan=${bulan}`;
-      else if (filterType === "Periode" && periodeMulai && periodeAkhir)
+      else if (filterType === "Periode")
         url += `filter=periode&startDate=${periodeMulai}&endDate=${periodeAkhir}`;
 
       const res = await fetch(url);
@@ -56,21 +55,21 @@ export default function LaporanProduk() {
     fetchData();
   }, [selectedStore, filterType, tanggal, bulan, periodeMulai, periodeAkhir]);
 
-  // ======================================================
-  // FORMAT TABLE
-  // ======================================================
+  // =============================
+  // TABLE DATA
+  // =============================
   const tableData = useMemo(
     () =>
       data.map((d, i) => ({
         no: i + 1,
-        store: d.nama_store || "-",
-        kode_produk: formatKodeProduk(d.id_produk),
-        nama_produk: d.nama_produk,
-        satuan: "pcs",
-        harga_awal: formatRupiah(d.harga_awal),
-        harga_jual: formatRupiah(d.harga_jual),
-        jumlah: d.jumlah_stok,
-        _search: `${d.nama_store} ${d.nama_produk}`.toLowerCase(),
+        store: d.store,
+        tanggal: formatTanggal(d.tanggal),
+        no_faktur: d.no_faktur,
+        layanan: d.layanan,
+        harga: formatRupiah(d.harga),
+        laba: formatRupiah(d.laba),
+
+        _search: `${d.store} ${d.layanan} ${d.no_faktur}`.toLowerCase(),
       })),
     [data]
   );
@@ -78,9 +77,9 @@ export default function LaporanProduk() {
   const filterSearch = (s) =>
     tableData.filter((d) => d._search.includes(s.toLowerCase()));
 
-  // ======================================================
+  // =============================
   // PDF EXPORT
-  // ======================================================
+  // =============================
   const handlePrintPDF = () => {
     const doc = new jsPDF({
       orientation: "landscape",
@@ -98,13 +97,10 @@ export default function LaporanProduk() {
     // === HEADER ===
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
-    doc.text(profil?.nama, pageWidth / 2, 12, { align: "center" });
+    doc.text(profil?.nama , pageWidth / 2, 12, { align: "center" });
 
     doc.setFontSize(12);
-    doc.text("LAPORAN DATA PRODUK", pageWidth / 2, 18, { align: "center" });
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
+    doc.text("LAPORAN PENDAPATAN JASA", pageWidth / 2, 18, { align: "center" });
 
     // === FORMAT TANGGAL INDONESIA ===
     const formatTanggalID = (tgl) => {
@@ -116,9 +112,8 @@ export default function LaporanProduk() {
       });
     };
 
-    // === PERIODE TEXT ===
+    // === PERIODE ===
     let periodeText = "";
-
     if (filterType === "Harian") {
       periodeText = `Tanggal: ${formatTanggalID(tanggal)}`;
     } else if (filterType === "Bulanan") {
@@ -128,57 +123,50 @@ export default function LaporanProduk() {
         periodeMulai
       )} s.d. ${formatTanggalID(periodeAkhir)}`;
     } else {
-      periodeText = "Semua Data Produk";
+      periodeText = "Semua Data Pendapatan Jasa";
     }
 
-    // === CETAK PERIODE DI HEADER ===
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
     doc.text(periodeText, pageWidth / 2, 24, { align: "center" });
 
-    // === TABLE ===
+    // === TABLE HEADER ===
     const headers = [
-      [
-        "No",
-        "Cabang",
-        "Kode Produk",
-        "Nama Produk",
-        "Satuan",
-        "Harga Pokok",
-        "Harga Jual",
-        "Jumlah Stok",
-      ],
+      ["No", "Cabang", "Tanggal", "No Faktur", "Layanan", "Harga", "Laba"],
     ];
 
+    // === ROWS ===
     const rows = data.map((d, i) => [
       i + 1,
-      d.nama_store || "-",
-      formatKodeProduk(d.id_produk),
-      d.nama_produk,
-      "pcs",
-      `Rp ${Number(d.harga_awal).toLocaleString("id-ID")}`,
-      `Rp ${Number(d.harga_jual).toLocaleString("id-ID")}`,
-      d.jumlah_stok,
+      d.store,
+      formatTanggal(d.tanggal),
+      d.no_faktur,
+      d.layanan,
+      `Rp ${Number(d.harga).toLocaleString("id-ID")}`,
+      `Rp ${Number(d.laba).toLocaleString("id-ID")}`,
     ]);
 
-    const totalStok = data.reduce((sum, d) => sum + (d.jumlah_stok || 0), 0);
+    // === TOTAL ===
+    const totalLaba = data.reduce((s, d) => s + Number(d.laba || 0), 0);
 
     rows.push([
       {
-        content: "Total",
-        colSpan: 7,
+        content: "Total Laba",
+        colSpan: 6,
         styles: { halign: "right", fontStyle: "bold" },
       },
       {
-        content: totalStok.toLocaleString("id-ID"),
+        content: `Rp ${totalLaba.toLocaleString("id-ID")}`,
         styles: { halign: "center", fontStyle: "bold" },
       },
     ]);
 
+    // === DRAW TABLE ===
     autoTable(doc, {
       startY: 30,
       head: headers,
       body: rows,
       theme: "grid",
-      tableWidth: "auto",
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: {
         fillColor: [37, 99, 235],
@@ -189,6 +177,9 @@ export default function LaporanProduk() {
       margin: { left: 15, right: 15 },
     });
 
+    // === POSISI DI BAWAH TABEL ===
+    const finalY = doc.lastAutoTable.finalY + 12; // jarak setelah tabel
+
     // === BLOK TANDA TANGAN ===
     const now = new Date();
     const tanggalID = now.toLocaleDateString("id-ID", {
@@ -197,32 +188,41 @@ export default function LaporanProduk() {
       year: "numeric",
     });
 
+    doc.setFontSize(11);
     const ownerName = localStorage.getItem("nama_user") || "-";
 
+    /// Posisi dasar di bawah tabel
     let ttdY = doc.lastAutoTable.finalY + 12;
     const ttdX = pageWidth - 80;
 
-    doc.setFontSize(11);
+    // === Baris 1: Kota & tanggal ===
     doc.text(`Bandar Lampung, ${tanggalID}`, ttdX, ttdY);
 
+    // === Baris 2: "Owner," — naikkan Y sedikit ===
     ttdY += 7;
     doc.text("Owner,", ttdX, ttdY);
 
+    // === Ruang kosong untuk tanda tangan (±30mm) ===
     ttdY += 25;
+
+    // === Baris 3: Nama pemilik ===
     doc.text(ownerName, ttdX, ttdY);
 
-    doc.save(`Laporan_Produk_${new Date().toISOString().slice(0, 10)}.pdf`);
+    // === SAVE PDF ===
+    doc.save(
+      `Laporan_Pendapatan_Jasa_${new Date().toISOString().slice(0, 10)}.pdf`
+    );
   };
 
+  // Columns
   const columns = [
     { key: "no", label: "#" },
     { key: "store", label: "Cabang" },
-    { key: "kode_produk", label: "Kode Produk" },
-    { key: "nama_produk", label: "Nama Produk" },
-    { key: "satuan", label: "Satuan" },
-    { key: "harga_awal", label: "Harga Pokok" },
-    { key: "harga_jual", label: "Harga Jual" },
-    { key: "jumlah", label: "Jumlah Stok" },
+    { key: "tanggal", label: "Tanggal" },
+    { key: "no_faktur", label: "No Faktur" },
+    { key: "layanan", label: "Layanan" },
+    { key: "harga", label: "Harga" },
+    { key: "laba", label: "Laba" },
   ];
 
   return (
@@ -232,13 +232,13 @@ export default function LaporanProduk() {
 
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-8">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
-                  Laporan Data Produk
+                  Laporan Pendapatan Jasa
                 </h1>
-                <p className="text-sm text-gray-500 mt-1">
-                  Rekap seluruh data produk berdasarkan filter yang dipilih.
+                <p className="text-sm text-gray-500">
+                  Rekap pendapatan jasa setelah pembagian komisi capster.
                 </p>
               </div>
 
@@ -251,16 +251,14 @@ export default function LaporanProduk() {
               </button>
             </div>
 
-            {/* === Filter Bar === */}
+            {/* FILTERS */}
             <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
               <div className="flex items-center gap-2">
-                <label className="text-gray-600 font-medium text-sm">
-                  Jenis:
-                </label>
+                <label className="text-gray-600 text-sm">Jenis:</label>
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                 >
                   <option value="Harian">Harian</option>
                   <option value="Bulanan">Bulanan</option>
@@ -274,7 +272,7 @@ export default function LaporanProduk() {
                   value={selectedStore}
                   onChange={(e) => setSelectedStore(e.target.value)}
                   disabled={loadingStore}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                 >
                   <option value="Semua">Semua Cabang</option>
                   {storeData.map((s) => (
@@ -292,7 +290,7 @@ export default function LaporanProduk() {
                     type="date"
                     value={tanggal}
                     onChange={(e) => setTanggal(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                   />
                 </div>
               )}
@@ -304,7 +302,7 @@ export default function LaporanProduk() {
                     type="month"
                     value={bulan}
                     onChange={(e) => setBulan(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                   />
                 </div>
               )}
@@ -316,7 +314,7 @@ export default function LaporanProduk() {
                     type="date"
                     value={periodeMulai}
                     onChange={(e) => setPeriodeMulai(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                   />
                   <span className="text-gray-500 text-sm">sampai</span>
                   <Calendar size={16} className="text-gray-500" />
@@ -324,14 +322,15 @@ export default function LaporanProduk() {
                     type="date"
                     value={periodeAkhir}
                     onChange={(e) => setPeriodeAkhir(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                   />
                 </div>
               )}
             </div>
 
+            {/* TABEL */}
             {loading ? (
-              <p className="text-gray-500 italic">Memuat data produk...</p>
+              <p className="text-gray-500 italic">Memuat data...</p>
             ) : filtered.length === 0 ? (
               <p className="text-gray-500 italic">Tidak ada data.</p>
             ) : (

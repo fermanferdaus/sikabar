@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import ConfirmModal from "../../components/ConfirmModal";
+import { formatKasirID } from "../../utils/formatID";
 
 export default function Kasir() {
   const role = localStorage.getItem("role");
@@ -59,6 +60,7 @@ export default function Kasir() {
         // 🧱 Kolom tabel
         const columns = [
           { key: "no", label: "#" },
+          { key: "id_kasir", label: "ID Kasir" },
           { key: "nama_kasir", label: "Nama Kasir" },
           { key: "nama_store", label: "Cabang" },
           { key: "status", label: "Status" },
@@ -69,6 +71,11 @@ export default function Kasir() {
         // 🧱 Data tabel
         const data = filtered.map((k, i) => ({
           no: i + 1,
+          id_kasir: (
+            <span className="font-semibold text-slate-700">
+              {formatKasirID(k.id_kasir)}
+            </span>
+          ),
           nama_kasir: k.nama_kasir,
           nama_store: k.nama_store,
           status: (

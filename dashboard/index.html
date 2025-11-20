@@ -1,10 +1,25 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/Logo1.png" />
+
+    <link id="dynamic-favicon" rel="icon" type="image/png" href="/Logo1.png" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard</title>
+
+    <script type="module">
+      const API_URL = import.meta.env.VITE_API_URL;
+
+      fetch(`${API_URL}/profil`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.logo_url) {
+            document.getElementById("dynamic-favicon").href = data.logo_url;
+          }
+        })
+        .catch((err) => console.error("favicon error:", err));
+    </script>
   </head>
   <body>
     <div id="root"></div>

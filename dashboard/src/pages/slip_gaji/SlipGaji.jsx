@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import html2canvas from "html2canvas";
 import MainLayout from "../../layouts/MainLayout";
+import useProfil from "../../hooks/useProfil";
 import { Download, AlertTriangle } from "lucide-react";
 
 export default function SlipGaji() {
@@ -13,6 +14,9 @@ export default function SlipGaji() {
   const idCapster = localStorage.getItem("id_capster");
   const idKasir = localStorage.getItem("id_kasir");
   const token = localStorage.getItem("token");
+
+  const { profil } = useProfil();
+  const logoSrc = profil?.logo_url || "/Logo1.png";
 
   useEffect(() => {
     if (!["kasir", "capster"].includes(role)) {
@@ -217,7 +221,7 @@ export default function SlipGaji() {
       <html><head><style>${css}</style></head><body>
 
         <header>
-          <div class="logo"><img src="/Logo.png" alt="Logo" /></div>
+          <div class="logo"><img src="${logoSrc}" crossorigin="anonymous" alt="Logo" /></div>
           <h1>Slip Gaji Bulan<br />${data?.periode || "N/A"}</h1>
         </header>
 
@@ -349,6 +353,8 @@ export default function SlipGaji() {
       /* EXPORT PNG */
       const canvas = await html2canvas(iframe.contentDocument.body, {
         scale: 2,
+        useCORS: true,
+        allowTaint: false,
       });
       const img = canvas.toDataURL("image/png");
       const a = document.createElement("a");
@@ -390,7 +396,7 @@ export default function SlipGaji() {
         <div className="w-full bg-white rounded-b-2xl shadow-sm border border-gray-100 px-10 py-10">
           <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-6">
             <img
-              src="/Logo.png"
+              src={logoSrc}
               alt="Logo"
               className="w-20 h-20 object-contain"
             />

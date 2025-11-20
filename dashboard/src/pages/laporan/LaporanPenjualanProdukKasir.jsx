@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo } from "react";
 import MainLayout from "../../layouts/MainLayout";
 import TableData from "../../components/TableData";
 import { FileText, Calendar } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import formatRupiah from "../../utils/formatRupiah";
 import { formatPeriode, formatTanggal } from "../../utils/dateFormatter";
 import useProfil from "../../hooks/useProfil";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
-export default function LaporanPengeluaranKasir() {
+export default function LaporanPenjualanProdukKasir() {
+  const [data, setData] = useState([]);
   const [filterType, setFilterType] = useState("Harian");
   const [tanggal, setTanggal] = useState(
     new Date().toISOString().split("T")[0]
@@ -16,43 +17,29 @@ export default function LaporanPengeluaranKasir() {
   const [bulan, setBulan] = useState(new Date().toISOString().slice(0, 7));
   const [periodeMulai, setPeriodeMulai] = useState("");
   const [periodeAkhir, setPeriodeAkhir] = useState("");
-  const [kategoriPengeluaran, setKategoriPengeluaran] = useState("Semua");
-  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [storeName, setStoreName] = useState(
     localStorage.getItem("nama_store") || "-"
   );
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const idStore = localStorage.getItem("id_store");
+  const id_store = localStorage.getItem("id_store");
   const { profil } = useProfil();
   const logoSrc = profil?.logo_url || "/Logo1.png";
 
-  // ============================
+  // ================================
   // FETCH DATA
-  // ============================
+  // ================================
   const fetchData = async () => {
     try {
       setLoading(true);
-      setError("");
 
-      let url = `${API_URL}/laporan/pengeluaran/kasir?id_store=${idStore}`;
+      let url = `${API_URL}/laporan/penjualan-produk-kasir?id_store=${id_store}&`;
 
-      if (filterType === "Harian") {
-        url += `&filter=periode&startDate=${tanggal}&endDate=${tanggal}`;
-      } else if (filterType === "Bulanan") {
-        const [year, month] = bulan.split("-");
-        const startDate = `${year}-${month}-01`;
-        const endDate = `${year}-${month}-31`;
-        url += `&filter=periode&startDate=${startDate}&endDate=${endDate}`;
-      } else if (filterType === "Periode" && periodeMulai && periodeAkhir) {
-        url += `&filter=periode&startDate=${periodeMulai}&endDate=${periodeAkhir}`;
-      }
-
-      if (kategoriPengeluaran !== "Semua") {
-        url += `&kategori=${kategoriPengeluaran}`;
-      }
+      if (filterType === "Harian") url += `filter=hari&tanggal=${tanggal}`;
+      else if (filterType === "Bulanan") url += `filter=bulan&bulan=${bulan}`;
+      else if (filterType === "Periode")
+        url += `filter=periode&startDate=${periodeMulai}&endDate=${periodeAkhir}`;
 
       const res = await fetch(url);
       const json = await res.json();
@@ -65,17 +52,7 @@ export default function LaporanPengeluaranKasir() {
             localStorage.getItem("nama_store") ||
             "-"
         );
-
-        if (!json.data || json.data.length === 0) {
-          setData([]);
-          return;
-        }
-      } else {
-        setError("Gagal memuat data laporan.");
       }
-    } catch (err) {
-      console.error(err);
-      setError("Gagal memuat data laporan.");
     } finally {
       setLoading(false);
     }
@@ -83,18 +60,32 @@ export default function LaporanPengeluaranKasir() {
 
   useEffect(() => {
     fetchData();
-  }, [
-    filterType,
-    tanggal,
-    bulan,
-    periodeMulai,
-    periodeAkhir,
-    kategoriPengeluaran,
-  ]);
+  }, [filterType, tanggal, bulan, periodeMulai, periodeAkhir]);
 
-  // ============================
-  // PRINT PDF — STYLE SAMA PERSIS
-  // ============================
+  // ================================
+  // FORMAT TABEL
+  // ================================
+  const tableData = useMemo(
+    () =>
+      data.map((d, i) => ({
+        no: i + 1,
+        tanggal: formatTanggal(d.tanggal),
+        faktur: d.nomor_struk,
+        produk: d.nama_produk,
+        jumlah: d.jumlah,
+        harga_satuan: formatRupiah(d.harga_satuan),
+        total: formatRupiah(d.total),
+        _search: `${d.nama_produk} ${d.nomor_struk}`.toLowerCase(),
+      })),
+    [data]
+  );
+
+  const filterSearch = (s) =>
+    tableData.filter((d) => d._search.includes(s.toLowerCase()));
+
+  // ================================
+  // PRINT PDF (STYLE SAMA SEMUA LAPORAN KASIR)
+  // ================================
   const handlePrintPDF = () => {
     const doc = new jsPDF({
       orientation: "landscape",
@@ -103,6 +94,7 @@ export default function LaporanPengeluaranKasir() {
     });
 
     const pageWidth = doc.internal.pageSize.getWidth();
+    const kasirName = localStorage.getItem("nama_user") || "-";
 
     // LOGO
     const logo = new Image();
@@ -115,69 +107,70 @@ export default function LaporanPengeluaranKasir() {
     doc.text(profil?.nama, pageWidth / 2, 12, { align: "center" });
 
     doc.setFontSize(12);
-    doc.text("LAPORAN PENGELUARAN CABANG", pageWidth / 2, 18, {
+    doc.text("LAPORAN PENJUALAN PRODUK CABANG", pageWidth / 2, 18, {
       align: "center",
     });
 
     doc.setFontSize(11);
-    doc.text(`${storeName}`, pageWidth / 2, 23, { align: "center" });
+    doc.text(storeName, pageWidth / 2, 23, { align: "center" });
 
-    // FORMAT TANGGAL INDONESIA
-    const formatTanggalID = (tgl) => {
-      const d = new Date(tgl);
-      return d.toLocaleDateString("id-ID", {
+    const tglID = (tgl) =>
+      new Date(tgl).toLocaleDateString("id-ID", {
         day: "numeric",
         month: "long",
         year: "numeric",
       });
-    };
 
-    // PERIODE
     let periodeText = "";
-    if (filterType === "Harian") {
-      periodeText = `Tanggal: ${formatTanggalID(tanggal)}`;
-    } else if (filterType === "Bulanan") {
+    if (filterType === "Harian") periodeText = `Tanggal: ${tglID(tanggal)}`;
+    else if (filterType === "Bulanan")
       periodeText = `Periode Bulan: ${formatPeriode(bulan)}`;
-    } else if (filterType === "Periode") {
-      periodeText = `Periode: ${formatTanggalID(
-        periodeMulai
-      )} s.d. ${formatTanggalID(periodeAkhir)}`;
-    }
+    else
+      periodeText = `Periode: ${tglID(periodeMulai)} s.d. ${tglID(
+        periodeAkhir
+      )}`;
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.text(periodeText, pageWidth / 2, 28, { align: "center" });
 
-    // TABLE HEADER
+    // TABEL
     const headers = [
-      ["No", "Tanggal", "Kategori", "Keterangan", "Jumlah Pengeluaran"],
+      [
+        "No",
+        "Tanggal",
+        "No Faktur",
+        "Nama Produk",
+        "Jumlah",
+        "Harga Satuan",
+        "Total",
+      ],
     ];
 
-    // TABLE ROWS
     const rows = data.map((d, i) => [
       i + 1,
-      formatTanggalID(d.tanggal),
-      d.kategori,
-      d.keterangan || "-",
-      `Rp ${Number(d.jumlah || 0).toLocaleString("id-ID")}`,
+      tglID(d.tanggal),
+      d.nomor_struk,
+      d.nama_produk,
+      d.jumlah,
+      `Rp ${Number(d.harga_satuan).toLocaleString("id-ID")}`,
+      `Rp ${Number(d.total).toLocaleString("id-ID")}`,
     ]);
 
-    // TOTAL
-    const totalJumlah = data.reduce((sum, d) => sum + (d.jumlah || 0), 0);
+    const totalSemua = data.reduce((sum, d) => sum + Number(d.total), 0);
 
     rows.push([
       {
-        content: "Total Pengeluaran",
-        colSpan: 4,
+        content: "Total Pendapatan Produk",
+        colSpan: 6,
         styles: { halign: "right", fontStyle: "bold" },
       },
       {
-        content: `Rp ${totalJumlah.toLocaleString("id-ID")}`,
+        content: `Rp ${totalSemua.toLocaleString("id-ID")}`,
         styles: { halign: "center", fontStyle: "bold" },
       },
     ]);
 
-    // CETAK TABEL
     autoTable(doc, {
       startY: 34,
       head: headers,
@@ -185,7 +178,7 @@ export default function LaporanPengeluaranKasir() {
       theme: "grid",
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: {
-        fillColor: [37, 99, 235], // BIRU
+        fillColor: [37, 99, 235],
         textColor: 255,
         halign: "center",
       },
@@ -194,83 +187,57 @@ export default function LaporanPengeluaranKasir() {
     });
 
     // TANDA TANGAN
-    const now = new Date();
-    const tanggalID = now.toLocaleDateString("id-ID", {
+    const nowID = new Date().toLocaleDateString("id-ID", {
       day: "numeric",
       month: "long",
       year: "numeric",
     });
 
-    const ttdName = localStorage.getItem("nama_user") || "-";
-
-    let ttdY = doc.lastAutoTable.finalY + 12;
     const ttdX = pageWidth - 80;
+    let ttdY = doc.lastAutoTable.finalY + 12;
 
     doc.setFontSize(11);
-    doc.text(`Bandar Lampung, ${tanggalID}`, ttdX, ttdY);
+    doc.text(`Bandar Lampung, ${nowID}`, ttdX, ttdY);
 
     ttdY += 7;
     doc.text("Kasir,", ttdX, ttdY);
 
     ttdY += 25;
-    doc.text(ttdName, ttdX, ttdY);
+    doc.text(kasirName, ttdX, ttdY);
 
-    // SAVE
     doc.save(
-      `Laporan_PengeluaranKasir_${new Date().toISOString().slice(0, 10)}.pdf`
+      `Laporan_Penjualan_Produk_${new Date().toISOString().slice(0, 10)}.pdf`
     );
   };
 
-  // ============================
-  // TABEL WEB
-  // ============================
+  // ================================
+  // TABLE COLUMNS
+  // ================================
   const columns = [
     { key: "no", label: "#" },
     { key: "tanggal", label: "Tanggal" },
-    { key: "kategori", label: "Kategori Pengeluaran" },
-    { key: "keterangan", label: "Keterangan" },
-    { key: "jumlah", label: "Jumlah Pengeluaran" },
+    { key: "faktur", label: "No Faktur" },
+    { key: "produk", label: "Nama Produk" },
+    { key: "jumlah", label: "Jumlah" },
+    { key: "harga_satuan", label: "Harga Satuan" },
+    { key: "total", label: "Total Harga" },
   ];
 
   return (
     <MainLayout current="laporan">
       {(searchTerm) => {
-        const filteredData = useMemo(() => {
-          if (!searchTerm) return data;
-          const lower = searchTerm.toLowerCase();
-          return data.filter(
-            (d) =>
-              d.kategori.toLowerCase().includes(lower) ||
-              (d.keterangan || "").toLowerCase().includes(lower) ||
-              d.tanggal.toLowerCase().includes(lower)
-          );
-        }, [searchTerm, data]);
-
-        const tableData = useMemo(
-          () =>
-            filteredData.map((d, i) => ({
-              no: i + 1,
-              tanggal: formatTanggal(d.tanggal),
-              kategori: (
-                <span className="capitalize text-slate-700">{d.kategori}</span>
-              ),
-              keterangan: d.keterangan || "-",
-              jumlah: <span>{formatRupiah(d.jumlah)}</span>,
-            })),
-          [filteredData]
-        );
+        const filtered = filterSearch(searchTerm);
 
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-8">
             {/* HEADER */}
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
-                  Laporan Pengeluaran Cabang — <span>{storeName}</span>
+                  Laporan Penjualan Produk — <span>{storeName}</span>
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
-                  Rekap seluruh biaya operasional, pembelian barang, dan
-                  pengeluaran kas.
+                  Rekap penjualan produk berdasarkan transaksi.
                 </p>
               </div>
 
@@ -278,14 +245,12 @@ export default function LaporanPengeluaranKasir() {
                 onClick={handlePrintPDF}
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md"
               >
-                <FileText size={16} />
-                Cetak PDF
+                <FileText size={16} /> Cetak PDF
               </button>
             </div>
 
-            {/* FILTER BAR */}
+            {/* FILTERS */}
             <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
-              {/* Filter Jenis */}
               <div className="flex items-center gap-2">
                 <label className="text-gray-600 font-medium text-sm">
                   Jenis:
@@ -301,25 +266,6 @@ export default function LaporanPengeluaranKasir() {
                 </select>
               </div>
 
-              {/* Filter Kategori */}
-              <div className="flex items-center gap-2">
-                <label className="text-gray-600 font-medium text-sm">
-                  Kategori:
-                </label>
-                <select
-                  value={kategoriPengeluaran}
-                  onChange={(e) => setKategoriPengeluaran(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
-                  <option value="Semua">Semua</option>
-                  <option value="operasional">Operasional</option>
-                  <option value="pembelian">Pembelian</option>
-                  <option value="gaji">Gaji / Komisi</option>
-                  <option value="lainnya">Lainnya</option>
-                </select>
-              </div>
-
-              {/* Filter Waktu — Harian */}
               {filterType === "Harian" && (
                 <div className="flex items-center gap-2">
                   <Calendar size={16} className="text-gray-500" />
@@ -332,7 +278,6 @@ export default function LaporanPengeluaranKasir() {
                 </div>
               )}
 
-              {/* Bulanan */}
               {filterType === "Bulanan" && (
                 <div className="flex items-center gap-2">
                   <Calendar size={16} className="text-gray-500" />
@@ -345,7 +290,6 @@ export default function LaporanPengeluaranKasir() {
                 </div>
               )}
 
-              {/* Periode */}
               {filterType === "Periode" && (
                 <div className="flex items-center gap-2">
                   <Calendar size={16} className="text-gray-500" />
@@ -367,15 +311,13 @@ export default function LaporanPengeluaranKasir() {
               )}
             </div>
 
-            {/* TABLE */}
+            {/* TABEL */}
             {loading ? (
-              <p className="text-gray-500 italic">Memuat laporan...</p>
-            ) : error ? (
-              <p className="text-red-500">{error}</p>
-            ) : tableData.length === 0 ? (
+              <p className="text-gray-500 italic">Memuat data...</p>
+            ) : filtered.length === 0 ? (
               <p className="text-gray-500 italic">Tidak ada data.</p>
             ) : (
-              <TableData columns={columns} data={tableData} />
+              <TableData columns={columns} data={filtered} />
             )}
           </div>
         );

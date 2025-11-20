@@ -5,6 +5,7 @@ import { FileText, Calendar, Store } from "lucide-react";
 import formatRupiah from "../../utils/formatRupiah";
 import { formatTanggal } from "../../utils/dateFormatter";
 import useFetchStore from "../../hooks/useFetchStore";
+import useProfil from "../../hooks/useProfil";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -24,6 +25,8 @@ export default function LaporanPengeluaran() {
 
   const { data: storeData, loading: loadingStore } = useFetchStore();
   const API_URL = import.meta.env.VITE_API_URL;
+  const { profil } = useProfil();
+  const logoSrc = profil?.logo_url || "/Logo1.png";
 
   // === FETCH DATA ===
   const fetchData = async () => {
@@ -73,7 +76,9 @@ export default function LaporanPengeluaran() {
     kategoriPengeluaran,
   ]);
 
-  // === CETAK PDF ===
+  // ===========================
+  // CETAK PDF (STYLE SESUAI)
+  // ===========================
   const handlePrintPDF = () => {
     const doc = new jsPDF({
       orientation: "landscape",
@@ -81,15 +86,22 @@ export default function LaporanPengeluaran() {
       format: "a4",
     });
 
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // === LOGO ===
+    const logo = new Image();
+    logo.src = logoSrc;
+    doc.addImage(logo, "PNG", 80, 6, 22, 22);
+
     // === HEADER ===
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
-    doc.text("LE MUANI BARBERSHOP", 148, 12, { align: "center" });
-    doc.setFontSize(12);
-    doc.text("LAPORAN PENGELUARAN", 148, 18, { align: "center" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
+    doc.text(profil?.nama, pageWidth / 2, 12, { align: "center" });
 
+    doc.setFontSize(12);
+    doc.text("LAPORAN PENGELUARAN", pageWidth / 2, 18, { align: "center" });
+
+    // === FORMAT TANGGAL INDONESIA ===
     const formatTanggalID = (tgl) => {
       const d = new Date(tgl);
       return d.toLocaleDateString("id-ID", {
@@ -99,115 +111,113 @@ export default function LaporanPengeluaran() {
       });
     };
 
+    // === PERIODE ===
     let periodeText = "";
-    if (filterType === "Harian")
+    if (filterType === "Harian") {
       periodeText = `Tanggal: ${formatTanggalID(tanggal)}`;
-    else if (filterType === "Bulanan")
+    } else if (filterType === "Bulanan") {
       periodeText = `Periode Bulan: ${formatTanggalID(bulan + "-01")}`;
-    else if (filterType === "Periode")
+    } else if (filterType === "Periode") {
       periodeText = `Periode: ${formatTanggalID(
         periodeMulai
       )} s.d. ${formatTanggalID(periodeAkhir)}`;
+    }
 
-    doc.text(periodeText, 148, 24, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(periodeText, pageWidth / 2, 24, { align: "center" });
 
-    // === HEADER TABEL ===
+    // === TABEL ===
     const headers = [
       [
         "No",
-        "Tanggal",
         "Store",
+        "Tanggal",
         "Kategori",
         "Keterangan",
         "Jumlah Pengeluaran",
       ],
     ];
 
-    // === ISI DATA ===
     const rows = data.map((d, i) => [
       i + 1,
-      formatTanggalID(d.tanggal),
       d.store,
+      formatTanggalID(d.tanggal),
       d.kategori,
       d.keterangan || "-",
-      `Rp ${Number(d.jumlah || 0).toLocaleString("id-ID")}`,
+      `Rp ${Number(d.jumlah).toLocaleString("id-ID")}`,
     ]);
 
-    // === TOTAL ===
     const totalJumlah = data.reduce((sum, d) => sum + (d.jumlah || 0), 0);
 
-    // Baris total (merge kolom 1–5)
     rows.push([
       {
         content: "Total Pengeluaran",
         colSpan: 5,
-        styles: { halign: "left", fontStyle: "bold" },
+        styles: { halign: "right", fontStyle: "bold" },
       },
       {
         content: `Rp ${totalJumlah.toLocaleString("id-ID")}`,
-        styles: { halign: "right", fontStyle: "bold" },
+        styles: { halign: "center", fontStyle: "bold" },
       },
     ]);
 
-    // === CETAK TABEL ===
     autoTable(doc, {
       startY: 30,
       head: headers,
       body: rows,
       theme: "grid",
-      tableWidth: "auto",
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: {
         fillColor: [37, 99, 235],
         textColor: 255,
         halign: "center",
-      }, // merah
-      bodyStyles: { halign: "center", textColor: [0, 0, 0] },
-      columnStyles: {
-        0: { cellWidth: "wrap" },
-        1: { cellWidth: "wrap" },
-        2: { cellWidth: "wrap" },
-        3: { cellWidth: "wrap" },
-        4: { cellWidth: "wrap" },
-        5: { cellWidth: "wrap", halign: "right" },
       },
+      bodyStyles: { halign: "center", textColor: [0, 0, 0] },
+      margin: { left: 15, right: 15 },
     });
 
-    // === FOOTER ===
+    // === BLOK TANDA TANGAN ===
     const now = new Date();
-    doc.setFontSize(9);
-    doc.text(
-      `Dicetak pada: ${now.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`,
-      285,
-      200,
-      { align: "right" }
-    );
+    const tanggalID = now.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
 
+    const ownerName = localStorage.getItem("nama_user") || "-";
+
+    let ttdY = doc.lastAutoTable.finalY + 12;
+    const ttdX = pageWidth - 80;
+
+    doc.setFontSize(11);
+    doc.text(`Bandar Lampung, ${tanggalID}`, ttdX, ttdY);
+
+    ttdY += 7;
+    doc.text("Owner,", ttdX, ttdY);
+
+    ttdY += 25;
+    doc.text(ownerName, ttdX, ttdY);
+
+    // === SAVE PDF ===
     doc.save(
       `Laporan_Pengeluaran_${new Date().toISOString().slice(0, 10)}.pdf`
     );
   };
 
-  // === KOLOM UNTUK TABEL WEB ===
+  // === KOLOM TABLE WEB ===
   const columns = [
     { key: "no", label: "#" },
-    { key: "tanggal", label: "Tanggal" },
     { key: "store", label: "Store" },
-    { key: "kategori", label: "Kategori Pengeluaran" },
+    { key: "tanggal", label: "Tanggal" },
+    { key: "kategori", label: "Kategori" },
     { key: "keterangan", label: "Keterangan" },
-    { key: "jumlah", label: "Jumlah Pengeluaran" },
+    { key: "jumlah", label: "Jumlah" },
   ];
 
   return (
     <MainLayout current="laporan">
       {(searchTerm) => {
-        // 🔍 Filter data berdasarkan search bar
         const filteredData = useMemo(() => {
           if (!searchTerm) return data;
           const lower = searchTerm.toLowerCase();
@@ -221,30 +231,25 @@ export default function LaporanPengeluaran() {
           );
         }, [searchTerm, data]);
 
-        // 🧾 Siapkan data untuk tabel
         const tableData = useMemo(
           () =>
             filteredData.map((d, i) => ({
               no: i + 1,
-              tanggal: formatTanggal(d.tanggal),
               store: d.store,
+              tanggal: formatTanggal(d.tanggal),
               kategori: (
                 <span className="capitalize text-slate-700">{d.kategori}</span>
               ),
               keterangan: d.keterangan || "-",
-              jumlah: (
-                <span className="text-red-600 font-medium">
-                  {formatRupiah(d.jumlah)}
-                </span>
-              ),
+              jumlah: <span>{formatRupiah(d.jumlah)}</span>,
             })),
           [filteredData]
         );
 
         return (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-8 transition-all duration-300">
-            {/* === Header === */}
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-8">
+            {/* HEADER */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
                   Laporan Pengeluaran
@@ -257,16 +262,16 @@ export default function LaporanPengeluaran() {
 
               <button
                 onClick={handlePrintPDF}
-                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm"
               >
                 <FileText size={16} />
                 Cetak PDF
               </button>
             </div>
 
-            {/* === Filter Bar === */}
+            {/* FILTER BAR */}
             <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
-              {/* Jenis Filter */}
+              {/* Filter Jenis */}
               <div className="flex items-center gap-2">
                 <label className="text-gray-600 font-medium text-sm">
                   Jenis:
@@ -274,7 +279,7 @@ export default function LaporanPengeluaran() {
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                 >
                   <option value="Harian">Harian</option>
                   <option value="Bulanan">Bulanan</option>
@@ -284,16 +289,14 @@ export default function LaporanPengeluaran() {
 
               {/* Filter Store */}
               <div className="flex items-center gap-2">
-                <label className="text-gray-600 font-medium text-sm">
-                  Store:
-                </label>
+                <Store size={16} className="text-gray-500" />
                 <select
                   value={selectedStore}
                   onChange={(e) => setSelectedStore(e.target.value)}
                   disabled={loadingStore}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                 >
-                  <option value="Semua">Semua Store</option>
+                  <option value="Semua">Semua Cabang</option>
                   {storeData.map((s) => (
                     <option key={s.id_store} value={s.id_store}>
                       {s.nama_store}
@@ -302,7 +305,7 @@ export default function LaporanPengeluaran() {
                 </select>
               </div>
 
-              {/* Filter Kategori Pengeluaran */}
+              {/* Filter Kategori */}
               <div className="flex items-center gap-2">
                 <label className="text-gray-600 font-medium text-sm">
                   Kategori:
@@ -310,7 +313,7 @@ export default function LaporanPengeluaran() {
                 <select
                   value={kategoriPengeluaran}
                   onChange={(e) => setKategoriPengeluaran(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+                  className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                 >
                   <option value="Semua">Semua</option>
                   <option value="operasional">Operasional</option>
@@ -328,7 +331,7 @@ export default function LaporanPengeluaran() {
                     type="date"
                     value={tanggal}
                     onChange={(e) => setTanggal(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                   />
                 </div>
               )}
@@ -340,7 +343,7 @@ export default function LaporanPengeluaran() {
                     type="month"
                     value={bulan}
                     onChange={(e) => setBulan(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                   />
                 </div>
               )}
@@ -352,7 +355,7 @@ export default function LaporanPengeluaran() {
                     type="date"
                     value={periodeMulai}
                     onChange={(e) => setPeriodeMulai(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                   />
                   <span className="text-gray-500 text-sm">sampai</span>
                   <Calendar size={16} className="text-gray-500" />
@@ -360,23 +363,19 @@ export default function LaporanPengeluaran() {
                     type="date"
                     value={periodeAkhir}
                     onChange={(e) => setPeriodeAkhir(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
+                    className="border border-gray-300 rounded-md px-2 py-1 text-sm"
                   />
                 </div>
               )}
             </div>
 
-            {/* === Tabel === */}
+            {/* TABLE */}
             {loading ? (
-              <p className="text-gray-500 italic">
-                Memuat laporan pengeluaran...
-              </p>
+              <p className="text-gray-500 italic">Memuat laporan...</p>
             ) : error ? (
               <p className="text-red-500">{error}</p>
             ) : tableData.length === 0 ? (
-              <p className="text-gray-500 italic">
-                Tidak ada data pengeluaran.
-              </p>
+              <p className="text-gray-500 italic">Tidak ada data.</p>
             ) : (
               <TableData columns={columns} data={tableData} />
             )}

@@ -5,7 +5,7 @@ import useProdukAPI from "../../hooks/useProdukAPI";
 import TableData from "../../components/TableData";
 import { Pencil, Trash2, Plus, ArrowLeft } from "lucide-react";
 import ConfirmModal from "../../components/ConfirmModal";
-import { formatKodeProduk } from "../../utils/formatProduk"; // ✅ GLOBAL FORMATTER
+import { formatKodeProduk } from "../../utils/formatProduk";
 
 export default function ProdukStokDetail() {
   const { id_store } = useParams();
@@ -101,7 +101,7 @@ export default function ProdukStokDetail() {
 
         const columns = [
           { key: "no", label: "#" },
-          { key: "kode_produk", label: "Kode" }, // 🔥 NEW
+          { key: "kode_produk", label: "Kode Produk" },
           { key: "nama_produk", label: "Nama Produk" },
           { key: "harga_awal", label: "Harga Awal" },
           { key: "harga_jual", label: "Harga Jual" },

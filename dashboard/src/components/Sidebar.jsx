@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, memo } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -15,14 +15,15 @@ import {
   Clock,
   Settings,
   ChevronDown,
-  FileBarChart,
   FileText,
   Percent,
   X,
   Receipt,
   ClipboardMinus,
   DollarSign,
+  UserRoundCog,
 } from "lucide-react";
+import useProfil from "../hooks/useProfil";
 
 // ======================
 // 🔹 Ikon ChevronTriple
@@ -47,18 +48,10 @@ const ChevronTriple = memo(({ direction = "right", size = 26 }) => {
 });
 
 // ======================
-// 🔹 MenuGroup (memoized)
+// 🔹 MenuGroup
 // ======================
 const MenuGroup = memo(
-  ({
-    group,
-    role,
-    isCollapsed,
-    openGroups,
-    toggleGroup,
-    location,
-    onClose,
-  }) => {
+  ({ group, role, isCollapsed, openGroups, location, onClose }) => {
     const visibleItems = group.items.filter((i) => i.roles.includes(role));
     if (visibleItems.length === 0) return null;
 
@@ -69,19 +62,11 @@ const MenuGroup = memo(
         }`}
       >
         {!isCollapsed && (
-          <button
-            onClick={() => toggleGroup(group.title)}
-            className="w-full flex items-center justify-between text-gray-400 text-[12px] uppercase font-semibold px-4 mb-1 tracking-wide hover:text-[#0e57b5] transition"
-          >
+          <button className="w-full flex items-center justify-between text-gray-400 text-[12px] uppercase font-semibold px-4 mb-1 tracking-wide hover:text-[#0e57b5] transition">
             <span>{group.title}</span>
-            <ChevronDown
-              size={14}
-              className={`transition-transform ${
-                openGroups.includes(group.title)
-                  ? "rotate-180 text-[#0e57b5]"
-                  : ""
-              }`}
-            />
+
+            {/* 🔹 Chevron disembunyikan agar selalu expand (style tidak berubah) */}
+            <ChevronDown size={14} className="opacity-0" />
           </button>
         )}
 
@@ -100,6 +85,7 @@ const MenuGroup = memo(
               const isActive =
                 location.pathname === item.path ||
                 location.pathname.startsWith(item.path + "/");
+
               return (
                 <Link
                   key={item.path}
@@ -141,10 +127,24 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
     const saved = localStorage.getItem("sidebarCollapsed");
     return saved ? JSON.parse(saved) : true;
   });
-  const isAutoExpanding = useRef(false);
   const role = localStorage.getItem("role");
 
+  const { profil } = useProfil();
+  const logoSrc = profil?.logo_url || "/Logo1.png";
+
+  // ===========================
+  // 🔥 Selalu expand semua grup
+  // ===========================
+  useEffect(() => {
+    setOpenGroups(menuGroups.map((g) => g.title));
+  }, []);
+
+  // toggleGroup dimatikan supaya tidak collapse
+  const toggleGroup = () => {};
+
+  //  =====================
   // Responsive handler
+  //  =====================
   useEffect(() => {
     const isMobile = window.innerWidth < 1024;
     if (isMobile && isOpen) {
@@ -152,28 +152,6 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
       onCollapseChange?.(false);
     }
   }, [isOpen]);
-
-  // 🧭 Expand grup aktif sesuai route
-  useEffect(() => {
-    isAutoExpanding.current = true;
-    const activeGroups = [];
-    menuGroups.forEach((group) => {
-      const active = group.items.some(
-        (item) =>
-          location.pathname === item.path ||
-          location.pathname.startsWith(item.path + "/")
-      );
-      if (active) activeGroups.push(group.title);
-    });
-    setOpenGroups(activeGroups);
-    setTimeout(() => (isAutoExpanding.current = false), 150);
-  }, [location.pathname]);
-
-  const toggleGroup = (title) => {
-    setOpenGroups((prev) =>
-      prev.includes(title) ? prev.filter((g) => g !== title) : [...prev, title]
-    );
-  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -187,7 +165,9 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
     onCollapseChange?.(newState);
   };
 
-  // Menu Items
+  // ======================
+  // 🔹 Menu Items
+  // ======================
   const menuGroups = [
     {
       title: "Menu Utama",
@@ -205,37 +185,35 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
         },
       ],
     },
+
     {
-  title: "Data Master",
-  items: [
-    {
-      path: role === "kasir" ? "/produk/kasir" : "/produk",
-      label: "Produk",
-      icon: Package,
-      roles: ["admin", "kasir"],
+      title: "Data Master",
+      items: [
+        {
+          path: role === "kasir" ? "/produk/kasir" : "/produk",
+          label: "Produk",
+          icon: Package,
+          roles: ["admin", "kasir"],
+        },
+        {
+          path: role === "kasir" ? "/capster/kasir" : "/capster",
+          label: "Capster",
+          icon: Scissors,
+          roles: ["admin", "kasir"],
+        },
+        { path: "/kasir", label: "Kasir", icon: User, roles: ["admin"] },
+        {
+          path: "/pricelist",
+          label: "Daftar Harga",
+          icon: Tag,
+          roles: ["admin"],
+        },
+        { path: "/store", label: "Cabang", icon: Store, roles: ["admin"] },
+        { path: "/profil", label: "Profil Barbershop", icon: UserRoundCog, roles: ["admin"] },
+        { path: "/users", label: "Pengguna", icon: Users, roles: ["admin"] },
+      ],
     },
-    {
-      path: role === "kasir" ? "/capster/kasir" : "/capster",
-      label: "Capster",
-      icon: Scissors,
-      roles: ["admin", "kasir"],
-    },
-    {
-      path: "/kasir",
-      label: "Kasir",
-      icon: User,
-      roles: ["admin"]
-    },
-    {
-      path: "/pricelist",
-      label: "Daftar Harga",
-      icon: Tag,
-      roles: ["admin"],
-    },
-    { path: "/store", label: "Cabang", icon: Store, roles: ["admin"] },
-    { path: "/users", label: "Pengguna", icon: Users, roles: ["admin"] },
-  ],
-},
+
     {
       title: "Transaksi & Riwayat",
       items: [
@@ -253,6 +231,7 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
         },
       ],
     },
+
     {
       title: "Keuangan",
       items: [
@@ -294,6 +273,7 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
         },
       ],
     },
+
     {
       title: "Komisi",
       items: [
@@ -311,34 +291,41 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
         },
       ],
     },
+
     {
       title: "Laporan",
       items: [
         {
-          path:"/laporan/produk",
+          path: role === "admin" ? "/laporan/produk" : "/laporan/kasir/produk",
           label: "Laporan Data Produk",
           icon: FileText,
-          roles: ["admin"],
-        },
-        {
-          path:"/laporan/penjualan-produk",
-          label: "Laporan Penjualan Produk",
-          icon: FileText,
-          roles: ["admin"],
-        },
-        {
-          path:"/laporan/stok-produk",
-          label: "Laporan Stok Produk",
-          icon: FileText,
-          roles: ["admin"],
+          roles: ["admin", "kasir"],
         },
         {
           path:
             role === "admin"
-              ? "/laporan/pemasukan"
-              : "/laporan/kasir/pemasukan",
-          label: "Laporan Pemasukan",
-          icon: FileBarChart,
+              ? "/laporan/penjualan-produk"
+              : "/laporan/kasir/penjualan-produk",
+          label: "Laporan Penjualan Produk",
+          icon: FileText,
+          roles: ["admin", "kasir"],
+        },
+        {
+          path:
+            role === "admin"
+              ? "/laporan/pendapatan-produk"
+              : "/laporan/kasir/pendapatan-produk",
+          label: "Laporan Pendapatan Produk",
+          icon: FileText,
+          roles: ["admin", "kasir"],
+        },
+        {
+          path:
+            role === "admin"
+              ? "/laporan/pendapatan-jasa"
+              : "/laporan/kasir/pendapatan-jasa",
+          label: "Laporan Pendapatan Jasa",
+          icon: FileText,
           roles: ["admin", "kasir"],
         },
         {
@@ -378,17 +365,19 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
           {!isCollapsed && (
             <div className="flex items-center gap-3">
               <img
-                src="/Logo1.png"
+                src={logoSrc}
                 alt="Logo Le Muani Barbershop"
                 className="w-11 h-11 object-contain"
               />
               <h1 className="font-bold text-[14px] text-[#0e57b5] leading-tight">
-                LE MUANI <br /> BARBERSHOP
+                {profil?.nama?.split(" ").slice(0, 2).join(" ") || ""}
+                <br />
+                {profil?.nama?.split(" ").slice(2).join(" ") || ""}
               </h1>
             </div>
           )}
 
-          {/* Tombol Close (Mobile) */}
+          {/* Tombol Close */}
           {isOpen && (
             <button
               onClick={onClose}
@@ -430,7 +419,6 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
                 role={role}
                 isCollapsed={isCollapsed}
                 openGroups={openGroups}
-                toggleGroup={toggleGroup}
                 location={location}
                 onClose={onClose}
               />
@@ -459,14 +447,14 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
         </div>
       </aside>
 
-      {/* 🔹 Styling untuk sembunyikan scrollbar tapi tetap bisa scroll */}
+      {/* Hide scrollbar style */}
       <style>{`
         .hide-scrollbar {
-          scrollbar-width: none;        /* Firefox */
-          -ms-overflow-style: none;     /* IE/Edge */
+          scrollbar-width: none;
+          -ms-overflow-style: none;
         }
         .hide-scrollbar::-webkit-scrollbar {
-          display: none;                /* Chrome/Safari/Opera */
+          display: none;
         }
       `}</style>
     </>

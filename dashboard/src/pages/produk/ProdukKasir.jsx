@@ -5,7 +5,7 @@ import useProdukAPI from "../../hooks/useProdukAPI";
 import TableData from "../../components/TableData";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import ConfirmModal from "../../components/ConfirmModal";
-import { formatKodeProduk } from "../../utils/formatProduk"; // ✅ GLOBAL FORMATTER
+import { formatKodeProduk } from "../../utils/formatProduk";
 
 export default function ProdukKasir() {
   const navigate = useNavigate();
@@ -130,7 +130,7 @@ export default function ProdukKasir() {
 
         const columns = [
           { key: "no", label: "#" },
-          { key: "kode_produk", label: "Kode" }, // 🔥 ADA KODE PRODUK
+          { key: "kode_produk", label: "Kode Produk" },
           { key: "nama_produk", label: "Nama Produk" },
           { key: "harga_awal", label: "Harga Awal" },
           { key: "harga_jual", label: "Harga Jual" },

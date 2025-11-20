@@ -50,9 +50,7 @@ import PengeluaranAdminEdit from "./pages/pengeluaran/PengeluaranAdminEdit";
 import PengeluaranKasir from "./pages/pengeluaran/PengeluaranKasir";
 import PengeluaranKasirAdd from "./pages/pengeluaran/PengeluaranKasirAdd";
 import PengeluaranKasirEdit from "./pages/pengeluaran/PengeluaranKasirEdit";
-import LaporanPemasukan from "./pages/laporan/LaporanPemasukan";
 import LaporanPengeluaran from "./pages/laporan/LaporanPengeluran";
-import LaporanPemasukanKasir from "./pages/laporan/LaporanPemasukanKasir";
 import LaporanPengeluaranKasir from "./pages/laporan/LaporanPengeluaranKasir";
 import SlipGaji from "./pages/slip_gaji/SlipGaji";
 import SlipGajiAdmin from "./pages/slip_gaji/SlipGajiAdmin";
@@ -64,8 +62,15 @@ import KasbonEdit from "./pages/kasbon/KasbonEdit";
 import PotonganAdd from "./pages/potongan/PotonganAdd";
 import PotonganEdit from "./pages/potongan/PotonganEdit";
 import LaporanProduk from "./pages/laporan/LaporanProduk";
+import LaporanDataProdukKasir from "./pages/laporan/LaporanDataProdukKasir";
 import LaporanPenjualanProduk from "./pages/laporan/LaporanPenjualanProduk";
-import LaporanStokProduk from "./pages/laporan/LaporanStokProduk";
+import LaporanPenjualanProdukKasir from "./pages/laporan/LaporanPenjualanProdukKasir";
+import LaporanPendapatanProduk from "./pages/laporan/LaporanPendapatanProduk";
+import LaporanPendapatanJasa from "./pages/laporan/LaporanPendapatanJasa";
+import LaporanPendapatanProdukKasir from "./pages/laporan/LaporanPendapatanProdukKasir";
+import LaporanPendapatanJasaKasir from "./pages/laporan/LaporanPendapatanJasaKasir";
+import Profil from "./pages/profil/Profil";
+import ProfilEdit from "./pages/profil/ProfilEdit";
 
 export default function App() {
   return (
@@ -603,6 +608,15 @@ export default function App() {
         />
 
         <Route
+          path="/laporan/kasir/produk"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <LaporanDataProdukKasir />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/laporan/penjualan-produk"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
@@ -612,19 +626,46 @@ export default function App() {
         />
 
         <Route
-          path="/laporan/stok-produk"
+          path="/laporan/kasir/penjualan-produk"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <LaporanStokProduk />
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <LaporanPenjualanProdukKasir />
             </ProtectedRoute>
           }
         />
 
         <Route
-          path="/laporan/pemasukan"
+          path="/laporan/pendapatan-produk"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <LaporanPemasukan />
+              <LaporanPendapatanProduk />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/laporan/kasir/pendapatan-produk"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <LaporanPendapatanProdukKasir />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/laporan/pendapatan-jasa"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <LaporanPendapatanJasa />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/laporan/kasir/pendapatan-jasa"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <LaporanPendapatanJasaKasir />
             </ProtectedRoute>
           }
         />
@@ -639,19 +680,28 @@ export default function App() {
         />
 
         <Route
-          path="/laporan/kasir/pemasukan"
+          path="/laporan/kasir/pengeluaran"
           element={
             <ProtectedRoute allowedRoles={["kasir"]}>
-              <LaporanPemasukanKasir />
+              <LaporanPengeluaranKasir />
             </ProtectedRoute>
           }
         />
 
         <Route
-          path="/laporan/kasir/pengeluaran"
+          path="/profil"
           element={
-            <ProtectedRoute allowedRoles={["kasir"]}>
-              <LaporanPengeluaranKasir />
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Profil />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profil/edit"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ProfilEdit />
             </ProtectedRoute>
           }
         />

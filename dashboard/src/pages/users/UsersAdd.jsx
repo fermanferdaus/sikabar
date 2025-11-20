@@ -284,7 +284,7 @@ export default function UsersAdd() {
                 className="w-full border border-gray-300 rounded-lg px-4 py-3
                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
               >
-                <option value="admin">Admin</option>
+                <option value="admin">Owner</option>
                 <option value="kasir">Kasir</option>
                 <option value="capster">Capster</option>
               </select>

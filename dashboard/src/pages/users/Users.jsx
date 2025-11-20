@@ -75,7 +75,7 @@ export default function Users() {
           nama_store: u.nama_store || <i className="text-gray-400">-</i>,
           role: (
             <span className="capitalize px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
-              {u.role}
+              {u.role == "admin" ? "owner" : u.role}
             </span>
           ),
           aksi: (

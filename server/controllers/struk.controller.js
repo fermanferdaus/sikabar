@@ -32,6 +32,30 @@ export const printStruk = async (req, res) => {
       "Rp" +
       Number(val || 0).toLocaleString("id-ID", { minimumFractionDigits: 0 });
 
+    const formatTanggalWaktu = (date) => {
+      const d = new Date(date);
+
+      const hari = String(d.getDate()).padStart(2, "0");
+      const bulan = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"][d.getMonth()];
+      const tahun = String(d.getFullYear()).slice(2);
+
+      const jam = String(d.getHours()).padStart(2, "0");
+      const menit = String(d.getMinutes()).padStart(2, "0");
+
+      return `${hari} ${bulan} ${tahun} ${jam}:${menit}`;
+    };
+
+    const [profilRows] = await db.query(`
+        SELECT logo, telepon, instagram, tiktok
+        FROM profil 
+        LIMIT 1
+    `);
+
+    const profil = profilRows[0] || {};
+    const logoURL = profil.logo
+      ? `${req.protocol}://${req.get("host")}/${profil.logo}`
+      : "/Logo1.png";
+
     // ================= HEADER =================
     const [headerRows] = await db.query(
       `
@@ -104,7 +128,7 @@ export const printStruk = async (req, res) => {
         <html lang="id">
         <head>
         <meta charset="UTF-8" />
-        <link rel="icon" type="image/svg+xml" href="/Logo1.png" />
+        <link rel="icon" type="image/png" href="${logoURL}" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Struk ${nomorStruk}</title>
         <style>
@@ -128,7 +152,7 @@ export const printStruk = async (req, res) => {
         td { vertical-align: top; }
         img.logo {
             display:block;
-            margin:2px auto 6px auto;
+            margin:0px auto 0px auto;
             width:80px;           /* ✅ logo besar */
             height:auto;
         }
@@ -157,18 +181,19 @@ export const printStruk = async (req, res) => {
         <body onload="window.print()">
 
         <div class="center">
-            <img src="/Logo.png" class="logo" onerror="this.style.display='none'"/><br/>
+            <img src="${logoURL}" class="logo" onerror="this.style.display='none'"/><br/>
             <strong>${trx.nama_store}</strong><br/>
             <small>${trx.alamat_store}</small>
+            <p style="margin:0px 0 0 0; font-size:10px;">
+              ${profil.telepon || "-"}
+          </p>
         </div>
 
         <div class="line"></div>
 
         <table>
-            <tr><td>No</td><td>: ${nomorStruk}</td></tr>
-            <tr><td>Tgl</td><td>: ${new Date(trx.created_at).toLocaleString(
-              "id-ID"
-            )}</td></tr>
+            <tr><td>Faktur</td><td>: ${nomorStruk}</td></tr>
+            <tr><td>Tgl</td><td>: ${formatTanggalWaktu(trx.created_at)}</td></tr>
             <tr><td>Kasir</td><td>: ${trx.kasir}</td></tr>
             <tr><td>Metode</td><td>: ${trx.metode_bayar.toUpperCase()}</td></tr>
         </table>
@@ -206,9 +231,16 @@ export const printStruk = async (req, res) => {
 
         <div class="line"></div>
         <div class="center">
-            <p style="margin-top:10px;">Terima kasih telah berkunjung 😊</p>
-            <p style="margin-top:10px; color:white;">Terima kasih telah berkunjung</p>
-        </div>
+          <p style="margin-top:10px;">Terima kasih telah berkunjung 😊</p>
+
+          <p style="margin:2px 0 0 0; font-size:10px;">
+              Ig:${profil.instagram || "-"}
+          </p>
+
+          <p style="margin:2px 0 0 0; font-size:10px;">
+              TikTok:${profil.tiktok || "-"}
+          </p>
+      </div>
 
         </body>
         </html>

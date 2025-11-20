@@ -5,6 +5,7 @@ import TableData from "../../components/TableData";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import useCapsterKasir from "../../hooks/useCapsterKasir";
 import ConfirmModal from "../../components/ConfirmModal";
+import { formatCapsterID } from "../../utils/formatID";
 
 export default function CapsterKasir() {
   const id_store = localStorage.getItem("id_store");
@@ -70,6 +71,7 @@ export default function CapsterKasir() {
 
         const columns = [
           { key: "no", label: "#" },
+          { key: "id_capster", label: "ID Caspter" },
           { key: "nama_capster", label: "Nama Capster" },
           { key: "status", label: "Status" },
           { key: "aksi", label: "Aksi" },
@@ -77,6 +79,11 @@ export default function CapsterKasir() {
 
         const data = filtered.map((c, i) => ({
           no: i + 1,
+          id_capster: (
+            <span className="font-semibold text-slate-700">
+              {formatCapsterID(c.id_capster)}
+            </span>
+          ),
           nama_capster: c.nama_capster,
           status: (
             <span

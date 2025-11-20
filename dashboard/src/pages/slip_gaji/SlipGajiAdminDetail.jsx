@@ -3,6 +3,7 @@ import html2canvas from "html2canvas";
 import MainLayout from "../../layouts/MainLayout";
 import { Download, AlertTriangle, ArrowLeft } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
+import useProfil from "../../hooks/useProfil";
 
 export default function SlipGajiAdminDetail() {
   const [data, setData] = useState(null);
@@ -12,6 +13,9 @@ export default function SlipGajiAdminDetail() {
 
   const API_URL = import.meta.env.VITE_API_URL;
   const token = localStorage.getItem("token");
+
+  const { profil } = useProfil();
+  const logoSrc = profil?.logo_url || "/Logo1.png";
 
   const { id } = useParams();
   const role = new URLSearchParams(window.location.search).get("role");
@@ -216,7 +220,7 @@ export default function SlipGajiAdminDetail() {
       <html><head><style>${css}</style></head><body>
 
         <header>
-          <div class="logo"><img src="/Logo.png" alt="Logo" /></div>
+          <div class="logo"><img src="${logoSrc}" crossorigin="anonymous" alt="Logo" /></div>
           <h1>Slip Gaji Bulan<br />${data?.periode || "N/A"}</h1>
         </header>
 
@@ -347,6 +351,8 @@ export default function SlipGajiAdminDetail() {
 
       const canvas = await html2canvas(iframe.contentDocument.body, {
         scale: 2,
+        useCORS: true,
+        allowTaint: false,
       });
 
       const img = canvas.toDataURL("image/png");
@@ -394,7 +400,7 @@ export default function SlipGajiAdminDetail() {
       {!errorMsg && !loading && data && (
         <div className="w-full bg-white rounded-b-2xl shadow-sm border border-gray-100 px-10 py-10">
           <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-6">
-            <img src="/Logo.png" className="w-20 h-20 object-contain" />
+            <img src={logoSrc} className="w-20 h-20 object-contain" />
             <h1 className="text-2xl font-bold text-[#0e57b5] text-right">
               Slip Gaji Bulan <br /> {data.periode}
             </h1>

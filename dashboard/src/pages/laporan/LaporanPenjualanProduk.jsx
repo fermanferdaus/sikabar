@@ -5,8 +5,9 @@ import { FileText, Store, Calendar } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import formatRupiah from "../../utils/formatRupiah";
-import { formatTanggal, formatPeriode  } from "../../utils/dateFormatter";
+import { formatTanggal, formatPeriode } from "../../utils/dateFormatter";
 import useFetchStore from "../../hooks/useFetchStore";
+import useProfil from "../../hooks/useProfil";
 
 export default function LaporanPenjualanProduk() {
   const [data, setData] = useState([]);
@@ -22,6 +23,8 @@ export default function LaporanPenjualanProduk() {
 
   const API_URL = import.meta.env.VITE_API_URL;
   const { data: storeData, loading: loadingStore } = useFetchStore();
+  const { profil } = useProfil();
+  const logoSrc = profil?.logo_url || "/Logo1.png";
 
   // ======================================================
   // FETCH DATA
@@ -86,13 +89,13 @@ export default function LaporanPenjualanProduk() {
 
     // === LOGO ===
     const logo = new Image();
-    logo.src = "/Logo.png";
+    logo.src = logoSrc;
     doc.addImage(logo, "PNG", 80, 6, 22, 22);
 
     // === HEADER UTAMA ===
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
-    doc.text("LE MUANI BARBERSHOP", pageWidth / 2, 12, { align: "center" });
+    doc.text(profil?.nama, pageWidth / 2, 12, { align: "center" });
 
     // === SUB-HEADER ===
     doc.setFontSize(12);
@@ -115,7 +118,7 @@ export default function LaporanPenjualanProduk() {
     if (filterType === "Harian") {
       periodeText = `Tanggal: ${formatTanggalID(tanggal)}`;
     } else if (filterType === "Bulanan") {
-     periodeText = `Periode Bulan: ${formatPeriode(bulan)}`;
+      periodeText = `Periode Bulan: ${formatPeriode(bulan)}`;
     } else if (filterType === "Periode") {
       periodeText = `Periode: ${formatTanggalID(
         periodeMulai
@@ -190,22 +193,28 @@ export default function LaporanPenjualanProduk() {
       margin: { left: 15, right: 15 },
     });
 
-    // === FOOTER ===
+    // === BLOK TANDA TANGAN ===
     const now = new Date();
-    doc.setFontSize(9);
-    doc.text(
-      `Dicetak pada: ${now.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`,
-      pageWidth - 15,
-      200,
-      { align: "right" }
-    );
+    const tanggalID = now.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
 
+    const ownerName = localStorage.getItem("nama_user") || "-";
+
+    let ttdY = doc.lastAutoTable.finalY + 12;
+    const ttdX = pageWidth - 80;
+
+    doc.setFontSize(11);
+    doc.text(`Bandar Lampung, ${tanggalID}`, ttdX, ttdY);
+
+    ttdY += 7;
+    doc.text("Owner,", ttdX, ttdY);
+
+    ttdY += 25;
+    doc.text(ownerName, ttdX, ttdY);
+    
     doc.save(
       `Laporan_Penjualan_Produk_${new Date().toISOString().slice(0, 10)}.pdf`
     );
