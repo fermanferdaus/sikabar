@@ -180,7 +180,7 @@ export default function Kasbon() {
 
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6">
-            <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
                   Data Kasbon Pegawai
@@ -190,12 +190,15 @@ export default function Kasbon() {
                 </p>
               </div>
 
-              <button
-                onClick={() => navigate("/kasbon/add")}
-                className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow"
-              >
-                <Plus size={16} /> Tambah Kasbon
-              </button>
+              <div className="flex justify-start sm:justify-end w-auto">
+                <button
+                  onClick={() => navigate("/kasbon/add")}
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] 
+                 text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-sm"
+                >
+                  <Plus size={16} /> Tambah Kasbon
+                </button>
+              </div>
             </div>
 
             {alertMsg && (

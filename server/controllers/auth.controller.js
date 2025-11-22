@@ -14,12 +14,13 @@ export const login = async (req, res) => {
     }
 
     // 🔹 Cek user berdasarkan username
-    const [result] = await db.query("SELECT * FROM users WHERE username = ?", [
-      username,
-    ]);
+    const [result] = await db.query(
+      "SELECT * FROM users WHERE BINARY username = ?",
+      [username]
+    );
 
     if (result.length === 0)
-      return res.status(404).json({ message: "User tidak ditemukan" });
+      return res.status(404).json({ message: "Username tidak ditemukan" });
 
     const user = result[0];
 

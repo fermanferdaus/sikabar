@@ -98,7 +98,7 @@ export default function Profil() {
           </div>
 
           {role === "admin" && (
-            <div className="order-1 sm:order-2">
+            <div className="order-1 sm:order-2 w-full sm:w-auto flex justify-start sm:justify-end">
               <Link
                 to="/profil/edit"
                 className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition-all"

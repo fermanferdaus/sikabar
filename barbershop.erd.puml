@@ -1,63 +1,75 @@
 @startuml
 !theme materia
 
-' ===========================
-'        GLOBAL STYLE
-' ===========================
+
+' ======================================================
+'     POSTER MODE — SUPER MASSIVE A0 CONFIGURATION
+' ======================================================
 skinparam backgroundColor #000000
 skinparam defaultFontName "Consolas"
 skinparam defaultFontColor #ffffff
-skinparam defaultFontSize 200
-skinparam Padding 50
-skinparam HorizontalPadding 60
-skinparam VerticalPadding 40
-skinparam Ranksep 300
-skinparam Nodesep 200
-skinparam svgLinkTarget _blank
-skinparam shadowing false
-skinparam dpi 300
-skinparam svgDimensionStyle true
-skinparam svgBackgroundColor #000000
+skinparam defaultFontSize 500          ' 🔥 FONT SUPER BESAR
 
 
+' ====== TABLE SIZE (SUPER BIG) ======
+skinparam Padding 200
+skinparam HorizontalPadding 280
+skinparam VerticalPadding 260
 
-' ===========================
-'        ENTITY STYLE
-' ===========================
+' ====== SPACING (SUPER WIDE) ======
+skinparam Ranksep 520
+skinparam Nodesep 420
+
+
+' ====== ENTITY STYLE ======
 skinparam entity {
-  BackgroundColor #263238   ' abu tua kehijauan
-  FontColor #ffdd55         ' teks kuning lembut biar kebaca
-  FontSize 200
-  BorderThickness 3
-  RoundCorner 12
+  BackgroundColor #263238
+  FontColor #ffdd55
+  BorderThickness 6
+  RoundCorner 28
 }
-
 skinparam entityAttributeFontColor #ffdd55
-skinparam entityAttributeFontSize 200
+skinparam entityAttributeFontSize 500
 skinparam entityBorderColor #00eaff
-skinparam entityBackgroundColor #263238
-skinparam entityFontColor #ffdd55
-skinparam entityStereotypeFontColor #00eaff
 
-' ===========================
-'        RELATION STYLE
-' ===========================
 skinparam arrow {
   Color #ffffff
-  Thickness 30
-}
-skinparam note {
-  BackgroundColor #1a1a1a
-  BorderColor #00eaff
-  FontColor #ffdd55
-  FontSize 200
+  Thickness 45      ' Garis besar agar terbaca dari jauh
 }
 
-left to right direction
+top to bottom direction
 
-' ===========================
-'        ENTITIES
-' ===========================
+
+
+' ======================================================
+' ROW 1 — STORE + PROFIL
+' ======================================================
+entity "store" as store {
+  *id_store : INT <<PK>>
+  --
+  nama_store : VARCHAR(100)
+  alamat_store : TEXT
+  created_at : DATETIME
+}
+
+entity "profil" as profil {
+  *id_profil : INT <<PK>>
+  --
+  nama_barbershop : VARCHAR(150)
+  logo : VARCHAR(255)
+  telepon : VARCHAR(20)
+  instagram : VARCHAR(100)
+  tiktok : VARCHAR(100)
+  created_at : DATETIME
+}
+
+store -[hidden]-> profil
+
+
+
+' ======================================================
+' ROW 2 — USERS | KASIR | CAPSTER
+' ======================================================
 entity "users" as users {
   *id_user : INT <<PK>>
   --
@@ -67,14 +79,17 @@ entity "users" as users {
   role : ENUM
   id_store : INT <<FK>>
   id_capster : INT <<FK>>
+  id_kasir : INT <<FK>>
   created_at : DATETIME
 }
 
-entity "store" as store {
-  *id_store : INT <<PK>>
+entity "kasir" as kasir {
+  *id_kasir : INT <<PK>>
   --
-  nama_store : VARCHAR(100)
-  alamat_store : TEXT
+  nama_kasir : VARCHAR(100)
+  id_store : INT <<FK>>
+  id_user : INT <<FK>>
+  status : ENUM
   created_at : DATETIME
 }
 
@@ -88,12 +103,31 @@ entity "capster" as capster {
   created_at : DATETIME
 }
 
-entity "produk" as produk {
-  *id_produk : INT <<PK>>
+store -- users : bekerja_di
+store -- kasir : memiliki
+store -- capster : memiliki
+
+users -- kasir : terhubung
+users -- capster : terhubung
+
+users -[hidden]-> kasir
+kasir -[hidden]-> capster
+
+
+
+' ======================================================
+' ROW 3 — TRANSAKSI + PENGELUARAN + STRUK
+' ======================================================
+entity "transaksi" as transaksi {
+  *id_transaksi : INT <<PK>>
   --
-  nama_produk : VARCHAR(100)
-  harga_awal : DECIMAL
-  harga_jual : DECIMAL
+  id_store : INT <<FK>>
+  id_user : INT <<FK>>
+  tipe_transaksi : ENUM
+  metode_bayar : VARCHAR(20)
+  subtotal : DECIMAL
+  jumlah_bayar : DECIMAL
+  kembalian : DECIMAL
   created_at : DATETIME
 }
 
@@ -110,38 +144,28 @@ entity "pengeluaran" as pengeluaran {
   created_at : DATETIME
 }
 
-entity "stok_produk" as stok_produk {
-  *id_stok : INT <<PK>>
-  --
-  id_produk : INT <<FK>>
-  id_store : INT <<FK>>
-  jumlah_stok : INT
-  stok_akhir : INT
-  updated_at : DATETIME
-}
-
-entity "transaksi" as transaksi {
-  *id_transaksi : INT <<PK>>
-  --
-  id_store : INT <<FK>>
-  id_user : INT <<FK>>
-  tipe_transaksi : ENUM
-  metode_bayar : VARCHAR(20)
-  subtotal : DECIMAL
-  jumlah_bayar : DECIMAL
-  kembalian : DECIMAL
-  created_at : DATETIME
-}
-
 entity "struk" as struk {
   *id_struk : INT <<PK>>
   --
   id_transaksi : INT <<FK>>
   nomor_struk : VARCHAR(30)
-  file_path : VARCHAR(255)
   created_at : DATETIME
 }
 
+store -- transaksi : melayani_transaksi
+store -- pengeluaran : memiliki_pengeluaran
+users -- transaksi : dicatat_oleh
+users -- pengeluaran : mencatat
+transaksi ||-- struk : memiliki_struk
+
+transaksi -[hidden]-> pengeluaran
+pengeluaran -[hidden]-> struk
+
+
+
+' ======================================================
+' ROW 4 — DETAIL SERVICE + DETAIL PRODUK
+' ======================================================
 entity "transaksi_service_detail" as transaksi_service_detail {
   *id_detail : INT <<PK>>
   --
@@ -168,6 +192,26 @@ entity "transaksi_produk_detail" as transaksi_produk_detail {
   created_at : DATETIME
 }
 
+transaksi -- transaksi_service_detail : detail_service
+transaksi -- transaksi_produk_detail : detail_produk
+capster -- transaksi_service_detail : melayani
+
+transaksi_service_detail -[hidden]-> transaksi_produk_detail
+
+
+
+' ======================================================
+' ROW 5 — PRODUK + PRICELIST + STOK PRODUK
+' ======================================================
+entity "produk" as produk {
+  *id_produk : INT <<PK>>
+  --
+  nama_produk : VARCHAR(100)
+  harga_awal : DECIMAL
+  harga_jual : DECIMAL
+  created_at : DATETIME
+}
+
 entity "pricelist" as pricelist {
   *id_pricelist : INT <<PK>>
   --
@@ -177,6 +221,28 @@ entity "pricelist" as pricelist {
   created_at : DATETIME
 }
 
+entity "stok_produk" as stok_produk {
+  *id_stok : INT <<PK>>
+  --
+  id_produk : INT <<FK>>
+  id_store : INT <<FK>>
+  jumlah_stok : INT
+  stok_akhir : INT
+  updated_at : DATETIME
+}
+
+produk -- stok_produk : tersedia_di
+produk -- transaksi_produk_detail : terjual_dalam
+pricelist -- transaksi_service_detail : digunakan_pada
+
+produk -[hidden]-> pricelist
+pricelist -[hidden]-> stok_produk
+
+
+
+' ======================================================
+' ROW 6 — KOMISI | GAJI | BONUS | KASBON | POTONGAN
+' ======================================================
 entity "komisi_setting" as komisi_setting {
   *id_setting : INT <<PK>>
   --
@@ -189,6 +255,7 @@ entity "gaji_setting" as gaji_setting {
   *id_gaji_setting : INT <<PK>>
   --
   id_capster : INT <<FK>>
+  id_kasir : INT <<FK>>
   id_user : INT <<FK>>
   gaji_pokok : DECIMAL
   periode : ENUM
@@ -199,40 +266,61 @@ entity "bonus" as bonus {
   *id_bonus : INT <<PK>>
   --
   id_capster : INT <<FK>>
+  id_kasir : INT <<FK>>
   id_user : INT <<FK>>
   judul_bonus : VARCHAR(100)
   jumlah : DECIMAL
   keterangan : TEXT
   tanggal_diberikan : DATE
   periode : CHAR(7)
+  status : ENUM
   created_at : DATETIME
 }
 
-' ===========================
-'       RELATIONSHIPS
-' ===========================
-store ||--o{ capster : memiliki
-store ||--o{ stok_produk : memiliki_stok
-store ||--o{ transaksi : melayani_transaksi
-store ||--o{ pengeluaran : memiliki_pengeluaran
+entity "kasbon" as kasbon {
+  *id_kasbon : INT <<PK>>
+  --
+  id_capster : INT <<FK>>
+  id_kasir : INT <<FK>>
+  jumlah_total : DECIMAL
+  sisa_kasbon : DECIMAL
+  jumlah_cicilan : INT
+  cicilan_terbayar : INT
+  keterangan : VARCHAR(255)
+  status : ENUM
+  tanggal_pinjam : DATE
+  created_at : DATETIME
+  updated_at : DATETIME
+}
 
-users ||--o{ transaksi : dicatat_oleh
-users ||--o{ pengeluaran : mencatat
-users ||--|| capster : terhubung
-users ||--|| store : bekerja_di
+entity "potongan_kasbon" as potongan_kasbon {
+  *id_potongan : INT <<PK>>
+  --
+  id_kasbon : INT <<FK>>
+  id_capster : INT <<FK>>
+  id_kasir : INT <<FK>>
+  periode : CHAR(7)
+  jumlah_potongan : DECIMAL
+  keterangan : VARCHAR(255)
+  tanggal_potong : DATE
+  tipe_potongan : ENUM
+}
 
-capster ||--o{ komisi_setting : memiliki_komisi
-capster ||--o{ gaji_setting : memiliki_gaji
-capster ||--o{ bonus : mendapat_bonus
-capster ||--o{ transaksi_service_detail : melayani
+capster -- komisi_setting : memiliki_komisi
+capster -- gaji_setting : memiliki_gaji
+capster -- bonus : mendapat_bonus
+capster -- kasbon : meminjam
+capster -- potongan_kasbon : dipotong
 
-produk ||--o{ stok_produk : tersedia_di
-produk ||--o{ transaksi_produk_detail : terjual_dalam
+kasir -- bonus : memberikan
+kasir -- kasbon : mencatat
+kasir -- potongan_kasbon : mencatat_potongan
 
-pricelist ||--o{ transaksi_service_detail : digunakan_pada
+kasbon -- potongan_kasbon : memiliki_potongan
 
-transaksi ||--o{ transaksi_service_detail : detail_service
-transaksi ||--o{ transaksi_produk_detail : detail_produk
-transaksi ||--|| struk : memiliki_struk
+komisi_setting -[hidden]-> gaji_setting
+gaji_setting -[hidden]-> bonus
+bonus -[hidden]-> kasbon
+kasbon -[hidden]-> potongan_kasbon
 
 @enduml

@@ -24,7 +24,10 @@ export default function LaporanProduk() {
 
   const API_URL = import.meta.env.VITE_API_URL;
   const { profil } = useProfil();
-  const logoSrc = profil?.logo_url || "/Logo1.png";
+  const logoSrc = (profil?.logo_url || "/Logo1.png").replace(
+    "http://",
+    "https://"
+  );
 
   // 🔥 PERBAIKAN SATU-SATUNYA DI SINI 🔥
   const { data: storeData, loading: loadingStore } = useFetchStore();
@@ -242,13 +245,16 @@ export default function LaporanProduk() {
                 </p>
               </div>
 
-              <button
-                onClick={handlePrintPDF}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm"
-              >
-                <FileText size={16} />
-                Cetak PDF
-              </button>
+              <div className="flex justify-start sm:justify-end w-full sm:w-auto">
+                <button
+                  onClick={handlePrintPDF}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 
+                 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm"
+                >
+                  <FileText size={16} />
+                  Cetak PDF
+                </button>
+              </div>
             </div>
 
             {/* === Filter Bar === */}

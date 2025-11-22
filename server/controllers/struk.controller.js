@@ -1,4 +1,7 @@
 import db from "../config/db.js";
+import { createCanvas, loadImage } from "canvas";
+import path from "path";
+import { fileURLToPath } from "url";
 
 export const generateNomorStruk = async (req, res) => {
   try {
@@ -36,7 +39,20 @@ export const printStruk = async (req, res) => {
       const d = new Date(date);
 
       const hari = String(d.getDate()).padStart(2, "0");
-      const bulan = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"][d.getMonth()];
+      const bulan = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "Mei",
+        "Jun",
+        "Jul",
+        "Agu",
+        "Sep",
+        "Okt",
+        "Nov",
+        "Des",
+      ][d.getMonth()];
       const tahun = String(d.getFullYear()).slice(2);
 
       const jam = String(d.getHours()).padStart(2, "0");
@@ -45,6 +61,41 @@ export const printStruk = async (req, res) => {
       return `${hari} ${bulan} ${tahun} ${jam}:${menit}`;
     };
 
+    async function generateCircularFavicon(url) {
+      const size = 256;
+      const canvas = createCanvas(size, size);
+      const ctx = canvas.getContext("2d");
+
+      try {
+        const img = await loadImage(url);
+
+        // background bulat putih
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // scale hampir full
+        const scale = 0.95;
+        let w = size * scale;
+        let h = size * scale;
+
+        // jaga proporsi
+        if (img.width > img.height) {
+          h = (img.height / img.width) * w;
+        } else {
+          w = (img.width / img.height) * h;
+        }
+
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+
+        return canvas.toDataURL("image/png");
+      } catch (err) {
+        console.error("Favicon generation error:", err);
+        return null;
+      }
+    }
+
     const [profilRows] = await db.query(`
         SELECT logo, telepon, instagram, tiktok
         FROM profil 
@@ -52,9 +103,17 @@ export const printStruk = async (req, res) => {
     `);
 
     const profil = profilRows[0] || {};
-    const logoURL = profil.logo
-      ? `${req.protocol}://${req.get("host")}/${profil.logo}`
-      : "/Logo1.png";
+
+    // untuk mendapatkan __dirname (karena ES module)
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+    const logoPath = profil.logo
+      ? path.join(__dirname, "..", profil.logo) // pastikan folder 'uploads' benar
+      : null;
+
+    const faviconBase64 = logoPath
+      ? await generateCircularFavicon(logoPath)
+      : null;
 
     // ================= HEADER =================
     const [headerRows] = await db.query(
@@ -128,7 +187,11 @@ export const printStruk = async (req, res) => {
         <html lang="id">
         <head>
         <meta charset="UTF-8" />
-        <link rel="icon" type="image/png" href="${logoURL}" />
+        ${
+          faviconBase64
+            ? `<link rel="icon" type="image/png" href="${faviconBase64}" />`
+            : ""
+        }
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Struk ${nomorStruk}</title>
         <style>
@@ -181,19 +244,23 @@ export const printStruk = async (req, res) => {
         <body onload="window.print()">
 
         <div class="center">
-            <img src="${logoURL}" class="logo" onerror="this.style.display='none'"/><br/>
+            <img src="${profil.logo ? `${req.protocol}://${req.get("host")}/${profil.logo}` : ""}"
+              class="logo"
+              onerror="this.style.display='none'"/>
             <strong>${trx.nama_store}</strong><br/>
             <small>${trx.alamat_store}</small>
             <p style="margin:0px 0 0 0; font-size:10px;">
-              ${profil.telepon || "-"}
+              Tlp. ${profil.telepon || "-"}
           </p>
         </div>
 
         <div class="line"></div>
 
         <table>
-            <tr><td>Faktur</td><td>: ${nomorStruk}</td></tr>
-            <tr><td>Tgl</td><td>: ${formatTanggalWaktu(trx.created_at)}</td></tr>
+            <tr><td>No</td><td>: ${nomorStruk}</td></tr>
+            <tr><td>Tgl</td><td>: ${formatTanggalWaktu(
+              trx.created_at
+            )}</td></tr>
             <tr><td>Kasir</td><td>: ${trx.kasir}</td></tr>
             <tr><td>Metode</td><td>: ${trx.metode_bayar.toUpperCase()}</td></tr>
         </table>

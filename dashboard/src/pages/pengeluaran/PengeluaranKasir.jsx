@@ -204,12 +204,16 @@ export default function PengeluaranKasir() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => navigate(`/pengeluaran/kasir/add`)}
-                  className="flex items-center justify-center md:justify-end gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <Plus size={16} /> Tambah Pengeluaran
-                </button>
+                <div className="flex justify-start md:justify-end w-full md:w-auto">
+                  <button
+                    onClick={() => navigate(`/pengeluaran/kasir/add`)}
+                    className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] 
+                 text-white px-4 py-2.5 rounded-lg text-sm font-medium 
+                 shadow-sm hover:shadow-md transition-all duration-200"
+                  >
+                    <Plus size={16} /> Tambah Pengeluaran
+                  </button>
+                </div>
               </div>
 
               {/* === Alert === */}

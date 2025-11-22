@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import TableData from "../../components/TableData";
 import ConfirmModal from "../../components/ConfirmModal";
@@ -338,7 +338,7 @@ export default function Pengeluaran() {
               {/* === PENGELUARAN ADMIN === */}
               {role === "admin" && (
                 <div className="mt-12">
-                  <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-4">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-gray-100 pb-4 mb-4 gap-3">
                     <div>
                       <h1 className="text-lg font-semibold text-slate-800">
                         Pengeluaran Pusat (Admin)
@@ -348,12 +348,16 @@ export default function Pengeluaran() {
                         pusat.
                       </p>
                     </div>
-                    <button
-                      onClick={() => navigate("/pengeluaran/add")}
-                      className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md"
-                    >
-                      <Plus size={16} /> Tambah Pengeluaran
-                    </button>
+
+                    <div className="flex justify-start sm:justify-end w-auto">
+                      <Link
+                        to="/pengeluaran/add"
+                        className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
+                      >
+                        <Plus size={16} />
+                        Tambah Pengeluaran
+                      </Link>
+                    </div>
                   </div>
 
                   {/* ALERT */}

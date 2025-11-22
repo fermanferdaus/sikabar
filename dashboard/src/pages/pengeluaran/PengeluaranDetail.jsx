@@ -214,19 +214,19 @@ export default function PengeluaranDetail() {
                 </div>
 
                 {/* Tombol Aksi */}
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="order-1 sm:order-2 flex gap-2">
                   <button
                     onClick={() =>
                       navigate(`/pengeluaran/add?id_store=${id_store}`)
                     }
-                    className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-sm transition-all"
+                    className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition"
                   >
                     <Plus size={16} /> Tambah Pengeluaran
                   </button>
 
                   <button
                     onClick={() => navigate("/pengeluaran")}
-                    className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-lg text-sm font-medium transition-all"
+                    className="flex items-center gap-2 bg-[#f3f6fb] text-[#0e57b5] px-4 py-2.5 rounded-xl text-sm font-medium border border-[#e4e7ec] hover:bg-[#eaf0fa] transition"
                   >
                     <ArrowLeft size={16} /> Kembali
                   </button>

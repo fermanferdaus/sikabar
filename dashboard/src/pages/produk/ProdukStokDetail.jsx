@@ -152,9 +152,9 @@ export default function ProdukStokDetail() {
         }));
 
         return (
-          <div className="bg-white shadow-md rounded-2xl border border-gray-100 p-8 space-y-6">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-8 transition-all duration-300">
             {/* === Header === */}
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
                   Stok Produk – {storeName || `Store #${id_store}`}

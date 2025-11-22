@@ -193,13 +193,15 @@ export default function ProdukKasir() {
                 </p>
               </div>
 
-              <button
-                onClick={handleAddProduk}
-                className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
-              >
-                <Plus size={16} />
-                Tambah Produk
-              </button>
+              <div className="flex justify-start sm:justify-end w-full sm:w-auto">
+                <button
+                  onClick={handleAddProduk}
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
+                >
+                  <Plus size={16} />
+                  Tambah Produk
+                </button>
+              </div>
             </div>
 
             {/* === Filter Bar === */}

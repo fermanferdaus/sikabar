@@ -369,7 +369,11 @@ export default function SlipGajiAdminDetail() {
   };
   return (
     <MainLayout current="Slip Gaji">
-      <div className="bg-white rounded-t-2xl border-b border-gray-100 p-6 flex items-center justify-between">
+      <div
+        className="bg-white rounded-t-2xl border-b border-gray-100 p-6 
+                flex flex-col sm:flex-row sm:items-center 
+                sm:justify-between gap-3"
+      >
         <div>
           <h1 className="text-lg font-semibold text-slate-800">
             Slip Gaji Bulanan
@@ -379,15 +383,18 @@ export default function SlipGajiAdminDetail() {
           </p>
         </div>
 
-        <button
-          onClick={() => navigate("/slip-admin")}
-          className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 
-                     text-gray-800 px-4 py-2.5 rounded-xl text-sm font-medium 
-                     shadow-sm hover:shadow-md transition-all"
-        >
-          <ArrowLeft size={16} />
-          Kembali
-        </button>
+        {/* Tombol kembali — mobile rata kiri, desktop rata kanan */}
+        <div className="flex justify-start sm:justify-end">
+          <button
+            onClick={() => navigate("/slip-admin")}
+            className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 
+                 text-gray-800 px-4 py-2.5 rounded-xl text-sm font-medium 
+                 shadow-sm hover:shadow-md transition-all"
+          >
+            <ArrowLeft size={16} />
+            Kembali
+          </button>
+        </div>
       </div>
 
       {errorMsg && (

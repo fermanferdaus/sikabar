@@ -152,7 +152,7 @@ export default function Potongan() {
 
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6">
-            <div className="flex justify-between items-center border-b border-gray-100 pb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
                   Data Potongan Pegawai
@@ -162,12 +162,15 @@ export default function Potongan() {
                 </p>
               </div>
 
-              <button
-                onClick={() => navigate("/potongan/add")}
-                className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow"
-              >
-                <Plus size={16} /> Tambah Potongan
-              </button>
+              <div className="flex justify-start sm:justify-end">
+                <button
+                  onClick={() => navigate("/potongan/add")}
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] 
+                 text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow"
+                >
+                  <Plus size={16} /> Tambah Potongan
+                </button>
+              </div>
             </div>
 
             {alertMsg && (
