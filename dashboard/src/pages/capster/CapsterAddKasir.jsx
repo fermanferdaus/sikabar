@@ -1,35 +1,48 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
-import { Save } from "lucide-react";
 import useCapsterKasir from "../../hooks/useCapsterKasir";
 
 export default function CapsterAddKasir() {
   const navigate = useNavigate();
   const id_store = localStorage.getItem("id_store");
+
   const { addCapster, loading } = useCapsterKasir(id_store);
 
-  const [nama, setNama] = useState("");
+  const [formData, setFormData] = useState({
+    nama_capster: "",
+    telepon: "",
+    email: "",
+    alamat: "",
+    jenis_kelamin: "",
+    tempat_lahir: "",
+    tanggal_lahir: "",
+  });
+
   const [error, setError] = useState(null);
 
   // 🧩 Handle Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!nama.trim()) {
+    if (!formData.nama_capster.trim()) {
       setError("Nama capster wajib diisi!");
       return;
     }
 
     try {
       setError(null);
-      await addCapster(nama);
+
+      await addCapster({
+        ...formData,
+        id_store, // store otomatis
+      });
 
       localStorage.setItem(
         "capsterMessageKasir",
         JSON.stringify({
           type: "success",
-          text: `Capster "${nama}" berhasil ditambahkan!`,
+          text: `Capster "${formData.nama_capster}" berhasil ditambahkan!`,
         })
       );
 
@@ -37,8 +50,7 @@ export default function CapsterAddKasir() {
     } catch (err) {
       console.error("❌ handleAddCapster Error:", err);
 
-      // 🔍 Cek apakah server mengirim pesan error custom
-      if (err.response && err.response.data && err.response.data.message) {
+      if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {
         setError(err.message);
@@ -67,27 +79,129 @@ export default function CapsterAddKasir() {
         )}
 
         {/* === Form === */}
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-10">
+          {/* Nama */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nama Capster
             </label>
             <input
               type="text"
-              value={nama}
-              onChange={(e) => setNama(e.target.value)}
+              value={formData.nama_capster}
+              onChange={(e) =>
+                setFormData({ ...formData, nama_capster: e.target.value })
+              }
+              className="w-full border border-gray-300 rounded-lg px-4 py-3"
               placeholder="Masukkan nama capster"
               required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
             />
           </div>
 
-          {/* === Tombol Aksi === */}
+          {/* Telepon & Email */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nomor Telepon
+              </label>
+              <input
+                type="text"
+                value={formData.telepon}
+                onChange={(e) =>
+                  setFormData({ ...formData, telepon: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3"
+                placeholder="08xxxxxxxx"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3"
+                placeholder="email@contoh.com"
+              />
+            </div>
+          </div>
+
+          {/* Gender & Tempat Lahir */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Jenis Kelamin
+              </label>
+              <select
+                value={formData.jenis_kelamin}
+                onChange={(e) =>
+                  setFormData({ ...formData, jenis_kelamin: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white"
+              >
+                <option value="">-- Pilih Gender --</option>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tempat Lahir
+              </label>
+              <input
+                type="text"
+                value={formData.tempat_lahir}
+                onChange={(e) =>
+                  setFormData({ ...formData, tempat_lahir: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3"
+                placeholder="Contoh: Palembang"
+              />
+            </div>
+          </div>
+
+          {/* Tanggal Lahir */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tanggal Lahir
+            </label>
+            <input
+              type="date"
+              value={formData.tanggal_lahir}
+              onChange={(e) =>
+                setFormData({ ...formData, tanggal_lahir: e.target.value })
+              }
+              className="w-full border border-gray-300 rounded-lg px-4 py-3"
+            />
+          </div>
+
+          {/* Alamat */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Alamat Lengkap
+            </label>
+            <textarea
+              value={formData.alamat}
+              onChange={(e) =>
+                setFormData({ ...formData, alamat: e.target.value })
+              }
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3"
+              placeholder="Masukkan alamat lengkap"
+            />
+          </div>
+
+          {/* Tombol Aksi */}
           <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
               onClick={() => navigate("/capster/kasir")}
-              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
+              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
               disabled={loading}
             >
               Batal
@@ -96,13 +210,13 @@ export default function CapsterAddKasir() {
             <button
               type="submit"
               disabled={loading}
-              className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg font-medium text-white transition ${
+              className={`px-6 py-2.5 rounded-lg font-medium text-white ${
                 loading
                   ? "bg-gray-300 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              {loading ? "Menyimpan..." : <> Simpan Capster</>}
+              {loading ? "Menyimpan..." : "Simpan Capster"}
             </button>
           </div>
         </form>

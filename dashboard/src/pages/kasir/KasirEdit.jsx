@@ -10,7 +10,12 @@ export default function KasirEdit() {
   const [formData, setFormData] = useState({
     nama_kasir: "",
     id_store: "",
-    status: "aktif",
+    telepon: "",
+    email: "",
+    jenis_kelamin: "",
+    tempat_lahir: "",
+    tanggal_lahir: "",
+    alamat: "",
   });
 
   const [stores, setStores] = useState([]);
@@ -21,29 +26,48 @@ export default function KasirEdit() {
   const role = localStorage.getItem("role");
   const navigate = useNavigate();
 
+  // Convert tanggal lahir supaya tidak offset -1 hari
+  function toLocalDateOnly(dateString) {
+    if (!dateString) return "";
+    const d = new Date(dateString);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().substring(0, 10);
+  }
+
   /* ============================================================
-     🧭 Fetch data kasir & store
-     ============================================================ */
+     Ambil data kasir & data store
+  ============================================================ */
   useEffect(() => {
     if (role !== "admin") navigate("/kasir");
 
     const fetchData = async () => {
       try {
-        // 🔵 Ambil data kasir
+        // Data Kasir
         const resKasir = await fetch(`${API_URL}/kasir/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const kasirData = await resKasir.json();
         if (!resKasir.ok) throw new Error(kasirData.message);
 
-        // 🔵 Ambil data store
+        // Data Store
         const resStore = await fetch(`${API_URL}/store`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const storeData = await resStore.json();
         if (!resStore.ok) throw new Error(storeData.message);
 
-        setFormData(kasirData);
+        // Prefill form lengkap
+        setFormData({
+          nama_kasir: kasirData.nama_kasir,
+          id_store: kasirData.id_store,
+          telepon: kasirData.telepon || "",
+          email: kasirData.email || "",
+          jenis_kelamin: kasirData.jenis_kelamin || "",
+          tempat_lahir: kasirData.tempat_lahir || "",
+          tanggal_lahir: toLocalDateOnly(kasirData.tanggal_lahir),
+          alamat: kasirData.alamat || "",
+        });
+
         setStores(storeData);
       } catch (err) {
         setError("Gagal memuat data kasir. " + err.message);
@@ -54,16 +78,16 @@ export default function KasirEdit() {
   }, [id]);
 
   /* ============================================================
-     📝 Handle Submit
-     ============================================================ */
+     Submit Form
+  ============================================================ */
   const handleSubmit = (e) => {
     e.preventDefault();
     updateKasir(id, formData);
   };
 
   /* ============================================================
-     🔴 Jika error load data
-     ============================================================ */
+     Jika error load data
+  ============================================================ */
   if (error)
     return (
       <MainLayout current="kasir">
@@ -74,7 +98,7 @@ export default function KasirEdit() {
           <div className="text-right mt-4">
             <button
               onClick={() => navigate("/kasir")}
-              className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
+              className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Kembali
             </button>
@@ -83,9 +107,6 @@ export default function KasirEdit() {
       </MainLayout>
     );
 
-  /* ============================================================
-     🧾 Tampilan Form
-     ============================================================ */
   return (
     <MainLayout current="kasir">
       <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 transition-all duration-300">
@@ -98,9 +119,10 @@ export default function KasirEdit() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-10">
+          {/* Nama & Store */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {/* Nama Kasir */}
+            {/* Nama */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nama Kasir
@@ -112,52 +134,124 @@ export default function KasirEdit() {
                   setFormData({ ...formData, nama_kasir: e.target.value })
                 }
                 required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700
-                  focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-                placeholder="Masukkan nama kasir"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3"
               />
             </div>
 
-            {/* Status */}
+            {/* Store */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
+                Cabang
               </label>
               <select
-                value={formData.status}
+                value={formData.id_store}
                 onChange={(e) =>
-                  setFormData({ ...formData, status: e.target.value })
+                  setFormData({ ...formData, id_store: e.target.value })
                 }
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white text-gray-700
-                  focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                required
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white"
               >
-                <option value="aktif">Aktif</option>
-                <option value="nonaktif">Nonaktif</option>
+                <option value="">-- Pilih Cabang --</option>
+                {stores.map((s) => (
+                  <option key={s.id_store} value={s.id_store}>
+                    {s.nama_store}
+                  </option>
+                ))}
               </select>
+            </div>
+
+            {/* Telepon */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nomor Telepon
+              </label>
+              <input
+                type="text"
+                value={formData.telepon}
+                onChange={(e) =>
+                  setFormData({ ...formData, telepon: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3"
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3"
+              />
+            </div>
+
+            {/* Gender */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Jenis Kelamin
+              </label>
+              <select
+                value={formData.jenis_kelamin}
+                onChange={(e) =>
+                  setFormData({ ...formData, jenis_kelamin: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white"
+              >
+                <option value="">-- Pilih Gender --</option>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
+              </select>
+            </div>
+
+            {/* Tempat lahir */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tempat Lahir
+              </label>
+              <input
+                type="text"
+                value={formData.tempat_lahir}
+                onChange={(e) =>
+                  setFormData({ ...formData, tempat_lahir: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3"
+              />
             </div>
           </div>
 
-          {/* Store */}
+          {/* Tanggal lahir — full width */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Store
+              Tanggal Lahir
             </label>
-            <select
-              value={formData.id_store}
+            <input
+              type="date"
+              value={formData.tanggal_lahir}
               onChange={(e) =>
-                setFormData({ ...formData, id_store: e.target.value })
+                setFormData({ ...formData, tanggal_lahir: e.target.value })
               }
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white text-gray-700
-                focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-            >
-              <option value="">-- Pilih Store --</option>
-              {stores.map((s) => (
-                <option key={s.id_store} value={s.id_store}>
-                  {s.nama_store}
-                </option>
-              ))}
-            </select>
+              className="w-full border border-gray-300 rounded-lg px-4 py-3"
+            />
+          </div>
+
+          {/* Alamat — full width */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Alamat Lengkap
+            </label>
+            <textarea
+              rows={3}
+              value={formData.alamat}
+              onChange={(e) =>
+                setFormData({ ...formData, alamat: e.target.value })
+              }
+              className="w-full border border-gray-300 rounded-lg px-4 py-3"
+            ></textarea>
           </div>
 
           {/* Tombol */}
@@ -165,8 +259,7 @@ export default function KasirEdit() {
             <button
               type="button"
               onClick={() => navigate("/kasir")}
-              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700
-                hover:bg-gray-50 transition font-medium"
+              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Batal
             </button>
@@ -174,12 +267,11 @@ export default function KasirEdit() {
             <button
               type="submit"
               disabled={loading}
-              className={`px-6 py-2.5 rounded-lg font-medium text-white transition
-                ${
-                  loading
-                    ? "bg-gray-300 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                }`}
+              className={`px-6 py-2.5 rounded-lg font-medium text-white ${
+                loading
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
               {loading ? "Menyimpan..." : "Simpan Perubahan"}
             </button>

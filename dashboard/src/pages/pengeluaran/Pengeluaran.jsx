@@ -133,7 +133,7 @@ export default function Pengeluaran() {
   // === Kolom tabel ===
   const columnsCabang = [
     { key: "no", label: "#" },
-    { key: "nama_store", label: "Nama Cabang" },
+    { key: "nama_store", label: "Cabang" },
     { key: "total_transaksi", label: "Jumlah Transaksi" },
     { key: "total_pengeluaran", label: "Total Pengeluaran (Rp)" },
     { key: "aksi", label: "Aksi" },
@@ -341,11 +341,10 @@ export default function Pengeluaran() {
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-gray-100 pb-4 mb-4 gap-3">
                     <div>
                       <h1 className="text-lg font-semibold text-slate-800">
-                        Pengeluaran Pusat (Admin)
+                        Pengeluaran Pusat (Owner)
                       </h1>
                       <p className="text-sm text-gray-500 mt-1">
-                        Daftar pengeluaran yang dilakukan langsung oleh admin
-                        pusat.
+                        Daftar pengeluaran yang dilakukan langsung oleh owner.
                       </p>
                     </div>
 

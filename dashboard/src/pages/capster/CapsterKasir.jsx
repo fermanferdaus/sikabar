@@ -17,7 +17,7 @@ export default function CapsterKasir() {
   const [selectedCapster, setSelectedCapster] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // 🚨 Ambil pesan dari localStorage
+  // 🚨 Ambil alert
   useEffect(() => {
     const message = localStorage.getItem("capsterMessageKasir");
     if (message) {
@@ -69,56 +69,71 @@ export default function CapsterKasir() {
           c.nama_capster.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
+        // ===============================
+        // 🔹 Kolom tabel terbaru
+        // ===============================
         const columns = [
           { key: "no", label: "#" },
-          { key: "id_capster", label: "ID Caspter" },
+          { key: "id_capster", label: "ID Capster" },
           { key: "nama_capster", label: "Nama Capster" },
-          { key: "status", label: "Status" },
+          { key: "telepon", label: "Telepon" },
+          { key: "email", label: "Email" },
+          { key: "alamat", label: "Alamat" },
+          { key: "jenis_kelamin", label: "Gender" },
+          { key: "ttl", label: "Tempat & Tanggal Lahir" },
           { key: "aksi", label: "Aksi" },
         ];
 
-        const data = filtered.map((c, i) => ({
-          no: i + 1,
-          id_capster: (
-            <span className="font-semibold text-slate-700">
-              {formatCapsterID(c.id_capster)}
-            </span>
-          ),
-          nama_capster: c.nama_capster,
-          status: (
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                c.status === "aktif"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-600"
-              }`}
-            >
-              {c.status}
-            </span>
-          ),
-          aksi: (
-            <div className="flex items-center justify-left gap-2">
-              <Link
-                to={`/capster/kasir/edit/${c.id_capster}`}
-                className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
-                title="Edit"
-              >
-                <Pencil size={16} />
-              </Link>
-              <button
-                onClick={() => openDeleteModal(c)}
-                className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
-                title="Hapus"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ),
-        }));
+        // ===============================
+        // 🔹 Mapping Data Tabel
+        // ===============================
+        const data = filtered.map((c, i) => {
+          const formattedDate = c.tanggal_lahir
+            ? new Date(c.tanggal_lahir).toLocaleDateString("id-ID", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })
+            : "-";
+
+          return {
+            no: i + 1,
+            id_capster: (
+              <span className="font-semibold text-slate-700">
+                {formatCapsterID(c.id_capster)}
+              </span>
+            ),
+            nama_capster: c.nama_capster,
+            telepon: c.telepon || "-",
+            email: c.email || "-",
+            alamat: c.alamat || "-",
+            jenis_kelamin: c.jenis_kelamin || "-",
+            ttl: `${c.tempat_lahir || "-"}, ${formattedDate}`,
+
+            aksi: (
+              <div className="flex items-center gap-2">
+                <Link
+                  to={`/capster/kasir/edit/${c.id_capster}`}
+                  className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
+                  title="Edit"
+                >
+                  <Pencil size={16} />
+                </Link>
+                <button
+                  onClick={() => openDeleteModal(c)}
+                  className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
+                  title="Hapus"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ),
+          };
+        });
 
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
-            {/* === Header Card === */}
+            {/* Header */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
@@ -129,7 +144,6 @@ export default function CapsterKasir() {
                 </p>
               </div>
 
-              {/* 🔹 Tombol Tambah Capster: kiri di mobile, kanan di desktop */}
               <div className="order-1 sm:order-2 w-full sm:w-auto flex justify-start sm:justify-end">
                 <Link
                   to="/capster/kasir/add"
@@ -141,7 +155,7 @@ export default function CapsterKasir() {
               </div>
             </div>
 
-            {/* === Alert === */}
+            {/* Alert */}
             {alert && (
               <div
                 className={`px-4 py-3 rounded-lg text-sm font-medium border ${
@@ -154,7 +168,7 @@ export default function CapsterKasir() {
               </div>
             )}
 
-            {/* === Table === */}
+            {/* Table */}
             {loading ? (
               <p className="text-gray-500 italic">Memuat data capster...</p>
             ) : error ? (
@@ -169,7 +183,7 @@ export default function CapsterKasir() {
               />
             )}
 
-            {/* === Modal Konfirmasi Hapus === */}
+            {/* Modal Hapus */}
             <ConfirmModal
               open={showModal}
               onClose={() => setShowModal(false)}

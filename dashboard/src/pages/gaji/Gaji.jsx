@@ -171,7 +171,7 @@ export default function Gaji() {
                   columns={[
                     { key: "nama", label: "Nama" },
                     { key: "jabatan", label: "Jabatan" },
-                    { key: "nama_store", label: "Toko" },
+                    { key: "nama_store", label: "Cabang" },
                     { key: "gaji_pokok", label: "Gaji Pokok" },
                     { key: "periode", label: "Periode" },
                     { key: "updated_at", label: "Diperbarui" },

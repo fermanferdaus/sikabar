@@ -34,11 +34,11 @@ export default function useCapsterKasir(id_store) {
   };
 
   /* =========================================================
-     🟢 Tambah Capster
-     ---------------------------------------------------------
-     POST /capster/kasir
-  ========================================================= */
-  const addCapster = async (nama_capster) => {
+   🟢 Tambah Capster (FIX)
+   ---------------------------------------------------------
+   POST /capster/kasir
+========================================================= */
+  const addCapster = async (formData) => {
     try {
       const res = await fetch(`${API_URL}/capster/kasir`, {
         method: "POST",
@@ -46,26 +46,20 @@ export default function useCapsterKasir(id_store) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          nama_capster,
-          id_store,
-          status: "aktif",
-        }),
+        body: JSON.stringify(formData),
       });
 
       const data = await res.json();
 
-      // 🔍 Jika respon gagal, lempar pesan asli dari backend
       if (!res.ok) {
         throw new Error(data.message || "Gagal menambahkan capster");
       }
 
-      // ✅ Jika berhasil, refresh data
       await fetchCapsters();
       return true;
     } catch (err) {
       console.error("❌ useCapsterKasir addCapster:", err);
-      throw err; // biar error-nya sampai ke komponen
+      throw err;
     }
   };
 
@@ -74,7 +68,7 @@ export default function useCapsterKasir(id_store) {
      ---------------------------------------------------------
      PUT /capster/kasir/:id
   ========================================================= */
-  const updateCapster = async (id_capster, nama_capster, status) => {
+  const updateCapster = async (id_capster, formData) => {
     try {
       const res = await fetch(`${API_URL}/capster/kasir/${id_capster}`, {
         method: "PUT",
@@ -82,14 +76,10 @@ export default function useCapsterKasir(id_store) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          nama_capster,
-          id_store,
-          status,
-        }),
+        body: JSON.stringify(formData),
       });
 
-      if (!res.ok) throw new Error("Gagal memperbarui data capster");
+      if (!res.ok) throw new Error("Gagal memperbarui capster");
       await fetchCapsters();
       return true;
     } catch (err) {

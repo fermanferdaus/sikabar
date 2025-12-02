@@ -73,10 +73,10 @@ export default function StoreAdd() {
         {/* === Header === */}
         <div className="border-b border-gray-100 pb-5 mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">
-            Tambah Store Baru
+            Tambah Cabang Baru
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Lengkapi informasi di bawah untuk menambahkan store baru.
+            Lengkapi informasi di bawah untuk menambahkan cabang baru.
           </p>
         </div>
 
@@ -92,7 +92,7 @@ export default function StoreAdd() {
           {/* Nama Store */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nama Store
+              Nama Cabang
             </label>
             <input
               type="text"

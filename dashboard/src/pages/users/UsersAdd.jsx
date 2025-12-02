@@ -294,7 +294,7 @@ export default function UsersAdd() {
           {/* ================= Store ================= */}
           <div>
             <label className="text-sm font-medium text-gray-700">
-              Store{" "}
+              Cabang{" "}
               {(form.role === "kasir" || form.role === "capster") && (
                 <span className="text-red-500">*</span>
               )}
@@ -312,7 +312,7 @@ export default function UsersAdd() {
                  : "border-gray-300"
              }`}
             >
-              <option value="">Pilih Store</option>
+              <option value="">Pilih Cabang</option>
               {stores.map((s) => (
                 <option key={s.id_store} value={s.id_store}>
                   {s.nama_store}

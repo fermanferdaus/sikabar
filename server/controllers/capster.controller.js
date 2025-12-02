@@ -57,9 +57,23 @@ export const getCapsterById = async (req, res) => {
 export const getCapsterByStore = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT id_capster, nama_capster, status FROM capster WHERE id_store = ? ORDER BY id_capster DESC",
+      `
+      SELECT 
+        id_capster,
+        nama_capster,
+        telepon,
+        email,
+        alamat,
+        jenis_kelamin,
+        tempat_lahir,
+        tanggal_lahir
+      FROM capster 
+      WHERE id_store = ?
+      ORDER BY id_capster DESC
+      `,
       [req.params.id_store]
     );
+
     res.json(rows);
   } catch (err) {
     console.error("❌ getCapsterByStore:", err.message);
@@ -72,11 +86,21 @@ export const getCapsterByStore = async (req, res) => {
    ============================================================ */
 export const createCapster = async (req, res) => {
   try {
-    const { nama_capster, id_store, status } = req.body;
+    const {
+      nama_capster,
+      id_store,
+      telepon,
+      email,
+      alamat,
+      jenis_kelamin,
+      tempat_lahir,
+      tanggal_lahir,
+    } = req.body;
 
     if (!nama_capster || !id_store)
       return res.status(400).json({ message: "Nama dan store wajib diisi" });
 
+    // Cek duplikat
     const [exist] = await db.query(
       "SELECT id_capster FROM capster WHERE nama_capster = ? AND id_store = ?",
       [nama_capster, id_store]
@@ -88,8 +112,21 @@ export const createCapster = async (req, res) => {
       });
 
     const [result] = await db.query(
-      "INSERT INTO capster (nama_capster, id_store, status) VALUES (?, ?, ?)",
-      [nama_capster, id_store, status || "aktif"]
+      `
+      INSERT INTO capster 
+      (nama_capster, id_store, telepon, email, alamat, jenis_kelamin, tempat_lahir, tanggal_lahir)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        nama_capster,
+        id_store,
+        telepon || null,
+        email || null,
+        alamat || null,
+        jenis_kelamin || null,
+        tempat_lahir || null,
+        tanggal_lahir || null,
+      ]
     );
 
     res.json({
@@ -108,7 +145,16 @@ export const createCapster = async (req, res) => {
    ============================================================ */
 export const updateCapster = async (req, res) => {
   try {
-    const { nama_capster, id_store, status } = req.body;
+    const {
+      nama_capster,
+      id_store,
+      telepon,
+      email,
+      alamat,
+      jenis_kelamin,
+      tempat_lahir,
+      tanggal_lahir,
+    } = req.body;
 
     if (!nama_capster || !id_store)
       return res
@@ -116,8 +162,29 @@ export const updateCapster = async (req, res) => {
         .json({ message: "Nama capster dan store wajib diisi" });
 
     const [result] = await db.query(
-      "UPDATE capster SET nama_capster = ?, id_store = ?, status = ? WHERE id_capster = ?",
-      [nama_capster, id_store, status || "aktif", req.params.id]
+      `
+      UPDATE capster 
+      SET nama_capster = ?, 
+          id_store = ?, 
+          telepon = ?, 
+          email = ?, 
+          alamat = ?, 
+          jenis_kelamin = ?, 
+          tempat_lahir = ?, 
+          tanggal_lahir = ?
+      WHERE id_capster = ?
+      `,
+      [
+        nama_capster,
+        id_store,
+        telepon || null,
+        email || null,
+        alamat || null,
+        jenis_kelamin || null,
+        tempat_lahir || null,
+        tanggal_lahir || null,
+        req.params.id,
+      ]
     );
 
     if (result.affectedRows === 0)

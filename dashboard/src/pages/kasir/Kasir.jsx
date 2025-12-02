@@ -3,7 +3,7 @@ import { useKasir } from "../../hooks/useKasir";
 import TableData from "../../components/TableData";
 import { Link } from "react-router-dom";
 import { Pencil, Trash2, Plus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import ConfirmModal from "../../components/ConfirmModal";
 import { formatKasirID } from "../../utils/formatID";
 
@@ -16,7 +16,7 @@ export default function Kasir() {
   const [selectedKasir, setSelectedKasir] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // 🗑️ Modal hapus
+  // Modal hapus
   const openDeleteModal = (kasir) => {
     setSelectedKasir(kasir);
     setShowModal(true);
@@ -25,12 +25,12 @@ export default function Kasir() {
   const confirmDelete = async () => {
     if (!selectedKasir) return;
     setDeleting(true);
+
     try {
       await deleteKasir(selectedKasir.id_kasir);
 
       setShowModal(false);
       setSelectedKasir(null);
-
       setAlert({
         type: "success",
         text: `Kasir "${selectedKasir.nama_kasir}" berhasil dihapus.`,
@@ -57,18 +57,32 @@ export default function Kasir() {
             k.nama_store.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
-        // 🧱 Kolom tabel
+        // Kolom tabel baru (status DIHAPUS)
         const columns = [
           { key: "no", label: "#" },
           { key: "id_kasir", label: "ID Kasir" },
           { key: "nama_kasir", label: "Nama Kasir" },
           { key: "nama_store", label: "Cabang" },
-          { key: "status", label: "Status" },
+          { key: "telepon", label: "Telepon" },
+          { key: "email", label: "Email" },
+          { key: "alamat", label: "Alamat" },
+          { key: "jenis_kelamin", label: "Gender" },
+          { key: "ttl", label: "Tempat & Tanggal Lahir" },
         ];
 
         if (role === "admin") columns.push({ key: "aksi", label: "Aksi" });
 
-        // 🧱 Data tabel
+        // Format tanggal lahir
+        const formatDate = (date) => {
+          if (!date) return "-";
+          return new Date(date).toLocaleDateString("id-ID", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          });
+        };
+
+        // Data tabel
         const data = filtered.map((k, i) => ({
           no: i + 1,
           id_kasir: (
@@ -78,20 +92,15 @@ export default function Kasir() {
           ),
           nama_kasir: k.nama_kasir,
           nama_store: k.nama_store,
-          status: (
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                k.status === "aktif"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-600"
-              }`}
-            >
-              {k.status}
-            </span>
-          ),
+          telepon: k.telepon || "-",
+          email: k.email || "-",
+          alamat: k.alamat || "-",
+          jenis_kelamin: k.jenis_kelamin || "-",
+          ttl: `${k.tempat_lahir || "-"}, ${formatDate(k.tanggal_lahir)}`,
+
           ...(role === "admin" && {
             aksi: (
-              <div className="flex items-center justify-left gap-2">
+              <div className="flex items-center gap-2">
                 <Link
                   to={`/kasir/edit/${k.id_kasir}`}
                   className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
@@ -114,7 +123,7 @@ export default function Kasir() {
 
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6">
-            {/* Header */}
+            {/* HEADER */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
@@ -126,19 +135,17 @@ export default function Kasir() {
               </div>
 
               {role === "admin" && (
-                <div className="order-1 sm:order-2 w-full sm:w-auto flex justify-start sm:justify-end">
-                  <Link
-                    to="/kasir/add"
-                    className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
-                  >
-                    <Plus size={16} />
-                    Tambah Kasir
-                  </Link>
-                </div>
+                <Link
+                  to="/kasir/add"
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
+                >
+                  <Plus size={16} />
+                  Tambah Kasir
+                </Link>
               )}
             </div>
 
-            {/* Alert */}
+            {/* ALERT */}
             {alert && (
               <div
                 className={`px-4 py-3 rounded-lg text-sm font-medium border ${
@@ -151,7 +158,7 @@ export default function Kasir() {
               </div>
             )}
 
-            {/* Table */}
+            {/* TABLE */}
             {loading ? (
               <p className="text-gray-500">Memuat data...</p>
             ) : error ? (
@@ -166,7 +173,7 @@ export default function Kasir() {
               />
             )}
 
-            {/* Modal Konfirmasi Hapus */}
+            {/* MODAL HAPUS */}
             <ConfirmModal
               open={showModal}
               onClose={() => setShowModal(false)}

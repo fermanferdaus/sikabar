@@ -130,7 +130,7 @@ export default function TransaksiDetail() {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
-                  Detail Transaksi Toko
+                  Detail Transaksi Cabang
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
                   Riwayat transaksi kasir, layanan, dan produk berdasarkan

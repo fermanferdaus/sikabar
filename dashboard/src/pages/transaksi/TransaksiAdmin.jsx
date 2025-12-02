@@ -42,7 +42,7 @@ export default function TransaksiAdmin() {
 
   const columns = [
     { key: "no", label: "#" },
-    { key: "nama_store", label: "Nama Toko" },
+    { key: "nama_store", label: "Cabang" },
     { key: "total_transaksi", label: "Total Transaksi" },
     { key: "pendapatan_kotor", label: "Pendapatan Kotor" },
     { key: "pendapatan_bersih", label: "Pendapatan Bersih" },

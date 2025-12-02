@@ -67,59 +67,73 @@ export default function Capster() {
             c.nama_store.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
-        // 🔹 Kolom tabel
+        // 🔹 Kolom tabel lengkap (TEMPAT + TANGGAL LAHIR digabung)
         const columns = [
           { key: "no", label: "#" },
-          { key: "id_capster", label : "ID Caspter"}, 
+          { key: "id_capster", label: "ID Capster" },
           { key: "nama_capster", label: "Nama Capster" },
           { key: "nama_store", label: "Cabang" },
-          { key: "status", label: "Status" },
+          { key: "telepon", label: "Telepon" },
+          { key: "email", label: "Email" },
+          { key: "alamat", label: "Alamat" },
+          { key: "jenis_kelamin", label: "Gender" },
+          { key: "ttl", label: "Tempat & Tanggal Lahir" }, // ✅ digabung
         ];
 
         if (role === "admin") columns.push({ key: "aksi", label: "Aksi" });
 
-        // 🔹 Data tabel
-        const data = filtered.map((c, i) => ({
-          no: i + 1,
-          id_capster: (
-            <span className="font-semibold text-slate-700">
-              {formatCapsterID(c.id_capster)}
-            </span>
-          ),
-          nama_capster: c.nama_capster,
-          nama_store: c.nama_store,
-          status: (
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                c.status === "aktif"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-600"
-              }`}
-            >
-              {c.status}
-            </span>
-          ),
-          ...(role === "admin" && {
-            aksi: (
-              <div className="flex items-center justify-left gap-2">
-                <Link
-                  to={`/capster/edit/${c.id_capster}`}
-                  className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
-                  title="Edit"
-                >
-                  <Pencil size={16} />
-                </Link>
-                <button
-                  onClick={() => openDeleteModal(c)}
-                  className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
-                  title="Hapus"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+        // 🔹 Data tabel lengkap (gabungan tempat + tanggal lahir)
+        const data = filtered.map((c, i) => {
+          const formattedDate = c.tanggal_lahir
+            ? new Date(c.tanggal_lahir).toLocaleDateString("id-ID", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })
+            : null;
+
+          return {
+            no: i + 1,
+            id_capster: (
+              <span className="font-semibold text-slate-700">
+                {formatCapsterID(c.id_capster)}
+              </span>
             ),
-          }),
-        }));
+            nama_capster: c.nama_capster,
+            nama_store: c.nama_store,
+            telepon: c.telepon || "-",
+            email: c.email || "-",
+            alamat: c.alamat || "-",
+            jenis_kelamin: c.jenis_kelamin || "-",
+
+            // 🌟 GABUNGAN TEMPAT + TANGGAL LAHIR
+            ttl:
+              c.tempat_lahir || formattedDate
+                ? `${c.tempat_lahir || "-"}, ${formattedDate || "-"}`
+                : "-",
+
+            ...(role === "admin" && {
+              aksi: (
+                <div className="flex items-center justify-left gap-2">
+                  <Link
+                    to={`/capster/edit/${c.id_capster}`}
+                    className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
+                    title="Edit"
+                  >
+                    <Pencil size={16} />
+                  </Link>
+                  <button
+                    onClick={() => openDeleteModal(c)}
+                    className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-md"
+                    title="Hapus"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ),
+            }),
+          };
+        });
 
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6">
@@ -130,8 +144,7 @@ export default function Capster() {
                   Data Capster
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
-                  Kelola daftar capster dan status aktif/nonaktif di setiap
-                  cabang.
+                  Kelola daftar capster beserta data diri lengkap mereka.
                 </p>
               </div>
 

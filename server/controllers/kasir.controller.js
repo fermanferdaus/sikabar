@@ -57,11 +57,11 @@ export const getKasirByStore = async (req, res) => {
   try {
     const [rows] = await db.query(
       `
-      SELECT k.id_kasir, k.nama_kasir, k.status 
+      SELECT k.*
       FROM kasir k
-      WHERE k.id_store = ? 
+      WHERE k.id_store = ?
       ORDER BY k.id_kasir DESC
-    `,
+      `,
       [req.params.id_store]
     );
     res.json(rows);
@@ -76,7 +76,16 @@ export const getKasirByStore = async (req, res) => {
    ============================================================ */
 export const createKasir = async (req, res) => {
   try {
-    const { nama_kasir, id_store, status } = req.body;
+    const {
+      nama_kasir,
+      id_store,
+      telepon,
+      email,
+      alamat,
+      jenis_kelamin,
+      tempat_lahir,
+      tanggal_lahir,
+    } = req.body;
 
     if (!nama_kasir || !id_store)
       return res
@@ -95,8 +104,21 @@ export const createKasir = async (req, res) => {
       });
 
     const [result] = await db.query(
-      "INSERT INTO kasir (nama_kasir, id_store, status) VALUES (?, ?, ?)",
-      [nama_kasir, id_store, status || "aktif"]
+      `
+      INSERT INTO kasir 
+      (nama_kasir, id_store, telepon, email, alamat, jenis_kelamin, tempat_lahir, tanggal_lahir)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        nama_kasir,
+        id_store,
+        telepon || null,
+        email || null,
+        alamat || null,
+        jenis_kelamin || null,
+        tempat_lahir || null,
+        tanggal_lahir || null,
+      ]
     );
 
     res.json({
@@ -115,7 +137,16 @@ export const createKasir = async (req, res) => {
    ============================================================ */
 export const updateKasir = async (req, res) => {
   try {
-    const { nama_kasir, id_store, status } = req.body;
+    const {
+      nama_kasir,
+      id_store,
+      telepon,
+      email,
+      alamat,
+      jenis_kelamin,
+      tempat_lahir,
+      tanggal_lahir,
+    } = req.body;
 
     if (!nama_kasir || !id_store)
       return res
@@ -123,8 +154,29 @@ export const updateKasir = async (req, res) => {
         .json({ message: "Nama kasir dan store wajib diisi" });
 
     const [result] = await db.query(
-      "UPDATE kasir SET nama_kasir = ?, id_store = ?, status = ? WHERE id_kasir = ?",
-      [nama_kasir, id_store, status || "aktif", req.params.id]
+      `
+      UPDATE kasir SET 
+        nama_kasir = ?, 
+        id_store = ?, 
+        telepon = ?, 
+        email = ?, 
+        alamat = ?, 
+        jenis_kelamin = ?, 
+        tempat_lahir = ?, 
+        tanggal_lahir = ?
+      WHERE id_kasir = ?
+      `,
+      [
+        nama_kasir,
+        id_store,
+        telepon || null,
+        email || null,
+        alamat || null,
+        jenis_kelamin || null,
+        tempat_lahir || null,
+        tanggal_lahir || null,
+        req.params.id,
+      ]
     );
 
     if (result.affectedRows === 0)

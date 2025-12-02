@@ -220,7 +220,7 @@ export default function UsersEdit() {
           {/* =================== 3. Store =================== */}
           <div>
             <label className="block text-sm font-medium">
-              Store (wajib untuk kasir & capster)
+              Cabang (wajib untuk kasir & capster)
             </label>
             <select
               value={form.id_store}
@@ -234,7 +234,7 @@ export default function UsersEdit() {
                   : "border-gray-300"
               }`}
             >
-              <option value="">Pilih Store</option>
+              <option value="">Pilih Cabang</option>
               {stores.map((s) => (
                 <option key={s.id_store} value={s.id_store}>
                   {s.nama_store}

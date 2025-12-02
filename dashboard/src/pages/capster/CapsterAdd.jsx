@@ -6,11 +6,18 @@ import useCapsterActions from "../../hooks/useCapsterActions";
 export default function CapsterAdd() {
   const { addCapster, loading } = useCapsterActions();
   const [stores, setStores] = useState([]);
-  const [errorMsg, setErrorMsg] = useState(""); // ⬅️ tambahkan state untuk pesan error
+  const [errorMsg, setErrorMsg] = useState("");
   const [formData, setFormData] = useState({
     nama_capster: "",
     id_store: "",
-    status: "aktif",
+
+    // 🔥 field baru
+    telepon: "",
+    email: "",
+    alamat: "",
+    jenis_kelamin: "",
+    tempat_lahir: "",
+    tanggal_lahir: "",
   });
 
   const API_URL = import.meta.env.VITE_API_URL;
@@ -40,34 +47,10 @@ export default function CapsterAdd() {
   // 🔹 Submit Form
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErrorMsg(""); // reset pesan error
+    setErrorMsg("");
 
     try {
-      const res = await fetch(`${API_URL}/capster`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        // 🔴 tampilkan pesan error backend
-        setErrorMsg(data.message || "Gagal menambahkan capster");
-        return;
-      }
-
-      // ✅ sukses
-      localStorage.setItem(
-        "userMessage",
-        JSON.stringify({
-          type: "success",
-          text: `Capster "${formData.nama_capster}" berhasil ditambahkan.`,
-        })
-      );
-      navigate("/capster");
+      await addCapster(formData);
     } catch (error) {
       console.error("❌ Error submit:", error);
       setErrorMsg("Terjadi kesalahan koneksi ke server");
@@ -76,7 +59,7 @@ export default function CapsterAdd() {
 
   return (
     <MainLayout current="capster">
-      <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 transition-all duration-300">
+      <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-10">
         {/* Header */}
         <div className="border-b border-gray-100 pb-5 mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">
@@ -95,9 +78,10 @@ export default function CapsterAdd() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-10">
+          {/* Bagian 1 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            {/* Nama Capster */}
+            {/* Nama */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nama Capster
@@ -109,49 +93,132 @@ export default function CapsterAdd() {
                   setFormData({ ...formData, nama_capster: e.target.value })
                 }
                 required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3"
                 placeholder="Masukkan nama capster"
               />
             </div>
 
-            {/* Status */}
+            {/* Store */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
+                Store
               </label>
               <select
-                value={formData.status}
+                value={formData.id_store}
                 onChange={(e) =>
-                  setFormData({ ...formData, status: e.target.value })
+                  setFormData({ ...formData, id_store: e.target.value })
                 }
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                required
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white"
               >
-                <option value="aktif">Aktif</option>
-                <option value="nonaktif">Nonaktif</option>
+                <option value="">-- Pilih Store --</option>
+                {stores.map((s) => (
+                  <option key={s.id_store} value={s.id_store}>
+                    {s.nama_store}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
-          {/* Store */}
+          {/* Bagian 2 – Data Diri */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            {/* Telepon */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nomor Telepon
+              </label>
+              <input
+                type="text"
+                value={formData.telepon}
+                onChange={(e) =>
+                  setFormData({ ...formData, telepon: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3"
+                placeholder="08xxxxxxxx"
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3"
+                placeholder="capster@email.com"
+              />
+            </div>
+
+            {/* Jenis Kelamin */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Jenis Kelamin
+              </label>
+              <select
+                value={formData.jenis_kelamin}
+                onChange={(e) =>
+                  setFormData({ ...formData, jenis_kelamin: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-white"
+              >
+                <option value="">-- Pilih Gender --</option>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
+              </select>
+            </div>
+
+            {/* Tempat Lahir */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tempat Lahir
+              </label>
+              <input
+                type="text"
+                value={formData.tempat_lahir}
+                onChange={(e) =>
+                  setFormData({ ...formData, tempat_lahir: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-3"
+                placeholder="Contoh: Palembang"
+              />
+            </div>
+          </div>
+
+          {/* Tanggal Lahir */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Store
+              Tanggal Lahir
             </label>
-            <select
-              value={formData.id_store}
+            <input
+              type="date"
+              value={formData.tanggal_lahir}
               onChange={(e) =>
-                setFormData({ ...formData, id_store: e.target.value })
+                setFormData({ ...formData, tanggal_lahir: e.target.value })
               }
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-            >
-              <option value="">-- Pilih Store --</option>
-              {stores.map((s) => (
-                <option key={s.id_store} value={s.id_store}>
-                  {s.nama_store}
-                </option>
-              ))}
-            </select>
+              className="w-full border border-gray-300 rounded-lg px-4 py-3"
+            />
+          </div>
+
+          {/* Alamat */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Alamat Lengkap
+            </label>
+            <textarea
+              value={formData.alamat}
+              onChange={(e) =>
+                setFormData({ ...formData, alamat: e.target.value })
+              }
+              rows={3}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3"
+              placeholder="Masukkan alamat lengkap"
+            ></textarea>
           </div>
 
           {/* Tombol Aksi */}
@@ -159,7 +226,7 @@ export default function CapsterAdd() {
             <button
               type="button"
               onClick={() => navigate("/capster")}
-              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
+              className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Batal
             </button>
@@ -167,7 +234,7 @@ export default function CapsterAdd() {
             <button
               type="submit"
               disabled={loading}
-              className={`px-6 py-2.5 rounded-lg font-medium text-white transition ${
+              className={`px-6 py-2.5 rounded-lg font-medium text-white ${
                 loading
                   ? "bg-gray-300 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700"

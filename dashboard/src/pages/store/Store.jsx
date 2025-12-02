@@ -99,10 +99,10 @@ export default function Store() {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
-                  Data Store
+                  Data Cabang
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
-                  Kelola daftar store dan cabang barbershop Anda.
+                  Kelola daftar cabang barbershop Anda.
                 </p>
               </div>
 

@@ -39,7 +39,7 @@ export default function Produk() {
 
   const columns = [
     { key: "no", label: "#" },
-    { key: "nama_store", label: "Nama Store" },
+    { key: "nama_store", label: "Nama Cabang" },
     { key: "total_produk", label: "Total Produk" },
     { key: "total_stok", label: "Total Stok" },
     { key: "aksi", label: "Aksi" },
