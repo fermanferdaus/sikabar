@@ -227,13 +227,22 @@ export const updateKasbon = async (req, res) => {
 };
 
 // ======================================================
-// 🔹 DELETE Kasbon
+// 🔹 DELETE Kasbon (hapus juga potongan otomatis)
 // ======================================================
 export const deleteKasbon = async (req, res) => {
   const { id } = req.params;
+
   try {
-    await db.query(`DELETE FROM kasbon WHERE id_kasbon=?`, [id]);
-    res.json({ success: true, message: "Kasbon berhasil dihapus" });
+    // Hapus potongan otomatis berdasarkan id_kasbon
+    await db.query(`DELETE FROM potongan_kasbon WHERE id_kasbon = ?`, [id]);
+
+    // Hapus kasbon utama
+    await db.query(`DELETE FROM kasbon WHERE id_kasbon = ?`, [id]);
+
+    res.json({
+      success: true,
+      message: "Kasbon berhasil dihapus.",
+    });
   } catch (error) {
     console.error("❌ Error deleteKasbon:", error);
     res.status(500).json({
