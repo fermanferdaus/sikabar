@@ -10,12 +10,14 @@ import {
   getLaporanPendapatanJasa,
   getLaporanPendapatanProdukKasir,
   getLaporanPendapatanJasaKasir,
+  getLaporanKas,
+  getLaporanKasKasir,
 } from "../controllers/laporan.controller.js";
 
 const router = express.Router();
 
-router.get("/pengeluaran", getLaporanPengeluaran);
 router.get("/pengeluaran/kasir", getLaporanPengeluaranKasir);
+router.get("/pengeluaran", getLaporanPengeluaran);
 router.get("/produk", getLaporanProduk);
 router.get("/produk-kasir", getLaporanProdukKasir);
 router.get("/penjualan-produk", getLaporanPenjualanProduk);
@@ -24,5 +26,7 @@ router.get("/pendapatan-produk", getLaporanPendapatanProduk);
 router.get("/pendapatan-produk-kasir", getLaporanPendapatanProdukKasir);
 router.get("/pendapatan-jasa", getLaporanPendapatanJasa);
 router.get("/pendapatan-jasa-kasir", getLaporanPendapatanJasaKasir);
+router.get("/arus-kas", getLaporanKas);
+router.get("/arus-kas-kasir", getLaporanKasKasir);
 
 export default router;

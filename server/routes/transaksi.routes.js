@@ -1,19 +1,18 @@
 import express from "express";
 import {
-  // ================= ADMIN CONTROLLERS =================
   getAllTransaksi,
   getLaporanTransaksi,
   getTransaksiByStoreAdmin,
-
-  // ================= KASIR CONTROLLERS =================
   getTransaksiByStore,
   getKeuanganByStore,
   createTransaksi,
   deleteTransaksi,
+  uploadBuktiQris,
 } from "../controllers/transaksi.controller.js";
 
 import { verifyToken } from "../middlewares/auth.middleware.js";
 import { isAdmin, isKasir } from "../middlewares/role.middleware.js";
+import uploadQris from "../middlewares/uploadQris.middleware.js";
 
 const router = express.Router();
 
@@ -45,5 +44,7 @@ router.get("/keuangan/:id_store", verifyToken, isKasir, getKeuanganByStore);
 
 // ➕ Tambah transaksi baru
 router.post("/", verifyToken, isKasir, createTransaksi);
+
+router.post("/upload-bukti", verifyToken, isKasir, uploadQris, uploadBuktiQris);
 
 export default router;

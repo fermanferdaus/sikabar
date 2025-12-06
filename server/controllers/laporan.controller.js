@@ -898,3 +898,536 @@ export const getLaporanPendapatanJasaKasir = async (req, res) => {
     });
   }
 };
+
+// ======================================================
+// 🟣 LAPORAN ARUS KAS (ADMIN) – FIXED
+// ======================================================
+export const getLaporanKas = async (req, res) => {
+  try {
+    const { filter, store, tanggal, bulan, startDate, endDate } = req.query;
+
+    // ==============================
+    // WHERE TRANSAKSI (jasa & produk & komisi)
+    // ==============================
+    let where = ["1=1"];
+    const params = [];
+
+    // === FILTER STORE ===
+    if (store && store !== "Semua") {
+      where.push("t.id_store = ?");
+      params.push(store);
+    }
+
+    // === FILTER HARIAN ===
+    if (filter === "hari" && tanggal) {
+      where.push("DATE(t.created_at) = ?");
+      params.push(tanggal);
+    }
+
+    // === FILTER BULANAN ===
+    if (filter === "bulan" && bulan) {
+      where.push("DATE_FORMAT(t.created_at, '%Y-%m') = ?");
+      params.push(bulan);
+    }
+
+    // === FILTER PERIODE ===
+    if (filter === "periode" && startDate && endDate) {
+      where.push("DATE(t.created_at) BETWEEN ? AND ?");
+      params.push(startDate, endDate);
+    }
+
+    const whereSql = where.join(" AND ");
+
+    // ==============================
+    // PENDAPATAN JASA
+    // ==============================
+    const [pendapatanJasa] = await db.query(
+      `
+      SELECT COALESCE(SUM(tsd.harga - tsd.komisi_capster), 0) AS total
+      FROM transaksi_service_detail tsd
+      JOIN transaksi t ON t.id_transaksi = tsd.id_transaksi
+      WHERE ${whereSql}
+      `,
+      params
+    );
+
+    // ==============================
+    // PENDAPATAN PRODUK
+    // ==============================
+    const [pendapatanProduk] = await db.query(
+      `
+      SELECT COALESCE(SUM(tpd.laba_rugi), 0) AS total
+      FROM transaksi_produk_detail tpd
+      JOIN transaksi t ON t.id_transaksi = tpd.id_transaksi
+      WHERE ${whereSql}
+      `,
+      params
+    );
+
+    // ==============================
+    // KOMISI CAPSTER
+    // ==============================
+    const [komisi] = await db.query(
+      `
+      SELECT COALESCE(SUM(tsd.komisi_capster), 0) AS total
+      FROM transaksi_service_detail tsd
+      JOIN transaksi t ON t.id_transaksi = tsd.id_transaksi
+      WHERE ${whereSql}
+      `,
+      params
+    );
+
+    // ==============================
+    // PENGELUARAN
+    // ==============================
+    let whereOut = ["1=1"];
+    const paramsOut = [];
+
+    if (store && store !== "Semua") {
+      whereOut.push("p.id_store = ?");
+      paramsOut.push(store);
+    }
+
+    if (filter === "hari" && tanggal) {
+      whereOut.push("DATE(p.tanggal) = ?");
+      paramsOut.push(tanggal);
+    }
+
+    if (filter === "bulan" && bulan) {
+      whereOut.push("DATE_FORMAT(p.tanggal, '%Y-%m') = ?");
+      paramsOut.push(bulan);
+    }
+
+    if (filter === "periode" && startDate && endDate) {
+      whereOut.push("DATE(p.tanggal) BETWEEN ? AND ?");
+      paramsOut.push(startDate, endDate);
+    }
+
+    const [pengeluaran] = await db.query(
+      `
+      SELECT COALESCE(SUM(p.jumlah), 0) AS total
+      FROM pengeluaran p
+      WHERE ${whereOut.join(" AND ")}
+      `,
+      paramsOut
+    );
+
+    // ==============================
+    // KASBON
+    // ==============================
+    const [kasbon] = await db.query(
+      `
+      SELECT COALESCE(SUM(ka.jumlah_total), 0) AS total
+      FROM kasbon ka
+      LEFT JOIN kasir k ON ka.id_kasir = k.id_kasir
+      LEFT JOIN capster c ON ka.id_capster = c.id_capster
+      WHERE 1=1
+        ${
+          store && store !== "Semua"
+            ? " AND (k.id_store = ? OR c.id_store = ?)"
+            : ""
+        }
+        ${filter === "hari" ? " AND DATE(ka.tanggal_pinjam) = ?" : ""}
+        ${
+          filter === "bulan"
+            ? " AND DATE_FORMAT(ka.tanggal_pinjam, '%Y-%m') = ?"
+            : ""
+        }
+        ${
+          filter === "periode"
+            ? " AND DATE(ka.tanggal_pinjam) BETWEEN ? AND ?"
+            : ""
+        }
+      `,
+      store && store !== "Semua"
+        ? filter === "periode"
+          ? [store, store, startDate, endDate]
+          : filter === "bulan"
+          ? [store, store, bulan]
+          : filter === "hari"
+          ? [store, store, tanggal]
+          : [store, store]
+        : filter === "periode"
+        ? [startDate, endDate]
+        : filter === "bulan"
+        ? [bulan]
+        : filter === "hari"
+        ? [tanggal]
+        : []
+    );
+
+    // ==============================
+    // POTONGAN KASBON
+    // ==============================
+    const [potonganKasbon] = await db.query(
+      `
+      SELECT COALESCE(SUM(pk.jumlah_potongan), 0) AS total
+      FROM potongan_kasbon pk
+      LEFT JOIN kasbon ka ON ka.id_kasbon = pk.id_kasbon
+      LEFT JOIN kasir k ON pk.id_kasir = k.id_kasir
+      LEFT JOIN capster c ON pk.id_capster = c.id_capster
+      WHERE 1=1
+        ${
+          store && store !== "Semua"
+            ? " AND (k.id_store = ? OR c.id_store = ?)"
+            : ""
+        }
+        ${filter === "hari" ? " AND DATE(pk.tanggal_potong) = ?" : ""}
+        ${
+          filter === "bulan"
+            ? " AND DATE_FORMAT(pk.tanggal_potong, '%Y-%m') = ?"
+            : ""
+        }
+        ${
+          filter === "periode"
+            ? " AND DATE(pk.tanggal_potong) BETWEEN ? AND ?"
+            : ""
+        }
+      `,
+      store && store !== "Semua"
+        ? filter === "periode"
+          ? [store, store, startDate, endDate]
+          : filter === "bulan"
+          ? [store, store, bulan]
+          : filter === "hari"
+          ? [store, store, tanggal]
+          : [store, store]
+        : filter === "periode"
+        ? [startDate, endDate]
+        : filter === "bulan"
+        ? [bulan]
+        : filter === "hari"
+        ? [tanggal]
+        : []
+    );
+
+    // ==============================
+    // BONUS
+    // ==============================
+    const [bonus] = await db.query(
+      `
+      SELECT COALESCE(SUM(b.jumlah), 0) AS total
+      FROM bonus b
+      LEFT JOIN kasir k ON b.id_kasir = k.id_kasir
+      LEFT JOIN capster c ON b.id_capster = c.id_capster
+      WHERE b.status = 'sudah_diberikan'
+        ${
+          store && store !== "Semua"
+            ? " AND (k.id_store = ? OR c.id_store = ?)"
+            : ""
+        }
+        ${filter === "hari" ? " AND DATE(b.tanggal_diberikan) = ?" : ""}
+        ${filter === "bulan" ? " AND b.periode = ?" : ""}
+        ${
+          filter === "periode"
+            ? " AND DATE(b.tanggal_diberikan) BETWEEN ? AND ?"
+            : ""
+        }
+      `,
+      store && store !== "Semua"
+        ? filter === "periode"
+          ? [store, store, startDate, endDate]
+          : filter === "bulan"
+          ? [store, store, bulan]
+          : filter === "hari"
+          ? [store, store, tanggal]
+          : [store, store]
+        : filter === "periode"
+        ? [startDate, endDate]
+        : filter === "bulan"
+        ? [bulan]
+        : filter === "hari"
+        ? [tanggal]
+        : []
+    );
+
+    /// ==============================
+    // HITUNG TOTAL KAS
+    // ==============================
+    const kasMasuk =
+      Number(pendapatanJasa[0].total) +
+      Number(pendapatanProduk[0].total) +
+      Number(potonganKasbon[0].total);
+
+    // komisi & bonus ikut sebagai pengeluaran
+    const kasKeluar =
+      Number(pengeluaran[0].total) +
+      Number(kasbon[0].total) +
+      Number(komisi[0].total) +
+      Number(bonus[0].total);
+
+    const saldoAkhir = kasMasuk - kasKeluar;
+
+    // ==============================
+    // RESPONSE
+    // ==============================
+    res.json({
+      success: true,
+      kas_masuk: kasMasuk,
+      kas_keluar: kasKeluar,
+      saldo_akhir: saldoAkhir,
+      detail: {
+        pendapatan_jasa: pendapatanJasa[0].total,
+        pendapatan_produk: pendapatanProduk[0].total,
+        komisi: komisi[0].total,
+        pengeluaran: pengeluaran[0].total,
+        kasbon_keluar: kasbon[0].total,
+        potongan_kasbon: potonganKasbon[0].total,
+        bonus: bonus[0].total,
+      },
+    });
+  } catch (err) {
+    console.error("❌ ERROR getLaporanKas:", err);
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil laporan kas",
+      error: err.message,
+    });
+  }
+};
+
+// ======================================================
+// 🟣 LAPORAN ARUS KAS (KASIR)
+// ======================================================
+export const getLaporanKasKasir = async (req, res) => {
+  try {
+    const { filter, tanggal, bulan, startDate, endDate, id_store } = req.query;
+
+    if (!id_store) {
+      return res.status(400).json({
+        success: false,
+        message: "ID Store tidak ditemukan",
+      });
+    }
+
+    const [[storeData]] = await db.query(
+      "SELECT nama_store FROM store WHERE id_store = ? LIMIT 1",
+      [id_store]
+    );
+
+    const storeName = storeData?.nama_store || "-";
+
+    // ==========================
+    // WHERE TRANSAKSI (jasa & produk & komisi)
+    // ==========================
+    let where = ["t.id_store = ?"];
+    const params = [id_store];
+
+    if (filter === "hari" && tanggal) {
+      where.push("DATE(t.created_at) = ?");
+      params.push(tanggal);
+    }
+
+    if (filter === "bulan" && bulan) {
+      where.push("DATE_FORMAT(t.created_at, '%Y-%m') = ?");
+      params.push(bulan);
+    }
+
+    if (filter === "periode" && startDate && endDate) {
+      where.push("DATE(t.created_at) BETWEEN ? AND ?");
+      params.push(startDate, endDate);
+    }
+
+    const whereSql = where.join(" AND ");
+
+    // ==========================
+    // PENDAPATAN JASA
+    // ==========================
+    const [pendapatanJasa] = await db.query(
+      `
+      SELECT COALESCE(SUM(tsd.harga - tsd.komisi_capster), 0) AS total
+      FROM transaksi_service_detail tsd
+      JOIN transaksi t ON t.id_transaksi = tsd.id_transaksi
+      WHERE ${whereSql}
+      `,
+      params
+    );
+
+    // ==========================
+    // PENDAPATAN PRODUK
+    // ==========================
+    const [pendapatanProduk] = await db.query(
+      `
+      SELECT COALESCE(SUM(tpd.laba_rugi), 0) AS total
+      FROM transaksi_produk_detail tpd
+      JOIN transaksi t ON t.id_transaksi = tpd.id_transaksi
+      WHERE ${whereSql}
+      `,
+      params
+    );
+
+    // ==========================
+    // KOMISI CAPSTER
+    // ==========================
+    const [komisi] = await db.query(
+      `
+      SELECT COALESCE(SUM(tsd.komisi_capster), 0) AS total
+      FROM transaksi_service_detail tsd
+      JOIN transaksi t ON t.id_transaksi = tsd.id_transaksi
+      WHERE ${whereSql}
+      `,
+      params
+    );
+
+    // ==========================
+    // PENGELUARAN
+    // ==========================
+    let whereOut = ["p.id_store = ?"];
+    const paramsOut = [id_store];
+
+    if (filter === "hari" && tanggal) {
+      whereOut.push("DATE(p.tanggal) = ?");
+      paramsOut.push(tanggal);
+    }
+
+    if (filter === "bulan" && bulan) {
+      whereOut.push("DATE_FORMAT(p.tanggal, '%Y-%m') = ?");
+      paramsOut.push(bulan);
+    }
+
+    if (filter === "periode" && startDate && endDate) {
+      whereOut.push("DATE(p.tanggal) BETWEEN ? AND ?");
+      paramsOut.push(startDate, endDate);
+    }
+
+    const [pengeluaran] = await db.query(
+      `
+      SELECT COALESCE(SUM(p.jumlah), 0) AS total
+      FROM pengeluaran p
+      WHERE ${whereOut.join(" AND ")}
+      `,
+      paramsOut
+    );
+
+    // ==========================
+    // KASBON
+    // ==========================
+    const [kasbon] = await db.query(
+      `
+      SELECT COALESCE(SUM(ka.jumlah_total), 0) AS total
+      FROM kasbon ka
+      LEFT JOIN kasir k ON ka.id_kasir = k.id_kasir
+      LEFT JOIN capster c ON ka.id_capster = c.id_capster
+      WHERE (k.id_store = ? OR c.id_store = ?)
+        ${filter === "hari" ? " AND DATE(ka.tanggal_pinjam) = ?" : ""}
+        ${
+          filter === "bulan"
+            ? " AND DATE_FORMAT(ka.tanggal_pinjam, '%Y-%m') = ?"
+            : ""
+        }
+        ${
+          filter === "periode"
+            ? " AND DATE(ka.tanggal_pinjam) BETWEEN ? AND ?"
+            : ""
+        }
+      `,
+      filter === "periode"
+        ? [id_store, id_store, startDate, endDate]
+        : filter === "bulan"
+        ? [id_store, id_store, bulan]
+        : filter === "hari"
+        ? [id_store, id_store, tanggal]
+        : [id_store, id_store]
+    );
+
+    // ==========================
+    // POTONGAN KASBON
+    // ==========================
+    const [potonganKasbon] = await db.query(
+      `
+      SELECT COALESCE(SUM(pk.jumlah_potongan), 0) AS total
+      FROM potongan_kasbon pk
+      LEFT JOIN kasbon ka ON ka.id_kasbon = pk.id_kasbon
+      LEFT JOIN kasir k ON pk.id_kasir = k.id_kasir
+      LEFT JOIN capster c ON pk.id_capster = c.id_capster
+      WHERE (k.id_store = ? OR c.id_store = ?)
+        ${filter === "hari" ? " AND DATE(pk.tanggal_potong) = ?" : ""}
+        ${
+          filter === "bulan"
+            ? " AND DATE_FORMAT(pk.tanggal_potong, '%Y-%m') = ?"
+            : ""
+        }
+        ${
+          filter === "periode"
+            ? " AND DATE(pk.tanggal_potong) BETWEEN ? AND ?"
+            : ""
+        }
+      `,
+      filter === "periode"
+        ? [id_store, id_store, startDate, endDate]
+        : filter === "bulan"
+        ? [id_store, id_store, bulan]
+        : filter === "hari"
+        ? [id_store, id_store, tanggal]
+        : [id_store, id_store]
+    );
+
+    // ==========================
+    // BONUS
+    // ==========================
+    const [bonus] = await db.query(
+      `
+      SELECT COALESCE(SUM(b.jumlah), 0) AS total
+      FROM bonus b
+      LEFT JOIN kasir k ON b.id_kasir = k.id_kasir
+      LEFT JOIN capster c ON b.id_capster = c.id_capster
+      WHERE b.status = 'sudah_diberikan'
+        AND (k.id_store = ? OR c.id_store = ?)
+        ${filter === "hari" ? " AND DATE(b.tanggal_diberikan) = ?" : ""}
+        ${filter === "bulan" ? " AND b.periode = ?" : ""}
+        ${
+          filter === "periode"
+            ? " AND DATE(b.tanggal_diberikan) BETWEEN ? AND ?"
+            : ""
+        }
+      `,
+      filter === "periode"
+        ? [id_store, id_store, startDate, endDate]
+        : filter === "bulan"
+        ? [id_store, id_store, bulan]
+        : filter === "hari"
+        ? [id_store, id_store, tanggal]
+        : [id_store, id_store]
+    );
+
+    // ==========================
+    // HITUNG TOTAL
+    // ==========================
+    const kasMasuk =
+      Number(pendapatanJasa[0].total) +
+      Number(pendapatanProduk[0].total) +
+      Number(potonganKasbon[0].total);
+
+    const kasKeluar =
+      Number(pengeluaran[0].total) +
+      Number(kasbon[0].total) +
+      Number(komisi[0].total) +
+      Number(bonus[0].total);
+
+    const saldoAkhir = kasMasuk - kasKeluar;
+
+    return res.json({
+      success: true,
+      store: storeName,
+      kas_masuk: kasMasuk,
+      kas_keluar: kasKeluar,
+      saldo_akhir: saldoAkhir,
+      detail: {
+        pendapatan_jasa: pendapatanJasa[0].total,
+        pendapatan_produk: pendapatanProduk[0].total,
+        komisi: komisi[0].total,
+        pengeluaran: pengeluaran[0].total,
+        kasbon_keluar: kasbon[0].total,
+        potongan_kasbon: potonganKasbon[0].total,
+        bonus: bonus[0].total,
+      },
+    });
+  } catch (err) {
+    console.error("❌ ERROR getLaporanKasKasir:", err);
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil laporan kas kasir",
+      error: err.message,
+    });
+  }
+};

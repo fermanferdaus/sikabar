@@ -92,7 +92,7 @@ export default function TransaksiAdmin() {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
-                  Laporan Transaksi
+                  Riwayat Transaksi
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
                   Ringkasan transaksi dan pendapatan setiap cabang.

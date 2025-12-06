@@ -146,31 +146,23 @@ export const deleteProduk = async (req, res) => {
 // === 1️⃣ Total stok per store ===
 export const getStokPerStore = async (req, res) => {
   try {
-    const { filterType, tanggal } = req.query;
-    let dateFilter = "";
-    if (filterType === "Harian" && tanggal)
-      dateFilter = `WHERE DATE(sp.updated_at) = '${tanggal}'`;
-    else if (filterType === "Bulanan" && tanggal) {
-      const bulan = tanggal.slice(0, 7);
-      dateFilter = `WHERE DATE_FORMAT(sp.updated_at, '%Y-%m') = '${bulan}'`;
-    }
-
     const sql = `
       SELECT 
         st.id_store,
         st.nama_store,
-        COALESCE(COUNT(DISTINCT sp.id_produk), 0) AS total_produk,
-        COALESCE(SUM(sp.stok_akhir), 0) AS total_stok
+        COUNT(DISTINCT sp.id_produk) AS total_produk,
+        SUM(sp.stok_akhir) AS total_stok
       FROM store st
-      LEFT JOIN stok_produk sp 
-        ON st.id_store = sp.id_store
-        ${dateFilter ? dateFilter.replace("WHERE", "AND") : ""}
+      LEFT JOIN stok_produk sp ON st.id_store = sp.id_store
       GROUP BY st.id_store, st.nama_store
       ORDER BY st.nama_store ASC
     `;
+
     const [rows] = await db.query(sql);
     res.json(rows);
-  } catch {
+
+  } catch (err) {
+    console.error("❌ getStokPerStore Error:", err);
     res.status(500).json({ message: "Gagal mengambil data stok" });
   }
 };

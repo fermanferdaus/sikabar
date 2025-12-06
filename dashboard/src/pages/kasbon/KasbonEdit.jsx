@@ -220,9 +220,8 @@ export default function KasbonEdit() {
               <input
                 type="text"
                 value={kasbon.jumlah_total_formatted || ""}
-                onChange={handleTotalKasbonChange}
-                required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700"
+                disabled
+                className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-3 text-gray-500 cursor-not-allowed"
               />
             </div>
 
@@ -234,9 +233,8 @@ export default function KasbonEdit() {
               <input
                 type="text"
                 value={kasbon.sisa_kasbon_formatted || ""}
-                onChange={handleRupiahChange}
-                required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700"
+                disabled
+                className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-3 text-gray-500 cursor-not-allowed"
               />
             </div>
 
@@ -249,10 +247,8 @@ export default function KasbonEdit() {
                 type="number"
                 name="cicilan_terbayar"
                 value={kasbon.cicilan_terbayar ?? ""}
-                onChange={handleChange}
-                required
-                min="0"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-700"
+                disabled
+                className="w-full border border-gray-200 bg-gray-50 rounded-lg px-4 py-3 text-gray-500 cursor-not-allowed"
               />
             </div>
           </div>
@@ -279,7 +275,7 @@ export default function KasbonEdit() {
           <div className="lg:col-span-2 flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
-              onClick={() => navigate("/kasbon")}
+              onClick={() => navigate(-1)}
               className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium"
               disabled={loadingSubmit}
             >

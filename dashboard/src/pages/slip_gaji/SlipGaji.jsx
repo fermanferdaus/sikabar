@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import html2canvas from "html2canvas";
 import MainLayout from "../../layouts/MainLayout";
 import useProfil from "../../hooks/useProfil";
+import { formatPeriode } from "../../utils/dateFormatter";
 import { Download, AlertTriangle } from "lucide-react";
 
 export default function SlipGaji() {
@@ -222,7 +223,7 @@ export default function SlipGaji() {
 
         <header>
           <div class="logo"><img src="${logoSrc}" crossorigin="anonymous" alt="Logo" /></div>
-          <h1>Slip Gaji Bulan<br />${data?.periode || "N/A"}</h1>
+          <h1>Slip Gaji Bulan<br />${formatPeriode(data?.periode_raw) || "N/A"}</h1>
         </header>
 
         <section class="info">
@@ -401,7 +402,7 @@ export default function SlipGaji() {
               className="w-20 h-20 object-contain"
             />
             <h1 className="text-2xl font-bold text-[#0e57b5] text-right leading-tight">
-              Slip Gaji Bulan <br /> {data.periode || "N/A"}
+              Slip Gaji Bulan <br /> {formatPeriode(data?.periode_raw) || "N/A"}
             </h1>
           </div>
 
@@ -409,7 +410,7 @@ export default function SlipGaji() {
             <div className="font-semibold text-gray-800">Nama</div>
             <div>: {data.nama}</div>
             <div className="font-semibold text-gray-800">Jabatan</div>
-            <div>: {role === "kasir" ? "Kasir" : "Capster"}</div>
+            <div>: {role === "kasir" ? "Kasir" : "Kapster"}</div>
             <div className="font-semibold text-gray-800">Cabang</div>
             <div>: {data.nama_store}</div>
           </div>

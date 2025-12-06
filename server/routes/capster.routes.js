@@ -12,24 +12,11 @@ import {
 
 const router = express.Router();
 
-/* ===========================================================
-   🧩 ADMIN ROUTES
-   -----------------------------------------------------------
-   - Dapat mengelola semua capster dari seluruh store
-   - Akses penuh: get, post, put, delete
-=========================================================== */
 router.get("/", verifyToken, isAdmin, getCapsters);
 router.get("/:id", verifyToken, isAdmin, getCapsterById);
 router.post("/", verifyToken, isAdmin, createCapster);
 router.put("/:id", verifyToken, isAdmin, updateCapster);
 router.delete("/:id", verifyToken, isAdmin, deleteCapster);
-
-/* ===========================================================
-   🧩 KASIR ROUTES
-   -----------------------------------------------------------
-   - Hanya bisa melihat & kelola capster yang ada di tokonya
-   - Endpoint kasir tidak boleh bentrok dengan milik admin
-=========================================================== */
 
 // 🔹 Ambil semua capster milik store kasir
 router.get("/kasir/store/:id_store", verifyToken, isKasir, getCapsterByStore);

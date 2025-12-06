@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import MainLayout from "../../layouts/MainLayout";
 import TableData from "../../components/TableData";
-import { Eye, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function SlipGajiAdmin() {

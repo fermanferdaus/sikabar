@@ -245,9 +245,7 @@ export default function ProdukEdit() {
           <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
-              onClick={() =>
-                fromStore ? navigate(`/produk/stok/${fromStore}`) : navigate(-1)
-              }
+              onClick={() => navigate(-1)}
               className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
               disabled={saving}
             >

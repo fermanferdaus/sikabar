@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+
 import MainLayout from "../../layouts/MainLayout";
 import useFetchGajiSetting from "../../hooks/useFetchGajiSetting";
 import useFetchBonus from "../../hooks/useFetchBonus";
 import TableData from "../../components/TableData";
 import ConfirmModal from "../../components/ConfirmModal";
+
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { formatTanggal, formatPeriode } from "../../utils/dateFormatter";
 
@@ -15,6 +17,7 @@ export default function Gaji() {
     deleteGaji,
     refresh: refreshGaji,
   } = useFetchGajiSetting();
+
   const {
     data: bonus,
     loading: loadBonus,
@@ -24,7 +27,7 @@ export default function Gaji() {
   } = useFetchBonus();
 
   const [showModal, setShowModal] = useState(false);
-  const [targetType, setTargetType] = useState(""); // "gaji" | "bonus"
+  const [targetType, setTargetType] = useState("");
   const [targetId, setTargetId] = useState(null);
   const [notif, setNotif] = useState(null);
 
@@ -45,29 +48,19 @@ export default function Gaji() {
     if (targetType === "gaji") {
       res = await deleteGaji(targetId);
       await refreshGaji();
-    } else if (targetType === "bonus") {
+    } else {
       res = await deleteBonus(targetId);
       await refreshBonus();
     }
 
-    if (res?.success) {
-      setNotif({
-        type: "success",
-        text:
-          targetType === "gaji"
-            ? "Data gaji berhasil dihapus."
-            : "Data bonus berhasil dihapus.",
-      });
-    } else {
-      setNotif({
-        type: "error",
-        text:
-          res?.message ||
-          (targetType === "gaji"
-            ? "Gagal menghapus data gaji."
-            : "Gagal menghapus data bonus."),
-      });
-    }
+    setNotif({
+      type: res?.success ? "success" : "error",
+      text: res?.success
+        ? targetType === "gaji"
+          ? "Data gaji berhasil dihapus."
+          : "Data bonus berhasil dihapus."
+        : res?.message || "Gagal menghapus data.",
+    });
 
     closeModal();
     setTimeout(() => setNotif(null), 4000);
@@ -78,8 +71,7 @@ export default function Gaji() {
       localStorage.getItem("gajiMessage") ||
       localStorage.getItem("bonusMessage");
     if (msg) {
-      const parsed = JSON.parse(msg);
-      setNotif(parsed);
+      setNotif(JSON.parse(msg));
       localStorage.removeItem("gajiMessage");
       localStorage.removeItem("bonusMessage");
       setTimeout(() => setNotif(null), 4000);
@@ -91,7 +83,6 @@ export default function Gaji() {
       {(searchTerm) => {
         const search = searchTerm.toLowerCase();
 
-        // 🔍 Filter gaji berdasarkan pencarian
         const filteredGaji = gaji.filter(
           (g) =>
             g.nama?.toLowerCase().includes(search) ||
@@ -100,7 +91,6 @@ export default function Gaji() {
             g.periode?.toLowerCase().includes(search)
         );
 
-        // 🔍 Filter bonus berdasarkan pencarian
         const filteredBonus = bonus.filter(
           (b) =>
             b.nama?.toLowerCase().includes(search) ||
@@ -111,37 +101,30 @@ export default function Gaji() {
         );
 
         return (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-8 transition-all duration-300">
-            {/* ===== Header ===== */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4">
-              {/* Kiri: Judul & Deskripsi */}
-              <div className="text-left">
-                <h1 className="text-xl font-semibold text-slate-800">
-                  Manajemen Gaji & Bonus
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-8">
+            {/* HEADER */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-3">
+              <div>
+                <h1 className="text-lg font-semibold text-slate-700">
+                  Daftar Gaji Pokok
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
-                  Atur gaji pokok dan bonus untuk capster dan kasir.
+                  Kelola gaji untuk setiap pegawai.
                 </p>
               </div>
 
-              {/* Kanan: Tombol Tambah */}
-              <div className="flex flex-wrap gap-3 mt-2 sm:mt-0 sm:justify-end w-full sm:w-auto">
+              <div className="order-1 sm:order-2 w-full sm:w-auto flex justify-start sm:justify-end">
                 <Link
                   to="/gaji/add"
-                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
+                  className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
                 >
-                  <Plus size={16} /> Tambah Gaji
-                </Link>
-                <Link
-                  to="/gaji/bonus/add"
-                  className="flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <Plus size={16} /> Tambah Bonus
+                  <Plus size={16} />
+                  Tambah Gaji
                 </Link>
               </div>
             </div>
 
-            {/* ===== Notifikasi ===== */}
+            {/* ALERT NOTIF */}
             {notif && (
               <div
                 className={`px-4 py-3 rounded-lg text-sm font-medium border ${
@@ -154,18 +137,12 @@ export default function Gaji() {
               </div>
             )}
 
-            {/* ===== Table Gaji ===== */}
-            <div>
-              <h2 className="text-lg font-semibold text-slate-700 mb-3">
-                Daftar Gaji Pokok
-              </h2>
-
+            {/* ===== SECTION GAJI POKOK ===== */}
+            <section className="space-y-6">
               {loadGaji ? (
-                <p className="text-gray-500 italic">Memuat data...</p>
+                <p className="text-gray-500">Memuat data gaji...</p>
               ) : filteredGaji.length === 0 ? (
-                <p className="text-gray-500 italic">
-                  Tidak ada data gaji sesuai pencarian.
-                </p>
+                <p className="text-gray-500 italic">Tidak ada data.</p>
               ) : (
                 <TableData
                   columns={[
@@ -181,12 +158,11 @@ export default function Gaji() {
                     ...g,
                     gaji_pokok:
                       "Rp " + Number(g.gaji_pokok || 0).toLocaleString("id-ID"),
-                    periode: g.periode || "-",
                     updated_at: g.updated_at
                       ? formatTanggal(g.updated_at.replace(" ", "T"))
                       : "-",
                     aksi: (
-                      <div className="flex items-left justify-left gap-2">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() =>
                             (window.location.href = `/gaji/edit/${g.id_gaji_setting}`)
@@ -208,20 +184,37 @@ export default function Gaji() {
                   }))}
                 />
               )}
-            </div>
+            </section>
 
-            {/* ===== Table Bonus ===== */}
-            <div>
-              <h2 className="text-lg font-semibold text-slate-700 mb-3">
-                Daftar Bonus
-              </h2>
+            {/* GARIS PEMBATAS */}
+            <div className="border-t border-gray-100" />
+
+            {/* ===== SECTION BONUS ===== */}
+            <section className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-3">
+                <div>
+                  <h1 className="text-lg font-semibold text-slate-700">
+                    Daftar Bonus
+                  </h1>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Kelola Bonus untuk setiap pegawai.
+                  </p>
+                </div>
+                <div className="order-1 sm:order-2 w-full sm:w-auto flex justify-start sm:justify-end">
+                  <Link
+                    to="/gaji/bonus/add"
+                    className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
+                  >
+                    <Plus size={16} />
+                    Tambah Bonus
+                  </Link>
+                </div>
+              </div>
 
               {loadBonus ? (
-                <p className="text-gray-500 italic">Memuat data...</p>
+                <p className="text-gray-500">Memuat data bonus...</p>
               ) : filteredBonus.length === 0 ? (
-                <p className="text-gray-500 italic">
-                  Tidak ada bonus sesuai pencarian.
-                </p>
+                <p className="text-gray-500 italic">Tidak ada data.</p>
               ) : (
                 <TableData
                   columns={[
@@ -257,13 +250,13 @@ export default function Gaji() {
                       </span>
                     ),
                     aksi: (
-                      <div className="flex items-left justify-left gap-2">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() =>
                             (window.location.href = `/gaji/bonus/edit/${b.id_bonus}`)
                           }
                           className="p-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white rounded-md"
-                          title="Edit Bonus"
+                          title="Edit"
                         >
                           <Pencil size={16} />
                         </button>
@@ -274,72 +267,14 @@ export default function Gaji() {
                         >
                           <Trash2 size={16} />
                         </button>
-                        <button
-                          onClick={async () => {
-                            const newStatus =
-                              b.status === "belum_diberikan"
-                                ? "sudah_diberikan"
-                                : "belum_diberikan";
-                            await updateBonusStatus(b.id_bonus, newStatus);
-                          }}
-                          className={`flex items-center gap-2 px-3 py-1.5 rounded-md font-medium text-sm shadow-sm transition-all duration-200
-                          ${
-                            b.status === "belum_diberikan"
-                              ? "bg-blue-600 hover:bg-blue-700 text-white"
-                              : "bg-green-600 hover:bg-green-700 text-white"
-                          }`}
-                          title={
-                            b.status === "belum_diberikan"
-                              ? "Tandai sebagai sudah diberikan"
-                              : "Kembalikan ke belum diberikan"
-                          }
-                        >
-                          {b.status === "belum_diberikan" ? (
-                            <>
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                              <span>Sudah Diberikan</span>
-                            </>
-                          ) : (
-                            <>
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="w-4 h-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M4 4v16M4 12h16"
-                                />
-                              </svg>
-                              <span>Belum Diberikan</span>
-                            </>
-                          )}
-                        </button>
                       </div>
                     ),
                   }))}
                 />
               )}
-            </div>
+            </section>
 
-            {/* ===== Modal Konfirmasi Hapus ===== */}
+            {/* ===== MODAL HAPUS ===== */}
             <ConfirmModal
               open={showModal}
               onClose={closeModal}

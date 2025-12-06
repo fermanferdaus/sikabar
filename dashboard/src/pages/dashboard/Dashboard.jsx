@@ -76,7 +76,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-7 space-y-8 transition-all duration-300">
             {/* === TITLE === */}
             <h1 className="text-2xl font-semibold text-slate-800">
-              Dashboard Owner
+              Dasbor Owner
             </h1>
 
             {/* === BARIS 1: Statistik Umum === */}
@@ -91,8 +91,8 @@ export default function Dashboard() {
               />
               <CardStat
                 gradient="from-blue-400 to-cyan-400"
-                title="Total Capster"
-                subtitle="Karyawan terdaftar"
+                title="Total Kapster"
+                subtitle="Kapster terdaftar"
                 value={filteredCapster?.length || 0}
                 icon={<Scissors size={32} />}
                 onClick={() => goTo("/capster")}

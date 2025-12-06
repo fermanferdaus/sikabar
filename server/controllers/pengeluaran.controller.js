@@ -45,40 +45,40 @@ export const getTotalPengeluaran = async (req, res) => {
     const id_store = req.user?.id_store;
     const { tipe, tanggal } = req.query;
 
-    let sql = `
+    let dateFilter = "";
+
+    if (tanggal && tipe === "Harian") {
+      dateFilter = `AND DATE(p.tanggal) = '${tanggal}'`;
+    } else if (tanggal && tipe === "Bulanan") {
+      const bulan = tanggal.slice(0, 7);
+      dateFilter = `AND DATE_FORMAT(p.tanggal, '%Y-%m') = '${bulan}'`;
+    }
+
+    const sql = `
       SELECT 
         s.id_store,
         s.nama_store,
         COUNT(p.id_pengeluaran) AS total_transaksi,
         COALESCE(SUM(p.jumlah), 0) AS total_pengeluaran
       FROM store s
-      LEFT JOIN pengeluaran p ON s.id_store = p.id_store
+      LEFT JOIN pengeluaran p 
+        ON s.id_store = p.id_store
+        ${dateFilter}   -- ⬅ filter dipindah ke ON, bukan WHERE
+      ${role === "kasir" ? "WHERE s.id_store = ?" : ""}
+      GROUP BY s.id_store
+      ORDER BY s.nama_store ASC
     `;
 
-    const params = [];
-    const where = [];
-
-    if (role === "kasir") {
-      where.push("s.id_store = ?");
-      params.push(id_store);
-    }
-    if (tanggal && tipe === "Harian") {
-      where.push("DATE(p.tanggal) = ?");
-      params.push(tanggal);
-    } else if (tanggal && tipe === "Bulanan") {
-      where.push("MONTH(p.tanggal) = MONTH(?) AND YEAR(p.tanggal) = YEAR(?)");
-      params.push(tanggal, tanggal);
-    }
-
-    if (where.length) sql += " WHERE " + where.join(" AND ");
-    sql += " GROUP BY s.id_store ORDER BY s.nama_store ASC";
-
+    const params = role === "kasir" ? [id_store] : [];
     const [rows] = await db.query(sql, params);
+
     res.json({ status: "success", data: rows });
-  } catch {
-    res
-      .status(500)
-      .json({ status: "error", message: "Gagal menghitung total pengeluaran" });
+  } catch (err) {
+    console.error("❌ getTotalPengeluaran Error:", err);
+    res.status(500).json({
+      status: "error",
+      message: "Gagal menghitung total pengeluaran",
+    });
   }
 };
 

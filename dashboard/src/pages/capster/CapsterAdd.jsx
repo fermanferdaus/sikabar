@@ -63,10 +63,10 @@ export default function CapsterAdd() {
         {/* Header */}
         <div className="border-b border-gray-100 pb-5 mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">
-            Tambah Capster
+            Tambah Kapster
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Lengkapi data capster baru untuk ditambahkan ke dalam sistem.
+            Lengkapi data Kapster baru untuk ditambahkan ke dalam sistem.
           </p>
         </div>
 
@@ -84,7 +84,7 @@ export default function CapsterAdd() {
             {/* Nama */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nama Capster
+                Nama Kapster
               </label>
               <input
                 type="text"
@@ -94,7 +94,7 @@ export default function CapsterAdd() {
                 }
                 required
                 className="w-full border border-gray-300 rounded-lg px-4 py-3"
-                placeholder="Masukkan nama capster"
+                placeholder="Masukkan nama kapster"
               />
             </div>
 
@@ -151,7 +151,7 @@ export default function CapsterAdd() {
                   setFormData({ ...formData, email: e.target.value })
                 }
                 className="w-full border border-gray-300 rounded-lg px-4 py-3"
-                placeholder="capster@email.com"
+                placeholder="kapster@email.com"
               />
             </div>
 
@@ -225,7 +225,7 @@ export default function CapsterAdd() {
           <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
-              onClick={() => navigate("/capster")}
+              onClick={() => navigate(-1)}
               className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Batal
@@ -240,7 +240,7 @@ export default function CapsterAdd() {
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              {loading ? "Menyimpan..." : "Simpan Capster"}
+              {loading ? "Menyimpan..." : "Simpan Kapster"}
             </button>
           </div>
         </form>

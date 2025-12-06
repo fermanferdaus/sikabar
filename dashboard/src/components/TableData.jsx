@@ -4,13 +4,13 @@ export default function TableData({
   columns = [],
   data = [],
   searchTerm = "",
-  itemsPerPageOptions = [5, 10, 50, 100, 200, 500],
+  itemsPerPageOptions = [5, 10, 25, 50, 100, 200, 500],
+  children,
 }) {
   const [filteredData, setFilteredData] = useState([]);
-  const [perPage, setPerPage] = useState(5);
+  const [perPage, setPerPage] = useState(10); // default
   const [currentPage, setCurrentPage] = useState(1);
 
-  // 🔍 Filter data by searchTerm
   useEffect(() => {
     if (!searchTerm) setFilteredData(data);
     else {
@@ -25,7 +25,6 @@ export default function TableData({
     }
   }, [searchTerm, data]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredData.length / perPage);
   const paginated = filteredData.slice(
     (currentPage - 1) * perPage,
@@ -33,28 +32,28 @@ export default function TableData({
   );
 
   return (
-    <div className="w-full">
-      {/* === Header Controls === */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-3">
-        {/* 🔹 Dropdown "Tampilkan Entri" — di kiri mobile, kanan desktop */}
-        <div className="flex items-center gap-2 text-sm text-gray-600 order-2 sm:order-1 justify-start sm:justify-end w-full sm:w-auto">
-          <label>Tampilkan</label>
-          <select
-            value={perPage}
-            onChange={(e) => setPerPage(Number(e.target.value))}
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-[#0e57b5]/30 focus:outline-none"
-          >
-            {itemsPerPageOptions.map((num) => (
-              <option key={num} value={num}>
-                {num}
-              </option>
-            ))}
-          </select>
-          <span>Entri</span>
-        </div>
+    <div className="w-full space-y-4">
+      {/* ================= DROPDOWN TAMPILKAN ENTRI ================= */}
+      <div className="flex items-center gap-2 text-sm text-gray-600">
+        <label>Tampilkan</label>
+        <select
+          value={perPage}
+          onChange={(e) => {
+            setPerPage(Number(e.target.value));
+            setCurrentPage(1);
+          }}
+          className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-[#0e57b5]/30"
+        >
+          {itemsPerPageOptions.map((num) => (
+            <option key={num} value={num}>
+              {num}
+            </option>
+          ))}
+        </select>
+        <span>Entri</span>
       </div>
 
-      {/* === Table === */}
+      {/* ================= TABLE ================= */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-gray-700 border-collapse">
           <thead className="bg-[#f5f7fa] text-gray-700 font-semibold border-y border-gray-200">
@@ -66,6 +65,7 @@ export default function TableData({
               ))}
             </tr>
           </thead>
+
           <tbody>
             {paginated.length > 0 ? (
               paginated.map((row, i) => (
@@ -77,7 +77,7 @@ export default function TableData({
                 >
                   {columns.map((col, j) => (
                     <td key={j} className="px-4 py-3 border-t border-gray-100">
-                      {row[col.key]}
+                      {col.format ? col.format(row[col.key]) : row[col.key]}
                     </td>
                   ))}
                 </tr>
@@ -93,55 +93,61 @@ export default function TableData({
               </tr>
             )}
           </tbody>
+
+          {children}
         </table>
       </div>
 
-      {/* === Pagination === */}
+      {/* ================= PAGINATION ================= */}
       {filteredData.length > perPage && (
         <div className="flex justify-end items-center gap-2 mt-4 text-sm text-gray-600">
           <button
             disabled={currentPage === 1}
             onClick={() => setCurrentPage(1)}
-            className={`px-3 py-1 rounded-md border transition ${
+            className={`px-3 py-1 rounded-md border ${
               currentPage === 1
                 ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                : "text-[#0e57b5] border-gray-300 hover:bg-[#f1f5f9]"
+                : "text-[#0e57b5] border-gray-300 hover:bg-[#eef4ff]"
             }`}
           >
             First
           </button>
+
           <button
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((p) => p - 1)}
-            className={`px-3 py-1 rounded-md border transition ${
+            className={`px-3 py-1 rounded-md border ${
               currentPage === 1
                 ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                : "text-[#0e57b5] border-gray-300 hover:bg-[#f1f5f9]"
+                : "text-[#0e57b5] border-gray-300 hover:bg-[#eef4ff]"
             }`}
           >
             Prev
           </button>
+
           <span className="px-3 py-1 bg-[#0e57b5] text-white rounded-md">
             {currentPage}
           </span>
+
           <button
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage((p) => p + 1)}
-            className={`px-3 py-1 rounded-md border transition ${
+            className={`px-3 py-1 rounded-md border ${
               currentPage === totalPages
                 ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                : "text-[#0e57b5] border-gray-300 hover:bg-[#f1f5f9]"
+                : "text-[#0e57b5] border-gray-300 hover:bg-[#eef4ff]"
             }`}
           >
             Next
           </button>
+
           <button
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage(totalPages)}
-            className={`px-3 py-1 rounded-md border transition ${
+            className={`px-3 py-1 rounded-md border ${
               currentPage === totalPages
                 ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                : "text-[#0e57b5] border-gray-300 hover:bg-[#f1f5f9]"
+                : "text-[#0e57b5] border-gray-300 hover:bg-[#eef4ff]"
             }`}
           >
             Last

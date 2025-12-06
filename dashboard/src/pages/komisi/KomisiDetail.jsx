@@ -66,7 +66,7 @@ export default function KomisiDetail() {
               </div>
 
               <button
-                onClick={() => navigate("/komisi")}
+                onClick={() => navigate(-1)}
                 className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-lg font-medium text-sm shadow-sm hover:shadow-md transition-all duration-200"
               >
                 <ArrowLeft size={16} /> Kembali
@@ -136,13 +136,14 @@ export default function KomisiDetail() {
 
 function SummaryCards({ totalKotor, totalBersih }) {
   return (
-    <div className="grid sm:grid-cols-2 gap-6 mb-2">
+    <div className="grid sm:grid-cols-2 gap-6 mt-2">
       <div className="p-5 bg-white shadow-sm rounded-xl text-center transition hover:-translate-y-1 hover:shadow-md duration-300">
         <p className="text-gray-500">Pendapatan Kotor</p>
         <h2 className="text-3xl font-bold text-blue-600 mt-1">
           Rp {totalKotor.toLocaleString("id-ID")}
         </h2>
       </div>
+
       <div className="p-5 bg-white shadow-sm rounded-xl text-center transition hover:-translate-y-1 hover:shadow-md duration-300">
         <p className="text-gray-500">Pendapatan Bersih (Komisi)</p>
         <h2 className="text-3xl font-bold text-green-600 mt-1">

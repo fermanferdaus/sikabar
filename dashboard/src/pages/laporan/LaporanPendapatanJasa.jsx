@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import TableData from "../../components/TableData";
-import { FileText, Store, Calendar } from "lucide-react";
+import { FileText, Store, Calendar, ArrowLeft } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import useFetchStore from "../../hooks/useFetchStore";
@@ -11,6 +12,7 @@ import useProfil from "../../hooks/useProfil";
 
 export default function LaporanPendapatanJasa() {
   const [data, setData] = useState([]);
+  const navigate = useNavigate();
   const [selectedStore, setSelectedStore] = useState("Semua");
   const [filterType, setFilterType] = useState("Harian");
 
@@ -26,7 +28,11 @@ export default function LaporanPendapatanJasa() {
   const API_URL = import.meta.env.VITE_API_URL;
   const { data: storeData, loading: loadingStore } = useFetchStore();
   const { profil } = useProfil();
-  const logoSrc = (profil?.logo_url || "/Logo1.png").replace("http://", "https://");
+
+  let logoSrc = profil?.logo_url || "/Logo1.png";
+  if (!logoSrc.includes("localhost") && !logoSrc.includes("127.0.0.1")) {
+    logoSrc = logoSrc.replace("http://", "https://");
+  }
 
   // =============================
   // FETCH DATA LAPORAN
@@ -97,7 +103,7 @@ export default function LaporanPendapatanJasa() {
     // === HEADER ===
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
-    doc.text(profil?.nama , pageWidth / 2, 12, { align: "center" });
+    doc.text(profil?.nama, pageWidth / 2, 12, { align: "center" });
 
     doc.setFontSize(12);
     doc.text("LAPORAN PENDAPATAN JASA", pageWidth / 2, 18, { align: "center" });
@@ -232,8 +238,9 @@ export default function LaporanPendapatanJasa() {
 
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-8">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 border-b border-gray-100 pb-4">
-              <div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4">
+              {/* LEFT SECTION */}
+              <div className="text-left">
                 <h1 className="text-xl font-semibold text-slate-800">
                   Laporan Pendapatan Jasa
                 </h1>
@@ -242,7 +249,8 @@ export default function LaporanPendapatanJasa() {
                 </p>
               </div>
 
-              <div className="flex justify-start sm:justify-end w-full sm:w-auto">
+              {/* BUTTON GROUP */}
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
                 <button
                   onClick={handlePrintPDF}
                   className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 
@@ -250,6 +258,13 @@ export default function LaporanPendapatanJasa() {
                 >
                   <FileText size={16} />
                   Cetak PDF
+                </button>
+
+                <button
+                  onClick={() => navigate(-1)}
+                  className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-lg text-sm font-medium"
+                >
+                  <ArrowLeft size={16} /> Kembali
                 </button>
               </div>
             </div>

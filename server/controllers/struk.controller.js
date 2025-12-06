@@ -3,30 +3,6 @@ import { createCanvas, loadImage } from "canvas";
 import path from "path";
 import { fileURLToPath } from "url";
 
-export const generateNomorStruk = async (req, res) => {
-  try {
-    // Ambil jumlah transaksi hari ini
-    const [rows] = await db.query(`
-      SELECT COUNT(*) AS total 
-      FROM struk 
-      WHERE DATE(created_at) = CURDATE()
-    `);
-
-    const countToday = rows[0]?.total || 0;
-    const now = new Date();
-    const tanggal = now.toISOString().slice(2, 10).replace(/-/g, "");
-
-    // Format: STRK + tanggal + nomor urut 3 digit (001, 002, dst)
-    const nomorUrut = String(countToday + 1).padStart(3, "0");
-    const nomor = `STRK${tanggal}${nomorUrut}`;
-
-    res.json({ nomor_struk: nomor });
-  } catch (err) {
-    console.error("❌ generateNomorStruk Error:", err);
-    res.status(500).json({ message: "Gagal membuat nomor struk" });
-  }
-};
-
 export const printStruk = async (req, res) => {
   try {
     const { id } = req.params;
@@ -193,7 +169,7 @@ export const printStruk = async (req, res) => {
             : ""
         }
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Struk ${nomorStruk}</title>
+        <title>${nomorStruk}</title>
         <style>
         /* --- FORMAT CETAK MINI 58mm --- */
         @page { size: 58mm auto; margin: 0; }
@@ -244,7 +220,11 @@ export const printStruk = async (req, res) => {
         <body onload="window.print()">
 
         <div class="center">
-            <img src="${profil.logo ? `${req.protocol}://${req.get("host")}/${profil.logo}` : ""}"
+            <img src="${
+              profil.logo
+                ? `${req.protocol}://${req.get("host")}/${profil.logo}`
+                : ""
+            }"
               class="logo"
               onerror="this.style.display='none'"/>
             <strong>${trx.nama_store}</strong><br/>

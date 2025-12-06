@@ -1,9 +1,8 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/login/Login";
 import Dashboard from "./pages/dashboard/Dashboard";
 import DashboardKasir from "./pages/dashboard/DashboardKasir";
 import Produk from "./pages/produk/Produk";
-import Capster from "./pages/capster/Capster";
 import Transaksi from "./pages/transaksi/Transaksi";
 import Komisi from "./pages/komisi/Komisi";
 import Users from "./pages/users/Users";
@@ -12,7 +11,6 @@ import KomisiDetail from "./pages/komisi/KomisiDetail";
 import Store from "./pages/store/Store";
 import StoreAdd from "./pages/store/StoreAdd";
 import StoreEdit from "./pages/store/StoreEdit";
-import KomisiSetting from "./pages/komisi/KomisiSetting";
 import Pricelist from "./pages/pricelist/Pricelist";
 import KomisiAdd from "./pages/komisi/KomisiAdd";
 import KomisiEdit from "./pages/komisi/KomisiEdit";
@@ -34,7 +32,6 @@ import UsersEdit from "./pages/users/UsersEdit";
 import CapsterKasir from "./pages/capster/CapsterKasir";
 import CapsterAddKasir from "./pages/capster/CapsterAddKasir";
 import CapsterEditKasir from "./pages/capster/CapsterEditKasir";
-import Kasir from "./pages/kasir/Kasir";
 import KasirAdd from "./pages/kasir/KasirAdd";
 import KasirEdit from "./pages/kasir/KasirEdit";
 import Gaji from "./pages/gaji/Gaji";
@@ -71,11 +68,21 @@ import LaporanPendapatanProdukKasir from "./pages/laporan/LaporanPendapatanProdu
 import LaporanPendapatanJasaKasir from "./pages/laporan/LaporanPendapatanJasaKasir";
 import Profil from "./pages/profil/Profil";
 import ProfilEdit from "./pages/profil/ProfilEdit";
+import Pegawai from "./pages/pegawai/pegawai";
+import KomisiCapster from "./pages/komisi/KomisiCapster";
+import Laporan from "./pages/laporan/Laporan";
+import LaporanKasir from "./pages/laporan/LaporanKasir";
+import LaporanArusKas from "./pages/laporan/LaporanArusKas";
+import LaporanArusKasKasir from "./pages/laporan/LaporanArusKasKasir";
+import NotFound from "./pages/NotFound";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        
         {/* LOGIN */}
         <Route path="/login" element={<Login />} />
 
@@ -107,15 +114,15 @@ export default function App() {
         />
         {/* CAPSTER - Admin */}
         <Route
-          path="/capster"
+          path="/pegawai"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <Capster />
+              <Pegawai />
             </ProtectedRoute>
           }
         />
         <Route
-          path="/capster/add"
+          path="/pegawai/capster/add"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <CapsterAdd />
@@ -123,7 +130,7 @@ export default function App() {
           }
         />
         <Route
-          path="/capster/edit/:id"
+          path="/pegawai/capster/edit/:id"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <CapsterEdit />
@@ -157,16 +164,7 @@ export default function App() {
 
         {/* Kasir - Admin */}
         <Route
-          path="/kasir"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <Kasir />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/kasir/add"
+          path="/pegawai/kasir/add"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <KasirAdd />
@@ -175,7 +173,7 @@ export default function App() {
         />
 
         <Route
-          path="/kasir/edit/:id"
+          path="/pegawai/kasir/edit/:id"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <KasirEdit />
@@ -290,8 +288,17 @@ export default function App() {
         <Route
           path="/komisi"
           element={
-            <ProtectedRoute allowedRoles={["admin", "capster"]}>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <Komisi /> {/* Halaman daftar capster */}
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/komisi/capster"
+          element={
+            <ProtectedRoute allowedRoles={["capster"]}>
+              <KomisiCapster />
             </ProtectedRoute>
           }
         />
@@ -301,6 +308,24 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <KomisiDetail /> {/* Halaman detail capster */}
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/komisi/komisi-setting/add"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <KomisiAdd />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/komisi/komisi-setting/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <KomisiEdit />
             </ProtectedRoute>
           }
         />
@@ -378,30 +403,6 @@ export default function App() {
           element={
             <ProtectedRoute>
               <PricelistEdit />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/komisi-setting"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <KomisiSetting />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/komisi-setting/add"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <KomisiAdd />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/komisi-setting/edit/:id"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <KomisiEdit />
             </ProtectedRoute>
           }
         />
@@ -599,6 +600,24 @@ export default function App() {
 
         {/* Laporan */}
         <Route
+          path="/laporan"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <Laporan />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/laporan/kasir"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <LaporanKasir />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/laporan/produk"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
@@ -689,6 +708,24 @@ export default function App() {
         />
 
         <Route
+          path="/laporan/arus-kas"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <LaporanArusKas />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/laporan/kasir/arus-kas"
+          element={
+            <ProtectedRoute allowedRoles={["kasir"]}>
+              <LaporanArusKasKasir />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/profil"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
@@ -707,7 +744,7 @@ export default function App() {
         />
 
         {/* Default Fallback */}
-        <Route path="*" element={<Login />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

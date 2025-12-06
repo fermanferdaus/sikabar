@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import TableData from "../../components/TableData";
-import { FileText, Calendar } from "lucide-react";
+import { FileText, Calendar, ArrowLeft } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import formatRupiah from "../../utils/formatRupiah";
@@ -10,6 +11,7 @@ import useProfil from "../../hooks/useProfil";
 
 export default function LaporanPendapatanJasaKasir() {
   const [data, setData] = useState([]);
+  const navigate = useNavigate();
   const [filterType, setFilterType] = useState("Harian");
   const [tanggal, setTanggal] = useState(
     new Date().toISOString().split("T")[0]
@@ -25,7 +27,10 @@ export default function LaporanPendapatanJasaKasir() {
   const API_URL = import.meta.env.VITE_API_URL;
   const id_store = localStorage.getItem("id_store");
   const { profil } = useProfil();
-  const logoSrc = (profil?.logo_url || "/Logo1.png").replace("http://", "https://");
+  let logoSrc = profil?.logo_url || "/Logo1.png";
+  if (!logoSrc.includes("localhost") && !logoSrc.includes("127.0.0.1")) {
+    logoSrc = logoSrc.replace("http://", "https://");
+  }
 
   // ======================================================
   // FETCH DATA
@@ -124,7 +129,8 @@ export default function LaporanPendapatanJasaKasir() {
     // ============================
     let periodeText = "";
     if (filterType === "Harian") periodeText = `Tanggal: ${tglID(tanggal)}`;
-    else if (filterType === "Bulanan") periodeText = `Periode Bulan: ${formatPeriode(bulan)}`;
+    else if (filterType === "Bulanan")
+      periodeText = `Periode Bulan: ${formatPeriode(bulan)}`;
     else
       periodeText = `Periode: ${tglID(periodeMulai)} s.d. ${tglID(
         periodeAkhir
@@ -241,7 +247,7 @@ export default function LaporanPendapatanJasaKasir() {
                 </p>
               </div>
 
-              <div className="flex justify-start sm:justify-end w-full sm:w-auto">
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
                 <button
                   onClick={handlePrintPDF}
                   className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 
@@ -249,6 +255,13 @@ export default function LaporanPendapatanJasaKasir() {
                 >
                   <FileText size={16} />
                   Cetak PDF
+                </button>
+
+                <button
+                  onClick={() => navigate(-1)}
+                  className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-lg text-sm font-medium"
+                >
+                  <ArrowLeft size={16} /> Kembali
                 </button>
               </div>
             </div>

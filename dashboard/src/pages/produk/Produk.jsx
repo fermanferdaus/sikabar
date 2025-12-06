@@ -7,10 +7,6 @@ export default function Produk() {
   const [stores, setStores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filterType, setFilterType] = useState("Bulanan");
-  const [tanggal, setTanggal] = useState(
-    new Date().toISOString().split("T")[0]
-  );
   const navigate = useNavigate();
 
   const API_URL = import.meta.env.VITE_API_URL;
@@ -19,10 +15,11 @@ export default function Produk() {
   const fetchStores = async () => {
     try {
       setLoading(true);
-      const url = `${API_URL}/produk/stok?filterType=${filterType}&tanggal=${tanggal}`;
+      const url = `${API_URL}/produk/stok`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Gagal memuat data");
       setStores(data);
@@ -35,7 +32,7 @@ export default function Produk() {
 
   useEffect(() => {
     fetchStores();
-  }, [filterType, tanggal]);
+  }, []); // ⬅ dependency filterType & tanggal dihapus
 
   const columns = [
     { key: "no", label: "#" },
@@ -71,7 +68,6 @@ export default function Produk() {
 
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-6 transition-all duration-300">
-            {/* Header */}
             <div className="border-b border-gray-100 pb-4">
               <h1 className="text-xl font-semibold text-slate-800">
                 Data Stok Produk
@@ -81,45 +77,6 @@ export default function Produk() {
               </p>
             </div>
 
-            {/* === Filter Bar === */}
-            <div className="flex flex-wrap items-center gap-4 bg-white border border-gray-100 rounded-xl p-4">
-              <div className="flex items-center gap-2">
-                <label className="text-gray-600 font-medium text-sm">
-                  Tipe:
-                </label>
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                  className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
-                  <option value="Harian">Harian</option>
-                  <option value="Bulanan">Bulanan</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label className="text-gray-600 font-medium text-sm">
-                  {filterType === "Harian" ? "Tanggal:" : "Bulan:"}
-                </label>
-                {filterType === "Harian" ? (
-                  <input
-                    type="date"
-                    value={tanggal}
-                    onChange={(e) => setTanggal(e.target.value)}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                ) : (
-                  <input
-                    type="month"
-                    value={tanggal.slice(0, 7)}
-                    onChange={(e) => setTanggal(e.target.value + "-01")}
-                    className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* Konten */}
             {loading ? (
               <p className="text-gray-500">Memuat data...</p>
             ) : error ? (

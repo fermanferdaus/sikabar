@@ -47,14 +47,14 @@ export default function CapsterKasir() {
       setSelectedCapster(null);
       setAlert({
         type: "success",
-        text: `Capster "${selectedCapster.nama_capster}" berhasil dihapus.`,
+        text: `Kapster "${selectedCapster.nama_capster}" berhasil dihapus.`,
       });
       setTimeout(() => setAlert(null), 4000);
       fetchCapsters();
     } catch (err) {
       setAlert({
         type: "error",
-        text: "Gagal menghapus capster: " + err.message,
+        text: "Gagal menghapus kapster: " + err.message,
       });
       setTimeout(() => setAlert(null), 4000);
     } finally {
@@ -74,8 +74,8 @@ export default function CapsterKasir() {
         // ===============================
         const columns = [
           { key: "no", label: "#" },
-          { key: "id_capster", label: "ID Capster" },
-          { key: "nama_capster", label: "Nama Capster" },
+          { key: "id_capster", label: "ID Kapster" },
+          { key: "nama_capster", label: "Nama Kapster" },
           { key: "telepon", label: "Telepon" },
           { key: "email", label: "Email" },
           { key: "alamat", label: "Alamat" },
@@ -137,10 +137,10 @@ export default function CapsterKasir() {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">
               <div>
                 <h1 className="text-xl font-semibold text-slate-800">
-                  Data Capster Toko
+                  Data Kapster Toko
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
-                  Kelola daftar capster di toko Anda.
+                  Kelola daftar kapster di toko Anda.
                 </p>
               </div>
 
@@ -150,7 +150,7 @@ export default function CapsterKasir() {
                   className="flex items-center gap-2 bg-[#0e57b5] hover:bg-[#0b4894] text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all"
                 >
                   <Plus size={16} />
-                  Tambah Capster
+                  Tambah Kapster
                 </Link>
               </div>
             </div>
@@ -170,11 +170,11 @@ export default function CapsterKasir() {
 
             {/* Table */}
             {loading ? (
-              <p className="text-gray-500 italic">Memuat data capster...</p>
+              <p className="text-gray-500 italic">Memuat data kapster...</p>
             ) : error ? (
               <p className="text-red-600">{error}</p>
             ) : filtered.length === 0 ? (
-              <p className="text-gray-500 italic">Capster tidak ditemukan.</p>
+              <p className="text-gray-500 italic">Kapster tidak ditemukan.</p>
             ) : (
               <TableData
                 columns={columns}
@@ -191,7 +191,7 @@ export default function CapsterKasir() {
               loading={deleting}
               message={
                 selectedCapster
-                  ? `Apakah Anda yakin ingin menghapus capster "${selectedCapster.nama_capster}"?`
+                  ? `Apakah Anda yakin ingin menghapus kapster "${selectedCapster.nama_capster}"?`
                   : "Apakah Anda yakin ingin menghapus data ini?"
               }
             />

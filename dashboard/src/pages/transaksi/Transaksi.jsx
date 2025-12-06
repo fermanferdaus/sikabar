@@ -8,19 +8,28 @@ import ItemCard from "../../components/transaksi/ItemCard";
 import PembayaranCard from "../../components/transaksi/PembayaranCard";
 import ServiceGrid from "../../components/transaksi/ServiceGrid";
 import ProdukGrid from "../../components/transaksi/ProdukGrid";
+import QrisPopup from "../../components/transaksi/QrisPopup";
 
-export default function TransaksiAdd() {
+export default function Transaksi() {
   const [tipeTransaksi, setTipeTransaksi] = useState(null);
   const [metode, setMetode] = useState("cash");
   const [items, setItems] = useState([]);
   const [subtotal, setSubtotal] = useState(0);
   const [jumlahBayar, setJumlahBayar] = useState(0);
-  const [noStruk, setNoStruk] = useState("");
   const [loading, setLoading] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(300);
+  const [buktiQris, setBuktiQris] = useState(null);
+  const [uploadPopup, setUploadPopup] = useState({ show: false, id: null });
+
   const [popup, setPopup] = useState({
     visible: false,
     type: "success",
     message: "",
+  });
+
+  const [qrisPopup, setQrisPopup] = useState({
+    open: false,
+    qrisUrl: "",
   });
 
   const API_URL = import.meta.env.VITE_API_URL;
@@ -32,7 +41,65 @@ export default function TransaksiAdd() {
   const { produk } = useFetchProduk(id_store);
   const { capsters } = useFetchCapsterByStore(id_store);
 
-  /* ========================== SUBTOTAL ========================== */
+  const resetForm = () => {
+    setTipeTransaksi(null);
+    setItems([]);
+    setSubtotal(0);
+    setJumlahBayar(0);
+    setMetode("cash");
+    setBuktiQris(null);
+  };
+
+  // SIMPAN TRANSAKSI
+  const saveTransaction = async () => {
+    const body = {
+      id_store,
+      id_user,
+      tipe_transaksi: tipeTransaksi,
+      metode_bayar: metode,
+      items,
+      jumlah_bayar: subtotal,
+    };
+
+    const res = await fetch(`${API_URL}/transaksi`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const result = await res.json();
+
+    if (res.ok) {
+      window.open(`${API_URL}/struk/print/${result.id}`, "_blank");
+
+      setPopup({
+        visible: true,
+        type: "success",
+        message: `Transaksi berhasil! No Struk: ${result.nomor_struk}`,
+      });
+
+      return result.id;
+    }
+  };
+
+  // UPLOAD BUKTI
+  const uploadBuktiQris = async (id_transaksi) => {
+    if (!buktiQris) return;
+
+    const formData = new FormData();
+    formData.append("bukti", buktiQris);
+    formData.append("id_transaksi", id_transaksi);
+
+    await fetch(`${API_URL}/transaksi/upload-bukti`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+  };
+
   useEffect(() => {
     const total = items.reduce(
       (sum, i) => sum + Number(i.harga || 0) * Number(i.jumlah || 1),
@@ -41,38 +108,43 @@ export default function TransaksiAdd() {
     setSubtotal(total);
   }, [items]);
 
-  /* ========================== NOMOR STRUK ========================== */
+  // ================== AUTO HANDLE QRIS / CASH ==================
   useEffect(() => {
-    const fetchStruk = async () => {
-      try {
-        const res = await fetch(`${API_URL}/struk/generate`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        setNoStruk(data.nomor_struk);
-      } catch {
-        const now = new Date();
-        const tanggal = now.toISOString().slice(2, 10).replace(/-/g, "");
-        const rand = Math.floor(100 + Math.random() * 900);
-        setNoStruk(`STRK${tanggal}${rand}`);
-      }
-    };
-    fetchStruk();
-  }, []);
+    if (metode === "qris") {
+      setJumlahBayar(subtotal);
+    } else {
+      setJumlahBayar(0);
+    }
+  }, [metode, subtotal]);
 
-  /* ========================== ADD ITEM (FIXED STRICT MODE) ========================== */
+  useEffect(() => {
+    if (!qrisPopup.open) return;
+    setTimeLeft(300);
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleCancelQris();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [qrisPopup.open]);
+
   const addItem = (item) => {
     setItems((prev) => {
       const existingIndex = prev.findIndex((i) => {
         if (item.tipe === "produk" && i.tipe === "produk")
           return i.id_produk === item.id_produk;
-
         if (item.tipe === "service" && i.tipe === "service")
           return (
             i.id_pricelist === item.id_pricelist &&
             i.id_capster === item.id_capster
           );
-
         return false;
       });
 
@@ -80,26 +152,13 @@ export default function TransaksiAdd() {
         return prev.map((i, idx) => {
           if (idx !== existingIndex) return i;
           const newJumlah = i.jumlah + 1;
-          return {
-            ...i,
-            jumlah: newJumlah,
-            total: newJumlah * i.harga,
-          };
+          return { ...i, jumlah: newJumlah, total: newJumlah * i.harga };
         });
       }
-
-      return [
-        ...prev,
-        {
-          ...item,
-          jumlah: 1,
-          total: item.harga,
-        },
-      ];
+      return [...prev, { ...item, jumlah: 1, total: item.harga }];
     });
   };
 
-  /* ========================== UBAH TIPE ========================== */
   const handleChangeTipe = (newType) => {
     if (newType !== tipeTransaksi) {
       setTipeTransaksi(newType);
@@ -109,7 +168,21 @@ export default function TransaksiAdd() {
     }
   };
 
-  /* ========================== SUBMIT ========================== */
+  const handleCancelQris = async () => {
+    try {
+      if (qrisPopup.orderId) {
+        await fetch(`${API_URL}/payment/cancel/${qrisPopup.orderId}`, {
+          method: "POST",
+        });
+      }
+    } catch (err) {
+      console.error("Cancel error:", err);
+    }
+    setQrisPopup({ open: false, qrisUrl: "", orderId: "" });
+    setLoading(false);
+  };
+
+  // HANDLE SUBMIT
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
@@ -118,70 +191,75 @@ export default function TransaksiAdd() {
       return setPopup({
         visible: true,
         type: "error",
-        message: "Pilih tipe transaksi terlebih dahulu!",
+        message: "Pilih tipe transaksi!",
       });
 
     if (items.length === 0)
       return setPopup({
         visible: true,
         type: "error",
-        message: "Belum ada item yang ditambahkan!",
+        message: "Belum ada item!",
       });
 
     try {
       setLoading(true);
-      const body = {
-        id_store,
-        id_user,
-        nomor_struk: noStruk,
-        tipe_transaksi: tipeTransaksi,
-        metode_bayar: metode,
-        items,
-        jumlah_bayar: jumlahBayar,
-      };
 
-      const res = await fetch(`${API_URL}/transaksi`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        window.open(`${API_URL}/struk/print/${result.id}`, "_blank");
-
-        const resNum = await fetch(`${API_URL}/struk/generate`, {
-          headers: { Authorization: `Bearer ${token}` },
+      // QRIS
+      if (metode === "qris") {
+        const snapRes = await fetch(`${API_URL}/payment/create`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            subtotal,
+            nama_store: localStorage.getItem("nama_store"),
+            id_store,
+          }),
         });
-        const newNum = await resNum.json();
 
-        setNoStruk(newNum.nomor_struk);
-        setItems([]);
-        setSubtotal(0);
-        setJumlahBayar(0);
-        setTipeTransaksi(null);
+        const snapData = await snapRes.json();
 
-        setPopup({
-          visible: true,
-          type: "success",
-          message: "Transaksi berhasil disimpan!",
+        setQrisPopup({
+          open: true,
+          qrisUrl:
+            snapData.qrisUrl ||
+            `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${snapData.qrString}`,
+          amount: subtotal,
+          orderId: snapData.order_id,
         });
-      } else {
-        setPopup({
-          visible: true,
-          type: "error",
-          message: result.message || "Gagal menyimpan transaksi.",
-        });
+
+        const interval = setInterval(async () => {
+          const status = await fetch(
+            `${API_URL}/payment/status/${snapData.order_id}`
+          );
+          const result = await status.json();
+
+          if (
+            result.transaction_status === "settlement" ||
+            result.transaction_status === "capture"
+          ) {
+            clearInterval(interval);
+            setQrisPopup((prev) => ({ ...prev, open: false }));
+
+            const trxId = await saveTransaction();
+
+            if (trxId) setUploadPopup({ show: true, id: trxId });
+          }
+        }, 4000);
+
+        return;
       }
+
+      // CASH
+      await saveTransaction();
+      resetForm();
     } catch {
       setPopup({
         visible: true,
         type: "error",
-        message: "Kesalahan jaringan/server.",
+        message: "Kesalahan jaringan/server",
       });
     } finally {
       setLoading(false);
@@ -194,79 +272,75 @@ export default function TransaksiAdd() {
         const capsterFiltered = capsters.filter((c) =>
           c.nama_capster.toLowerCase().includes(searchTerm.toLowerCase())
         );
-
         const produkFiltered = produk.filter((p) =>
           p.nama_produk.toLowerCase().includes(searchTerm.toLowerCase())
         );
-
         const serviceFiltered = services.filter((s) =>
           s.service.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
         return (
           <div className="space-y-6">
-            {/* HEADER */}
-            {/* <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 md:p-5 lg:p-6 xl:p-8">
-              <h1 className="text-xl font-semibold text-slate-800 mb-1">
-                Tambah Transaksi
-              </h1>
-              <p className="text-gray-500 text-sm">
-                Pilih jenis transaksi, tambahkan item, lalu simpan dan cetak
-                struk.
-              </p>
-            </div> */}
-
-            {/* GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 h-[calc(100vh-190px)] pr-2">
-              {/* KIRI */}
               <div className="h-full overflow-y-auto space-y-6 pr-2 min-h-[calc(100vh-190px)]">
-                {/* PILIH TIPE */}
-                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 md:p-5 lg:p-6 xl:p-8">
-                  <h2 className="font-semibold text-gray-700 mb-4">
+                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 md:p-4 lg:p-4 xl:p-5">
+                  <h2 className="font-semibold text-gray-700 mb-3 text-sm md:text-base">
                     Pilih Jenis Transaksi
                   </h2>
-                  <div className="grid grid-cols-3 gap-4">
+
+                  <div className="grid grid-cols-3 gap-2 md:gap-3">
                     {[
-                      { key: "service", icon: <Scissors />, label: "Layanan" },
-                      { key: "produk", icon: <Package />, label: "Produk" },
-                      { key: "campuran", icon: <Layers />, label: "Campuran" },
+                      {
+                        key: "service",
+                        icon: <Scissors size={18} />,
+                        label: "Layanan",
+                      },
+                      {
+                        key: "produk",
+                        icon: <Package size={18} />,
+                        label: "Produk",
+                      },
+                      {
+                        key: "campuran",
+                        icon: <Layers size={18} />,
+                        label: "Campuran",
+                      },
                     ].map((t) => (
                       <button
                         key={t.key}
                         onClick={() => handleChangeTipe(t.key)}
-                        className={`flex flex-col items-center justify-center p-3 md:p-4 lg:p-5 rounded-xl text-sm md:text-base border font-medium transition-all ${
+                        className={`flex flex-col items-center justify-center p-2.5 md:p-3 lg:p-3 rounded-lg text-xs md:text-sm border font-medium transition-all ${
                           tipeTransaksi === t.key
-                            ? "bg-[#0e57b5] text-white border-blue-700 scale-[1.03]"
+                            ? "bg-[#0e57b5] text-white border-blue-700 scale-[1.02]"
                             : "bg-gray-50 hover:bg-blue-50 border-gray-200 text-gray-700"
                         }`}
                       >
                         {t.icon}
-                        <span className="mt-2">{t.label}</span>
+                        <span className="mt-1">{t.label}</span>
                       </button>
                     ))}
                   </div>
-                </div>
 
-                {/* LIST SERVICE/PRODUK */}
-                {tipeTransaksi && (
-                  <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-8 space-y-10">
-                    {tipeTransaksi !== "produk" && (
-                      <ServiceGrid
-                        capsters={capsterFiltered}
-                        services={serviceFiltered}
-                        onAdd={addItem}
-                      />
-                    )}
-                    {tipeTransaksi !== "service" && (
-                      <ProdukGrid produk={produkFiltered} onAdd={addItem} />
-                    )}
-                  </div>
-                )}
+                  {tipeTransaksi && (
+                    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-8 space-y-10 mt-5">
+                      {tipeTransaksi !== "produk" && (
+                        <ServiceGrid
+                          capsters={capsterFiltered}
+                          services={serviceFiltered}
+                          onAdd={addItem}
+                        />
+                      )}
+                      {tipeTransaksi !== "service" && (
+                        <ProdukGrid produk={produkFiltered} onAdd={addItem} />
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* KANAN (FIXED) */}
               <div className="space-y-6 lg:sticky lg:top-[110px] h-full">
                 <ItemCard items={items} setItems={setItems} />
+
                 <PembayaranCard
                   subtotal={subtotal}
                   metode={metode}
@@ -279,7 +353,7 @@ export default function TransaksiAdd() {
               </div>
             </div>
 
-            {/* POPUP */}
+            {/* POPUP SUCCESS */}
             {popup.visible && (
               <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                 <div className="bg-white rounded-2xl shadow-lg p-6 w-[380px] text-center space-y-4">
@@ -308,6 +382,74 @@ export default function TransaksiAdd() {
                 </div>
               </div>
             )}
+
+            {uploadPopup.show && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div className="bg-white w-[380px] p-5 rounded-xl space-y-4 text-center">
+                  <h3 className="font-semibold text-gray-700 text-lg">
+                    Upload Bukti Pembayaran QRIS
+                  </h3>
+
+                  {/* UPLOAD BOX */}
+                  <label
+                    className={`cursor-pointer border-2 border-dashed rounded-lg flex items-center justify-center w-full transition-all duration-200 ${
+                      buktiQris ? "h-54" : "h-22"
+                    } border-gray-300 hover:bg-gray-50`}
+                  >
+                    {buktiQris ? (
+                      <img
+                        src={URL.createObjectURL(buktiQris)}
+                        alt="preview"
+                        className="max-w-full max-h-full object-contain rounded-md"
+                      />
+                    ) : (
+                      <span className="text-gray-500 text-xs">
+                        Klik untuk upload bukti
+                      </span>
+                    )}
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => setBuktiQris(e.target.files[0])}
+                    />
+                  </label>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={async () => {
+                        await uploadBuktiQris(uploadPopup.id);
+                        resetForm();
+                        setUploadPopup({ show: false, id: null });
+                      }}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg"
+                    >
+                      Simpan
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        resetForm();
+                        setUploadPopup({ show: false, id: null });
+                      }}
+                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg"
+                    >
+                      Lewati
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <QrisPopup
+              open={qrisPopup.open}
+              qrisUrl={qrisPopup.qrisUrl}
+              amount={subtotal}
+              timeLeft={timeLeft}
+              onCancel={handleCancelQris}
+            />
           </div>
         );
       }}

@@ -173,10 +173,11 @@ export default function ProdukStokDetail() {
                 </button>
 
                 <button
-                  onClick={() => navigate(`/produk`)}
-                  className="flex items-center gap-2 bg-[#f3f6fb] text-[#0e57b5] px-4 py-2.5 rounded-xl text-sm font-medium border border-[#e4e7ec] hover:bg-[#eaf0fa] transition"
+                  onClick={() => navigate(-1)}
+                  className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
                 >
-                  <ArrowLeft size={16} /> Kembali
+                  <ArrowLeft size={16} />
+                  Kembali
                 </button>
               </div>
             </div>

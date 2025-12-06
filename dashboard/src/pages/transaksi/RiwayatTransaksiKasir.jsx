@@ -1,19 +1,16 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import { useFetchRiwayatKasir } from "../../hooks/useFetchRiwayatKasir";
 import { formatTanggalJam } from "../../utils/dateFormatter";
 import TableData from "../../components/TableData";
-import { Receipt } from "lucide-react";
 
 export default function RiwayatTransaksiKasir() {
-  const navigate = useNavigate();
   const [filterType, setFilterType] = useState("Bulanan");
   const [filterTipeTransaksi, setFilterTipeTransaksi] = useState("Semua");
   const [tanggal, setTanggal] = useState(
     new Date().toISOString().split("T")[0]
   );
-  const [showCount, setShowCount] = useState(25);
+  const [showCount] = useState(25);
 
   const {
     data: rawData,
@@ -63,6 +60,7 @@ export default function RiwayatTransaksiKasir() {
           { key: "detail", label: "Detail" },
           { key: "subtotal", label: "Total" },
           { key: "metode_bayar", label: "Metode Bayar" },
+          { key: "bukti", label: "Bukti Qris" },
           { key: "struk", label: "Struk" },
         ];
 
@@ -89,6 +87,27 @@ export default function RiwayatTransaksiKasir() {
             </div>
           ),
           metode_bayar: <span className="capitalize">{d.metode_bayar}</span>,
+          bukti: d.bukti_qris ? (
+            <button
+              onClick={() =>
+                window.open(
+                  `${import.meta.env.VITE_BACKEND_URL}${d.bukti_qris}`,
+                  "_blank"
+                )
+              }
+              className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition"
+            >
+              Lihat
+            </button>
+          ) : (
+            <button
+              disabled
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-300 text-gray-500 cursor-not-allowed"
+            >
+              Tidak ada
+            </button>
+          ),
+
           struk: (
             <button
               onClick={() =>

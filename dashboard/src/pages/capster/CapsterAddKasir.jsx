@@ -26,7 +26,7 @@ export default function CapsterAddKasir() {
     e.preventDefault();
 
     if (!formData.nama_capster.trim()) {
-      setError("Nama capster wajib diisi!");
+      setError("Nama kapster wajib diisi!");
       return;
     }
 
@@ -42,7 +42,7 @@ export default function CapsterAddKasir() {
         "capsterMessageKasir",
         JSON.stringify({
           type: "success",
-          text: `Capster "${formData.nama_capster}" berhasil ditambahkan!`,
+          text: `Kapster "${formData.nama_capster}" berhasil ditambahkan!`,
         })
       );
 
@@ -64,10 +64,10 @@ export default function CapsterAddKasir() {
         {/* === Header === */}
         <div className="border-b border-gray-100 pb-5 mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">
-            Tambah Capster
+            Tambah Kapster
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Capster baru akan otomatis ditambahkan ke store Anda.
+            Kapster baru akan otomatis ditambahkan ke cabang Anda.
           </p>
         </div>
 
@@ -83,7 +83,7 @@ export default function CapsterAddKasir() {
           {/* Nama */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nama Capster
+              Nama Kapster
             </label>
             <input
               type="text"
@@ -92,7 +92,7 @@ export default function CapsterAddKasir() {
                 setFormData({ ...formData, nama_capster: e.target.value })
               }
               className="w-full border border-gray-300 rounded-lg px-4 py-3"
-              placeholder="Masukkan nama capster"
+              placeholder="Masukkan nama kapster"
               required
             />
           </div>
@@ -200,7 +200,7 @@ export default function CapsterAddKasir() {
           <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
-              onClick={() => navigate("/capster/kasir")}
+              onClick={() => navigate(-1)}
               className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
               disabled={loading}
             >
@@ -216,7 +216,7 @@ export default function CapsterAddKasir() {
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              {loading ? "Menyimpan..." : "Simpan Capster"}
+              {loading ? "Menyimpan..." : "Simpan Kapster"}
             </button>
           </div>
         </form>

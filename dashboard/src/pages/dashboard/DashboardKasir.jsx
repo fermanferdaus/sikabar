@@ -100,13 +100,9 @@ export default function DashboardKasir() {
         return (
           <div className="bg-white shadow-md rounded-2xl border border-gray-100 p-7 space-y-8">
             <h1 className="text-2xl font-semibold text-slate-800">
-              Dashboard Kasir
+              Dasbor Kasir
             </h1>
 
-            {/* =============================
-                GRID BESAR — SEMUA CARD
-                (Desktop=3, Tablet=2, Mobile=1)
-            ============================== */}
             <div
               className="
               grid 
@@ -119,7 +115,7 @@ export default function DashboardKasir() {
               {/* 12 CARD URUTAN FIX */}
               <CardStat
                 gradient="from-indigo-500 to-blue-500"
-                title="Total Capster (Toko)"
+                title="Total Kapster (Toko)"
                 subtitle="Karyawan toko ini"
                 value={filteredCapster?.length || 0}
                 icon={<Scissors size={32} />}

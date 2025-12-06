@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from "react";
+import { useState, useEffect, memo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -9,8 +9,6 @@ import {
   CreditCard,
   Wallet,
   Banknote,
-  Users,
-  User,
   LogOut,
   Clock,
   Settings,
@@ -22,6 +20,8 @@ import {
   ClipboardMinus,
   DollarSign,
   UserRoundCog,
+  Users2,
+  User2,
 } from "lucide-react";
 import useProfil from "../hooks/useProfil";
 
@@ -179,7 +179,7 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
               : role === "capster"
               ? "/dashboard/capster"
               : "/dashboard",
-          label: "Dashboard",
+          label: "Dasbor",
           icon: LayoutDashboard,
           roles: ["admin", "kasir", "capster"],
         },
@@ -196,12 +196,17 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
           roles: ["admin", "kasir"],
         },
         {
-          path: role === "kasir" ? "/capster/kasir" : "/capster",
-          label: "Capster",
-          icon: Scissors,
-          roles: ["admin", "kasir"],
+          path: "/pegawai",
+          label: "Pegawai",
+          icon: Users2,
+          roles: ["admin"],
         },
-        { path: "/kasir", label: "Kasir", icon: User, roles: ["admin"] },
+        {
+          path: "/capster/kasir",
+          label: "Kapster",
+          icon: Scissors,
+          roles: ["kasir"],
+        },
         {
           path: "/pricelist",
           label: "Daftar Harga",
@@ -209,8 +214,13 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
           roles: ["admin"],
         },
         { path: "/store", label: "Cabang", icon: Store, roles: ["admin"] },
-        { path: "/profil", label: "Profil Barbershop", icon: UserRoundCog, roles: ["admin"] },
-        { path: "/users", label: "Pengguna", icon: Users, roles: ["admin"] },
+        {
+          path: "/profil",
+          label: "Profil Barbershop",
+          icon: UserRoundCog,
+          roles: ["admin"],
+        },
+        { path: "/users", label: "Pengguna", icon: User2, roles: ["admin"] },
       ],
     },
 
@@ -233,7 +243,7 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
     },
 
     {
-      title: "Keuangan",
+      title: role === "capster" ? "Keuangan" : "Keuangan & Laporan",
       items: [
         {
           path: role === "kasir" ? "/pengeluaran/kasir" : "/pengeluaran",
@@ -246,6 +256,12 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
           label: "Gaji & Bonus",
           icon: Banknote,
           roles: ["admin"],
+        },
+        {
+          path: role === "admin" ? "/komisi" : "/komisi/capster",
+          label: role === "admin" ? "Komisi Kapster" : "Komisi",
+          icon: Percent,
+          roles: ["admin", "capster"],
         },
         {
           path: "/kasbon",
@@ -271,69 +287,9 @@ export default function Sidebar({ isOpen, onClose, onCollapseChange }) {
           icon: Receipt,
           roles: ["kasir", "capster"],
         },
-      ],
-    },
-
-    {
-      title: "Komisi",
-      items: [
         {
-          path: "/komisi",
-          label: "Komisi Capster",
-          icon: Percent,
-          roles: ["admin", "capster"],
-        },
-        {
-          path: "/komisi-setting",
-          label: "Pengaturan Komisi",
-          icon: Settings,
-          roles: ["admin"],
-        },
-      ],
-    },
-
-    {
-      title: "Laporan",
-      items: [
-        {
-          path: role === "admin" ? "/laporan/produk" : "/laporan/kasir/produk",
-          label: "Laporan Data Produk",
-          icon: FileText,
-          roles: ["admin", "kasir"],
-        },
-        {
-          path:
-            role === "admin"
-              ? "/laporan/penjualan-produk"
-              : "/laporan/kasir/penjualan-produk",
-          label: "Laporan Penjualan Produk",
-          icon: FileText,
-          roles: ["admin", "kasir"],
-        },
-        {
-          path:
-            role === "admin"
-              ? "/laporan/pendapatan-produk"
-              : "/laporan/kasir/pendapatan-produk",
-          label: "Laporan Pendapatan Produk",
-          icon: FileText,
-          roles: ["admin", "kasir"],
-        },
-        {
-          path:
-            role === "admin"
-              ? "/laporan/pendapatan-jasa"
-              : "/laporan/kasir/pendapatan-jasa",
-          label: "Laporan Pendapatan Jasa",
-          icon: FileText,
-          roles: ["admin", "kasir"],
-        },
-        {
-          path:
-            role === "admin"
-              ? "/laporan/pengeluaran"
-              : "/laporan/kasir/pengeluaran",
-          label: "Laporan Pengeluaran",
+          path: role === "admin" ? "/laporan" : "/laporan/kasir",
+          label: "Laporan",
           icon: FileText,
           roles: ["admin", "kasir"],
         },

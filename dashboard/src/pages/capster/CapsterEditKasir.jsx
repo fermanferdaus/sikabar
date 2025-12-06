@@ -63,7 +63,7 @@ export default function CapsterEditKasir() {
 
         setError(null);
       } catch (err) {
-        setError("Gagal memuat data capster: " + err.message);
+        setError("Gagal memuat data kapster: " + err.message);
       } finally {
         setLoadingData(false);
       }
@@ -77,7 +77,7 @@ export default function CapsterEditKasir() {
     e.preventDefault();
 
     if (!formData.nama_capster.trim()) {
-      setError("Nama capster wajib diisi!");
+      setError("Nama kapster wajib diisi!");
       return;
     }
 
@@ -90,13 +90,13 @@ export default function CapsterEditKasir() {
         "capsterMessageKasir",
         JSON.stringify({
           type: "success",
-          text: `Capster "${formData.nama_capster}" berhasil diperbarui!`,
+          text: `kapster "${formData.nama_capster}" berhasil diperbarui!`,
         })
       );
 
       navigate("/capster/kasir");
     } catch (err) {
-      setError("Gagal memperbarui capster: " + err.message);
+      setError("Gagal memperbarui kapster: " + err.message);
     }
   };
 
@@ -127,10 +127,10 @@ export default function CapsterEditKasir() {
         {/* Header */}
         <div className="border-b border-gray-100 pb-5 mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">
-            Edit Capster
+            Edit Kapster
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Ubah informasi capster di store Anda.
+            Ubah informasi kapster di cabang Anda.
           </p>
         </div>
 
@@ -143,13 +143,13 @@ export default function CapsterEditKasir() {
 
         {/* Loading State */}
         {loadingData ? (
-          <p className="text-gray-500 italic">Memuat data capster...</p>
+          <p className="text-gray-500 italic">Memuat data kapster...</p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-10">
             {/* Nama */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nama Capster
+                Nama Kapster
               </label>
               <input
                 type="text"
@@ -265,7 +265,7 @@ export default function CapsterEditKasir() {
             <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
               <button
                 type="button"
-                onClick={() => navigate("/capster/kasir")}
+                onClick={() => navigate(-1)}
                 className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 Batal

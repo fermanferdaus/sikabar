@@ -250,7 +250,7 @@ export default function KasirAdd() {
           <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
-              onClick={() => navigate("/kasir")}
+              onClick={() => navigate(-1)}
               className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Batal

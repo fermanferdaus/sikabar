@@ -21,6 +21,7 @@ import kasbonRoutes from "./routes/kasbon.routes.js";
 import potonganRoutes from "./routes/potongan.routes.js";
 import kasirRoutes from "./routes/kasir.routes.js";
 import profilRoutes from "./routes/profil.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
 dotenv.config();
 const app = express();
@@ -46,6 +47,7 @@ app.use("/api/kasbon", kasbonRoutes);
 app.use("/api/potongan", potonganRoutes);
 app.use("/api/kasir", kasirRoutes);
 app.use("/api/profil", profilRoutes);
+app.use("/api/payment", paymentRoutes);
 app.use("/api", keuanganRoutes);
 app.use("/uploads", express.static("uploads"));
 app.use(express.static("public"));

@@ -4,6 +4,7 @@ import MainLayout from "../../layouts/MainLayout";
 import { Download, AlertTriangle, ArrowLeft } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import useProfil from "../../hooks/useProfil";
+import { formatPeriode } from "../../utils/dateFormatter";
 
 export default function SlipGajiAdminDetail() {
   const [data, setData] = useState(null);
@@ -221,7 +222,7 @@ export default function SlipGajiAdminDetail() {
 
         <header>
           <div class="logo"><img src="${logoSrc}" crossorigin="anonymous" alt="Logo" /></div>
-          <h1>Slip Gaji Bulan<br />${data?.periode || "N/A"}</h1>
+          <h1>Slip Gaji Bulan<br />${formatPeriode(data?.periode_raw) || "N/A"}</h1>
         </header>
 
         <section class="info">
@@ -383,10 +384,9 @@ export default function SlipGajiAdminDetail() {
           </p>
         </div>
 
-        {/* Tombol kembali — mobile rata kiri, desktop rata kanan */}
         <div className="flex justify-start sm:justify-end">
           <button
-            onClick={() => navigate("/slip-admin")}
+            onClick={() => navigate(-1)}
             className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 
                  text-gray-800 px-4 py-2.5 rounded-xl text-sm font-medium 
                  shadow-sm hover:shadow-md transition-all"
@@ -409,7 +409,7 @@ export default function SlipGajiAdminDetail() {
           <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-6">
             <img src={logoSrc} className="w-20 h-20 object-contain" />
             <h1 className="text-2xl font-bold text-[#0e57b5] text-right">
-              Slip Gaji Bulan <br /> {data.periode}
+              Slip Gaji Bulan <br /> {formatPeriode(data?.periode_raw) || "N/A"}
             </h1>
           </div>
 

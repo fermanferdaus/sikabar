@@ -35,7 +35,7 @@ export default function ItemCard({ items, setItems }) {
           {items.map((i, idx) => (
             <div
               key={idx}
-              className="flex justify-between items-center py-2 border-b last:border-none"
+              className="flex justify-between items-center py-2 border-b border-gray-300 last:border-none"
             >
               <div>
                 <p className="font-medium text-gray-800">{i.nama}</p>

@@ -93,7 +93,7 @@ export default function Profil() {
               Profil Barbershop
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Informasi utama barbershop dan logo usaha.
+              Informasi utama barbershop dan logo.
             </p>
           </div>
 

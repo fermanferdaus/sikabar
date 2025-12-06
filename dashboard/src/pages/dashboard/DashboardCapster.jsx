@@ -70,7 +70,7 @@ export default function CapsterDashboard() {
         {/* === Header === */}
         <div>
           <h1 className="text-2xl font-semibold text-slate-800">
-            Dashboard Capster
+            Dasbor Kapster
           </h1>
           <p className="text-sm text-gray-500 mt-1">Periode: {periodeLabel}</p>
         </div>

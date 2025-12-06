@@ -67,8 +67,8 @@ export default function KasbonAdd() {
       !form.jumlah_total ||
       !form.jumlah_cicilan ||
       !form.keterangan ||
-      (roleType === "capster" && !form.id_capster) ||
-      (roleType === "kasir" && !form.id_kasir)
+      (roleType === "capster" && form.id_capster === "") ||
+      (roleType === "kasir" && form.id_kasir === "")
     ) {
       setErrorMsg("Semua kolom wajib diisi!");
       return;
@@ -77,8 +77,12 @@ export default function KasbonAdd() {
     setLoadingSubmit(true);
 
     const payload = {
-      id_capster: roleType === "capster" ? form.id_capster : null,
-      id_kasir: roleType === "kasir" ? form.id_kasir : null,
+      id_capster:
+        roleType === "capster" && form.id_capster !== ""
+          ? form.id_capster
+          : null,
+      id_kasir:
+        roleType === "kasir" && form.id_kasir !== "" ? form.id_kasir : null,
       jumlah_total: Number(form.jumlah_total),
       jumlah_cicilan: Number(form.jumlah_cicilan),
       keterangan: form.keterangan,
@@ -255,7 +259,7 @@ export default function KasbonAdd() {
             <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
               <button
                 type="button"
-                onClick={() => navigate("/kasbon")}
+                onClick={() => navigate(-1)}
                 className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
                 disabled={loadingSubmit}
               >

@@ -69,7 +69,7 @@ export default function CapsterEdit() {
         setStores(storeData);
       } catch (err) {
         console.error(err);
-        setError("Gagal memuat data capster. " + err.message);
+        setError("Gagal memuat data kapster. " + err.message);
       }
     };
 
@@ -91,7 +91,7 @@ export default function CapsterEdit() {
           </p>
           <div className="text-right mt-4">
             <button
-              onClick={() => navigate("/capster")}
+              onClick={() => navigate(-1)}
               className="px-5 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition font-medium"
             >
               Kembali
@@ -107,10 +107,10 @@ export default function CapsterEdit() {
         {/* Header */}
         <div className="border-b border-gray-100 pb-5 mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">
-            Edit Capster
+            Edit Kapster
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Ubah informasi capster yang terdaftar di sistem.
+            Ubah informasi kapster yang terdaftar di sistem.
           </p>
         </div>
 
@@ -120,7 +120,7 @@ export default function CapsterEdit() {
             {/* Nama */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nama Capster
+                Nama Kapster
               </label>
               <input
                 type="text"
@@ -130,7 +130,7 @@ export default function CapsterEdit() {
                 }
                 required
                 className="w-full border border-gray-300 rounded-lg px-4 py-3"
-                placeholder="Masukkan nama capster"
+                placeholder="Masukkan nama kapster"
               />
             </div>
 
@@ -258,7 +258,7 @@ export default function CapsterEdit() {
           <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
             <button
               type="button"
-              onClick={() => navigate("/capster")}
+              onClick={() => navigate(-1)}
               className="px-6 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
             >
               Batal

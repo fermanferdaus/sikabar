@@ -144,17 +144,21 @@ export default function PengeluaranDetail() {
       </span>
     ),
     bukti: p.bukti_path ? (
-      <a
-        href={`${BACKEND_URL}${p.bukti_path}`}
-        target="_blank"
-        rel="noreferrer"
-        className="text-[#0e57b5] hover:underline"
+      <button
+        onClick={() => window.open(`${BACKEND_URL}${p.bukti_path}`, "_blank")}
+        className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition"
       >
         Lihat
-      </a>
+      </button>
     ) : (
-      <span className="text-gray-400 italic">Tidak ada</span>
+      <button
+        disabled
+        className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-300 text-gray-500 cursor-not-allowed"
+      >
+        Tidak ada
+      </button>
     ),
+
     aksi: (
       <div className="flex items-center justify-left gap-2">
         <button
@@ -225,10 +229,11 @@ export default function PengeluaranDetail() {
                   </button>
 
                   <button
-                    onClick={() => navigate("/pengeluaran")}
-                    className="flex items-center gap-2 bg-[#f3f6fb] text-[#0e57b5] px-4 py-2.5 rounded-xl text-sm font-medium border border-[#e4e7ec] hover:bg-[#eaf0fa] transition"
+                    onClick={() => navigate(-1)}
+                    className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
                   >
-                    <ArrowLeft size={16} /> Kembali
+                    <ArrowLeft size={16} />
+                    Kembali
                   </button>
                 </div>
               </div>

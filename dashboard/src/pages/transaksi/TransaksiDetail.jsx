@@ -78,6 +78,7 @@ export default function TransaksiDetail() {
           { key: "detail", label: "Detail" },
           { key: "subtotal", label: "Total" },
           { key: "metode_bayar", label: "Metode Bayar" },
+          { key: "bukti", label: "Bukti Qris" },
           { key: "struk", label: "Struk" },
         ];
 
@@ -107,6 +108,27 @@ export default function TransaksiDetail() {
           metode_bayar: (
             <span className="capitalize">{d.metode_bayar || "-"}</span>
           ),
+          bukti: d.bukti_qris ? (
+            <button
+              onClick={() =>
+                window.open(
+                  `${import.meta.env.VITE_BACKEND_URL}${d.bukti_qris}`,
+                  "_blank"
+                )
+              }
+              className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition"
+            >
+              Lihat
+            </button>
+          ) : (
+            <button
+              disabled
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-300 text-gray-500 cursor-not-allowed"
+            >
+              Tidak ada
+            </button>
+          ),
+
           struk: (
             <button
               onClick={() =>
@@ -140,7 +162,7 @@ export default function TransaksiDetail() {
 
               <div className="order-1 sm:order-2 flex justify-start sm:justify-end w-full sm:w-auto">
                 <button
-                  onClick={() => navigate("/transaksi/admin")}
+                  onClick={() => navigate(-1)}
                   className="flex items-center gap-2 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200"
                 >
                   <ArrowLeft size={16} />

@@ -19,7 +19,7 @@ export const getTransaksiByStore = async (req, res) => {
 
     const sql = `
       SELECT 
-        t.id_transaksi, t.tipe_transaksi, t.metode_bayar, t.subtotal, t.jumlah_bayar, t.created_at,
+        t.id_transaksi, t.tipe_transaksi, t.metode_bayar, t.subtotal, t.jumlah_bayar, t.created_at, t.bukti_qris,
         u.nama_user AS kasir, s.nama_store,
         COALESCE(GROUP_CONCAT(DISTINCT c.nama_capster SEPARATOR ', '), '-') AS capster,
         COALESCE(GROUP_CONCAT(DISTINCT pr.service SEPARATOR ', '), '-') AS layanan,
@@ -138,7 +138,7 @@ export const getTransaksiByStoreAdmin = async (req, res) => {
     const [rows] = await db.query(
       `
       SELECT 
-        t.id_transaksi, t.tipe_transaksi, t.metode_bayar, t.subtotal, t.jumlah_bayar, t.created_at,
+        t.id_transaksi, t.tipe_transaksi, t.metode_bayar, t.subtotal, t.jumlah_bayar, t.created_at,t.bukti_qris,
         u.nama_user AS kasir, s.nama_store,
         COALESCE(GROUP_CONCAT(DISTINCT c.nama_capster SEPARATOR ', '), '-') AS capster,
         COALESCE(GROUP_CONCAT(DISTINCT pr.service SEPARATOR ', '), '-') AS layanan,
@@ -174,25 +174,16 @@ export const createTransaksi = async (req, res) => {
   const {
     id_store,
     id_user,
-    nomor_struk,
     tipe_transaksi,
     metode_bayar,
     items,
     jumlah_bayar,
   } = req.body;
 
-  // 🧩 Validasi dasar
-  if (
-    !id_store ||
-    !id_user ||
-    !nomor_struk ||
-    !tipe_transaksi ||
-    !items?.length
-  ) {
+  if (!id_store || !id_user || !tipe_transaksi || !items?.length) {
     return res.status(400).json({ message: "Data transaksi tidak lengkap" });
   }
 
-  // 🧮 Hitung subtotal & kembalian
   let subtotal = 0;
   items.forEach((i) => (subtotal += i.total || i.harga * (i.jumlah || 1)));
   const kembalian = jumlah_bayar - subtotal;
@@ -202,9 +193,23 @@ export const createTransaksi = async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // =============================================================
-    // 🔹 1. Simpan transaksi utama
-    // =============================================================
+    // Hitung transaksi hari ini per cabang
+    const [rows] = await conn.query(
+      `
+      SELECT COUNT(*) AS total 
+      FROM transaksi 
+      WHERE id_store = ? AND DATE(created_at) = CURDATE()
+      `,
+      [id_store]
+    );
+
+    const countToday = rows[0]?.total || 0;
+    const now = new Date();
+    const tanggal = now.toISOString().slice(2, 10).replace(/-/g, ""); // YYMMDD
+    const kodeStore = String(id_store).padStart(2, "0"); // 02, 03, dst
+    const nomorUrut = String(countToday + 1).padStart(4, "0"); // 001, 002, dst
+    const nomor_struk = `${kodeStore}/${tanggal}/${nomorUrut}`;
+
     const [transaksi] = await conn.query(
       `
       INSERT INTO transaksi 
@@ -224,21 +229,14 @@ export const createTransaksi = async (req, res) => {
 
     const id_transaksi = transaksi.insertId;
 
-    // =============================================================
-    // 🔹 2. Simpan nomor struk
-    // =============================================================
     await conn.query(
       `INSERT INTO struk (id_transaksi, nomor_struk) VALUES (?, ?)`,
       [id_transaksi, nomor_struk]
     );
 
-    // =============================================================
-    // 🔹 3. Simpan detail produk (ambil harga_awal otomatis dari tabel produk)
-    // =============================================================
     const produkItems = items.filter((i) => i.tipe === "produk");
 
     if (produkItems.length > 0) {
-      // 🧠 Gabungkan produk dengan id_produk sama
       const produkMerged = Object.values(
         produkItems.reduce((acc, item) => {
           if (!acc[item.id_produk]) acc[item.id_produk] = { ...item };
@@ -275,17 +273,15 @@ export const createTransaksi = async (req, res) => {
         ]);
       }
 
-      // ✅ Simpan detail produk
       await conn.query(
         `
-          INSERT INTO transaksi_produk_detail 
-          (id_transaksi, id_produk, jumlah, harga_awal, harga_jual, total_penjualan, total_modal, laba_rugi)
-          VALUES ?
+        INSERT INTO transaksi_produk_detail 
+        (id_transaksi, id_produk, jumlah, harga_awal, harga_jual, total_penjualan, total_modal, laba_rugi)
+        VALUES ?
         `,
         [produkValues]
       );
 
-      // ✅ Kurangi stok hanya sekali per produk
       for (const item of produkMerged) {
         await conn.query(
           `
@@ -295,27 +291,24 @@ export const createTransaksi = async (req, res) => {
             updated_at = NOW()
           WHERE id_produk = ? AND id_store = ?
           LIMIT 1
-        `,
+          `,
           [item.jumlah, item.id_produk, id_store]
         );
       }
     }
 
-    // =============================================================
-    // 🔹 4. Simpan detail service (dengan komisi capster)
-    // =============================================================
     const serviceItems = items.filter((i) => i.tipe === "service");
 
     if (serviceItems.length > 0) {
       const capsterIds = [...new Set(serviceItems.map((i) => i.id_capster))];
 
-      const [rows] = await conn.query(
+      const [rowsKomisi] = await conn.query(
         `SELECT id_capster, persentase_capster FROM komisi_setting WHERE id_capster IN (?)`,
         [capsterIds]
       );
 
       const komisiMap = Object.fromEntries(
-        rows.map((r) => [r.id_capster, parseFloat(r.persentase_capster)])
+        rowsKomisi.map((r) => [r.id_capster, parseFloat(r.persentase_capster)])
       );
 
       const serviceValues = serviceItems.map((srv) => {
@@ -341,9 +334,6 @@ export const createTransaksi = async (req, res) => {
       );
     }
 
-    // =============================================================
-    // 🔹 5. Commit transaksi
-    // =============================================================
     await conn.commit();
 
     res.json({
@@ -421,5 +411,35 @@ export const getKeuanganByStore = async (req, res) => {
     res.json({ status: "success", data: formatted });
   } catch {
     res.status(500).json({ message: "Gagal mengambil data keuangan store" });
+  }
+};
+
+export const uploadBuktiQris = async (req, res) => {
+  try {
+    const { id_transaksi } = req.body;
+
+    if (!id_transaksi) {
+      return res.status(400).json({ message: "ID transaksi wajib dikirim" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "File bukti tidak ditemukan" });
+    }
+
+    const bukti_qris = `/uploads/qris/${req.file.filename}`;
+
+    await db.query(
+      "UPDATE transaksi SET bukti_qris = ? WHERE id_transaksi = ?",
+      [bukti_qris, id_transaksi]
+    );
+
+    return res.json({
+      success: true,
+      message: "Bukti QRIS berhasil diupload",
+      bukti_qris,
+      id_transaksi,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Gagal upload bukti" });
   }
 };

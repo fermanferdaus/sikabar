@@ -104,6 +104,9 @@ export const createKasbon = async (req, res) => {
     const { id_kasir, id_capster, jumlah_total, jumlah_cicilan, keterangan } =
       req.body;
 
+    const kasirId = id_kasir && id_kasir !== "" ? id_kasir : null;
+    const capsterId = id_capster && id_capster !== "" ? id_capster : null;
+
     if (!jumlah_total || !jumlah_cicilan) {
       return res.status(400).json({
         success: false,
@@ -111,26 +114,28 @@ export const createKasbon = async (req, res) => {
       });
     }
 
-    const potonganPerBulan = Math.ceil(jumlah_total / jumlah_cicilan);
-    const startDate = dayjs(); // Bulan sekarang
+    if (!kasirId && !capsterId) {
+      return res.status(400).json({
+        success: false,
+        message: "Penerima kasbon harus dipilih (kasir atau capster).",
+      });
+    }
 
-    // totalPeriode tetap sama (jumlah bulan cicilan)
+    const potonganPerBulan = Math.ceil(jumlah_total / jumlah_cicilan);
+    const startDate = dayjs();
     const totalPeriode = jumlah_cicilan;
 
     for (let i = 0; i < totalPeriode; i++) {
       const bulanKe = startDate.add(i, "month");
       const periode = bulanKe.format("YYYY-MM");
       const tanggalPinjam = bulanKe.startOf("month").format("YYYY-MM-DD");
-
-      // 🔹 PERUBAHAN UTAMA
-      const cicilanTerbayar = i + 1; // Bukan i (mulai dari 1)
+      const cicilanTerbayar = i + 1;
 
       const sisaKasbon = Math.max(
         jumlah_total - potonganPerBulan * cicilanTerbayar,
         0
       );
 
-      // === Tambah baris kasbon ===
       const [kasbonResult] = await db.query(
         `
         INSERT INTO kasbon 
@@ -138,8 +143,8 @@ export const createKasbon = async (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, 'aktif', ?)
         `,
         [
-          id_kasir || null,
-          id_capster || null,
+          kasirId,
+          capsterId,
           jumlah_total,
           sisaKasbon,
           jumlah_cicilan,
@@ -151,7 +156,6 @@ export const createKasbon = async (req, res) => {
 
       const id_kasbon = kasbonResult.insertId;
 
-      // === Tambah potongan_kasbon SETIAP BULAN (termasuk bulan ini)
       await db.query(
         `
         INSERT INTO potongan_kasbon 
@@ -160,8 +164,8 @@ export const createKasbon = async (req, res) => {
         `,
         [
           id_kasbon,
-          id_kasir || null,
-          id_capster || null,
+          kasirId,
+          capsterId,
           periode,
           potonganPerBulan,
           `Potongan otomatis kasbon bulan ${bulanKe.format("MMMM YYYY")}`,
@@ -244,25 +248,35 @@ export const deleteKasbon = async (req, res) => {
 // 🔹 CEK DAN UPDATE STATUS KASBON SAAT GANTI BULAN
 // ======================================================
 export const checkAndUpdateKasbonBulan = async () => {
-  const currentMonth = dayjs().format("YYYY-MM");
+  try {
+    const now = dayjs();
 
-  const [rows] = await db.query(
-    `
-    SELECT id_kasbon 
-    FROM kasbon 
-    WHERE status = 'aktif'
-      AND DATE_FORMAT(tanggal_pinjam, '%Y-%m') < ?
-    `,
-    [currentMonth]
-  );
+    const [kasbonList] = await db.query(`
+      SELECT id_kasbon, tanggal_pinjam, jumlah_cicilan, sisa_kasbon
+      FROM kasbon
+      WHERE status = 'aktif'
+    `);
 
-  if (rows.length) {
-    const ids = rows.map((r) => r.id_kasbon);
-    await db.query(
-      `UPDATE kasbon SET status = 'lunas' WHERE id_kasbon IN (?)`,
-      [ids]
-    );
-    console.log(`✅ ${ids.length} kasbon lama diperbarui menjadi lunas`);
+    for (const k of kasbonList) {
+      const bulanAwal = dayjs(k.tanggal_pinjam);
+      const bulanBerakhir = bulanAwal
+        .add(k.jumlah_cicilan - 1, "month")
+        .endOf("month");
+
+      if (
+        now.isSame(bulanBerakhir, "day") ||
+        now.isAfter(bulanBerakhir, "day")
+      ) {
+        await db.query(
+          `UPDATE kasbon SET status='lunas', sisa_kasbon=0 WHERE id_kasbon=?`,
+          [k.id_kasbon]
+        );
+      }
+    }
+
+    console.log("✔ Auto update status kasbon berjalan");
+  } catch (error) {
+    console.error("❌ Error checkAndUpdateKasbonBulan:", error);
   }
 };
 
