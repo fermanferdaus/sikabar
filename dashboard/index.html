@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <link id="dynamic-favicon" rel="icon" type="image/png" href="" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+
+    <script type="module">
+      const API_URL = import.meta.env.VITE_API_URL;
+
+      async function setCircularFavicon() {
+        try {
+          const res = await fetch(`${API_URL}/profil`);
+          const data = await res.json();
+          const logoURL = data.logo_url;
+          if (!logoURL) return;
+
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = logoURL;
+
+          img.onload = () => {
+            const size = 256;
+            const canvas = document.createElement("canvas");
+            canvas.width = size;
+            canvas.height = size;
+
+            const ctx = canvas.getContext("2d");
+
+            // ==== Background bulat putih FULL ====
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // ==== Logo memenuhi circle ====
+            const scale = 0.95; // >>> hampir full
+            let w = size * scale;
+            let h = size * scale;
+
+            // jaga aspek rasio
+            if (img.width > img.height) {
+              h = (img.height / img.width) * w;
+            } else {
+              w = (img.width / img.height) * h;
+            }
+
+            // gambar logo di tengah
+            ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+
+            const dataURL = canvas.toDataURL("image/png");
+            document.getElementById("dynamic-favicon").href = dataURL;
+          };
+        } catch (err) {
+          console.error("favicon error:", err);
+        }
+      }
+      setCircularFavicon();
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
