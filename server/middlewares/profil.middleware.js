@@ -2,43 +2,56 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 
-// 📁 Pastikan folder upload untuk logo tersedia
+// 📁 Pastikan folder upload tersedia
 const uploadDir = "uploads/logo";
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// 🎯 Konfigurasi penyimpanan file logo
+// 🎯 Storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, `logo-${unique}${ext}`); // format nama file
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `logo-${unique}${ext}`);
   },
 });
 
-// ✅ File filter (hanya gambar)
-const fileFilter = (req, file, cb) => {
-  const allowed = /jpeg|jpg|png/;
-  const ext = path.extname(file.originalname).toLowerCase();
-  const mime = file.mimetype.toLowerCase();
+// ✅ MIME yang diizinkan
+const ALLOWED_MIME = ["image/png", "image/jpeg", "image/jpg"];
 
-  if (allowed.test(ext) && allowed.test(mime)) {
+// 🔍 File filter
+const fileFilter = (req, file, cb) => {
+  if (ALLOWED_MIME.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Format logo tidak valid. Gunakan JPG atau PNG."), false);
+    cb(new Error("Format logo harus PNG, JPG, atau JPEG"));
   }
 };
 
-// 📦 Batas ukuran 3MB
+// 📦 Multer instance
 const upload = multer({
   storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
   fileFilter,
-  limits: { fileSize: 3 * 1024 * 1024 },
 });
 
-// Export untuk satu file input bernama "logo"
-export default upload.single("logo");
+// 🚀 EXPORT MIDDLEWARE YANG SUDAH HANDLE ERROR
+const uploadLogo = (req, res, next) => {
+  upload.single("logo")(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({
+        success: false,
+        message: err.message,
+      });
+    }
+    next();
+  });
+};
+
+export default uploadLogo;

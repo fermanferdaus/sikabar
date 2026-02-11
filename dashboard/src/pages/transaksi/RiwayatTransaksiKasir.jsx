@@ -8,9 +8,8 @@ export default function RiwayatTransaksiKasir() {
   const [filterType, setFilterType] = useState("Bulanan");
   const [filterTipeTransaksi, setFilterTipeTransaksi] = useState("Semua");
   const [tanggal, setTanggal] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
-  const [showCount] = useState(25);
 
   const {
     data: rawData,
@@ -21,8 +20,8 @@ export default function RiwayatTransaksiKasir() {
   const data = Array.isArray(rawData)
     ? rawData
     : Array.isArray(rawData?.data)
-    ? rawData.data
-    : [];
+      ? rawData.data
+      : [];
 
   return (
     <MainLayout current="riwayat transaksi">
@@ -31,7 +30,7 @@ export default function RiwayatTransaksiKasir() {
           .filter((d) =>
             filterTipeTransaksi === "Semua"
               ? true
-              : d.tipe_transaksi === filterTipeTransaksi
+              : d.tipe_transaksi === filterTipeTransaksi,
           )
           .filter(
             (d) =>
@@ -39,18 +38,18 @@ export default function RiwayatTransaksiKasir() {
                 ?.toLowerCase()
                 .includes(searchTerm.toLowerCase()) ||
               d.produk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              d.layanan?.toLowerCase().includes(searchTerm.toLowerCase())
-          )
-          .slice(0, showCount);
+              d.layanan?.toLowerCase().includes(searchTerm.toLowerCase()),
+          );
 
-        const totalTransaksi = filteredData.length;
-        const totalKotor = filteredData.reduce(
+        const totalTransaksi = data.length;
+        const totalKotor = data.reduce(
           (sum, d) => sum + Number(d.subtotal || 0),
-          0
+          0,
         );
-        const totalBersih = filteredData.reduce(
+
+        const totalBersih = data.reduce(
           (sum, d) => sum + Number(d.pendapatan_bersih || 0),
-          0
+          0,
         );
 
         const columns = [
@@ -92,7 +91,7 @@ export default function RiwayatTransaksiKasir() {
               onClick={() =>
                 window.open(
                   `${import.meta.env.VITE_BACKEND_URL}${d.bukti_qris}`,
-                  "_blank"
+                  "_blank",
                 )
               }
               className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#0e57b5] hover:bg-[#0b4894] transition"
@@ -115,7 +114,7 @@ export default function RiwayatTransaksiKasir() {
                   `${import.meta.env.VITE_API_URL}/struk/print/${
                     d.id_transaksi
                   }`,
-                  "_blank"
+                  "_blank",
                 )
               }
               className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#0e57b5] hover:bg-[#0b4894] transition"

@@ -1,5 +1,8 @@
 import db from "../config/db.js";
 import dayjs from "dayjs";
+import fs from "fs";
+import path from "path";
+import heicConvert from "heic-convert";
 
 // 🟢 Get Semua Transaksi berdasarkan store kasir login (lengkap + pendapatan bersih)
 export const getTransaksiByStore = async (req, res) => {
@@ -442,20 +445,41 @@ export const uploadBuktiQris = async (req, res) => {
       return res.status(400).json({ message: "File bukti tidak ditemukan" });
     }
 
-    const bukti_qris = `/uploads/qris/${req.file.filename}`;
+    let finalPath = req.file.path;
+    const ext = path.extname(req.file.originalname).toLowerCase();
+
+    // 🔁 KONVERSI HEIC / HEIF → JPG (pakai heic-convert)
+    if (ext === ".heic" || ext === ".heif") {
+      const inputBuffer = fs.readFileSync(req.file.path);
+
+      const outputBuffer = await heicConvert({
+        buffer: inputBuffer,
+        format: "JPEG",
+        quality: 0.9,
+      });
+
+      const jpgPath = req.file.path.replace(ext, ".jpg");
+
+      fs.writeFileSync(jpgPath, outputBuffer);
+      fs.unlinkSync(req.file.path); // hapus file HEIC
+
+      finalPath = jpgPath;
+    }
+
+    const bukti_qris = `/uploads/qris/${path.basename(finalPath)}`;
 
     await db.query(
       "UPDATE transaksi SET bukti_qris = ? WHERE id_transaksi = ?",
       [bukti_qris, id_transaksi],
     );
 
-    return res.json({
+    res.json({
       success: true,
       message: "Bukti QRIS berhasil diupload",
       bukti_qris,
-      id_transaksi,
     });
   } catch (err) {
-    return res.status(500).json({ message: "Gagal upload bukti" });
+    console.error("UPLOAD ERROR:", err);
+    res.status(500).json({ message: "Gagal upload bukti" });
   }
 };

@@ -1,28 +1,25 @@
 import { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
 import { useFetchTransaksiStore } from "../../hooks/useFetchTransaksi";
 import { formatTanggalJam } from "../../utils/dateFormatter";
-import { ArrowLeft } from "lucide-react";
 import TableData from "../../components/TableData";
 import { formatKasirID } from "../../utils/formatID";
 import BackButton from "../../components/BackButton";
 
 export default function TransaksiDetail() {
   const { id_store } = useParams();
-  const navigate = useNavigate();
 
   const [filterType, setFilterType] = useState("Bulanan");
   const [filterTipeTransaksi, setFilterTipeTransaksi] = useState("Semua");
   const [tanggal, setTanggal] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
-  const [showCount] = useState(25);
 
   const { data, summary, loading, error } = useFetchTransaksiStore(
     id_store,
     filterType,
-    tanggal
+    tanggal,
   );
 
   // 🔹 Filter berdasarkan tipe transaksi
@@ -30,7 +27,7 @@ export default function TransaksiDetail() {
     return data.filter((d) =>
       filterTipeTransaksi === "Semua"
         ? true
-        : d.tipe_transaksi === filterTipeTransaksi
+        : d.tipe_transaksi === filterTipeTransaksi,
     );
   }, [data, filterTipeTransaksi]);
 
@@ -47,7 +44,7 @@ export default function TransaksiDetail() {
       ? summary.pendapatan_bersih
       : filteredData.reduce(
           (sum, d) => sum + (Number(d.pendapatan_bersih || d.subtotal) || 0),
-          0
+          0,
         );
 
   // 🔹 Format Rupiah
@@ -61,17 +58,13 @@ export default function TransaksiDetail() {
   return (
     <MainLayout current="transaksi">
       {(searchTerm) => {
-        const searched = filteredData
-          .filter(
-            (d) =>
-              d.kasir?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              d.metode_bayar
-                ?.toLowerCase()
-                .includes(searchTerm.toLowerCase()) ||
-              d.produk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              d.layanan?.toLowerCase().includes(searchTerm.toLowerCase())
-          )
-          .slice(0, showCount);
+        const searched = filteredData.filter(
+          (d) =>
+            d.kasir?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            d.metode_bayar?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            d.produk?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            d.layanan?.toLowerCase().includes(searchTerm.toLowerCase()),
+        );
 
         const columns = [
           { key: "no", label: "#" },
@@ -97,9 +90,7 @@ export default function TransaksiDetail() {
           kasir: d.kasir || "-",
           tipe_transaksi: (
             <span className="capitalize">
-              {d.tipe_transaksi === "service"
-                ? "Layanan"
-                : d.tipe_transaksi}
+              {d.tipe_transaksi === "service" ? "Layanan" : d.tipe_transaksi}
             </span>
           ),
           detail:
@@ -126,7 +117,7 @@ export default function TransaksiDetail() {
               onClick={() =>
                 window.open(
                   `${import.meta.env.VITE_BACKEND_URL}${d.bukti_qris}`,
-                  "_blank"
+                  "_blank",
                 )
               }
               className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#0e57b5] hover:bg-[#0b4894] transition"
@@ -149,7 +140,7 @@ export default function TransaksiDetail() {
                   `${import.meta.env.VITE_API_URL}/struk/print/${
                     d.id_transaksi
                   }`,
-                  "_blank"
+                  "_blank",
                 )
               }
               className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#0e57b5] hover:bg-[#0b4894] transition"
@@ -162,7 +153,7 @@ export default function TransaksiDetail() {
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 space-y-8 transition-all duration-300">
             {/* Back Button */}
-            <BackButton to="/transaksi/admin"/>
+            <BackButton to="/transaksi/admin" />
 
             {/* === Header === */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-gray-100 pb-4">

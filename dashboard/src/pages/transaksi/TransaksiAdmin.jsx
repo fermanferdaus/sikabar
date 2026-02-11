@@ -1,7 +1,6 @@
 import MainLayout from "../../layouts/MainLayout";
 import { useNavigate } from "react-router-dom";
 import { useState, useMemo } from "react";
-import { RefreshCcw } from "lucide-react";
 import useFetchTransaksiAdmin from "../../hooks/useFetchTransaksi";
 import TableData from "../../components/TableData";
 
